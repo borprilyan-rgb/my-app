@@ -1,0 +1,12 @@
+streamlit
+gspread
+pandas
+plotly
+altair
+xlsxwriter
+num2words
+supabase
+matplotlib
+openpyxl
+pytz
+streamlit_cookies_manager
