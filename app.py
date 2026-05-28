@@ -2360,6 +2360,178 @@ def debug_payload_current_project_snapshot():
         st.json(d)
 
 
+def _debug_safe_preview(value, max_chars=120):
+    if isinstance(value, pd.DataFrame):
+        preview = f"DataFrame rows={len(value)}, cols={len(value.columns)}"
+    elif isinstance(value, list):
+        preview = f"list with {len(value)} rows"
+    elif isinstance(value, dict):
+        preview = f"dict with {len(value)} keys"
+    else:
+        preview = str(value)
+
+    if len(preview) > max_chars:
+        preview = preview[:max_chars] + "..."
+
+    return preview
+
+
+def _debug_sample_keys(value, limit=12):
+    if isinstance(value, dict):
+        return ", ".join(list(value.keys())[:limit])
+    return ""
+
+
+def render_debug_component_overview():
+    projects = st.session_state.get("projects", {})
+
+    if not isinstance(projects, dict) or not projects:
+        st.info("No valid projects found.")
+        return
+
+    rows = []
+
+    for project_id, pdata in projects.items():
+        pdata = pdata if isinstance(pdata, dict) else {}
+        data = pdata.get("data", {})
+
+        rows.append({
+            "project_id": project_id,
+            "name": pdata.get("name", ""),
+            "type": pdata.get("type", ""),
+            "data_key_count": len(data) if isinstance(data, dict) else None,
+            "has_inputs": isinstance(pdata.get("inputs"), dict),
+            "has_calculations": isinstance(pdata.get("calculations"), dict),
+            "has_ui": isinstance(pdata.get("ui"), dict),
+        })
+
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+
+def render_debug_current_project_buckets():
+    curr_id, curr_proj = get_current_project()
+
+    st.caption(
+        f"Current project: {curr_id} | "
+        f"{curr_proj.get('name', '')} ({curr_proj.get('type', '')})"
+    )
+    st.write("Top-level keys:", list(curr_proj.keys()))
+
+    rows = []
+
+    for bucket in ["data", "inputs", "calculations", "ui"]:
+        value = curr_proj.get(bucket)
+        rows.append({
+            "bucket": bucket,
+            "type": type(value).__name__,
+            "key_count": len(value) if isinstance(value, dict) else None,
+            "sample_keys": _debug_sample_keys(value),
+        })
+
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+
+def render_debug_area_source_check():
+    curr_id, curr_proj = get_current_project()
+    data = curr_proj.get("data", {}) if isinstance(curr_proj.get("data"), dict) else {}
+    calculations = (
+        curr_proj.get("calculations", {})
+        if isinstance(curr_proj.get("calculations"), dict)
+        else {}
+    )
+    area_calc = calculations.get("area", {}) if isinstance(calculations.get("area"), dict) else {}
+    clean_totals = area_calc.get("totals", {}) if isinstance(area_calc.get("totals"), dict) else {}
+    table_totals = calculate_area_totals_from_table(data.get("area_table_data", []))
+
+    rows = []
+
+    for metric, legacy_key in [
+        ("gba", "m_gba"),
+        ("gfa", "m_gfa"),
+        ("sgfa", "m_sgfa"),
+        ("nfa", "m_nfa"),
+    ]:
+        legacy_value = _safe_float(data.get(legacy_key, 0.0))
+        clean_value = _safe_float(clean_totals.get(metric, 0.0))
+        table_value = _safe_float(table_totals.get(metric, 0.0))
+
+        rows.append({
+            "metric": metric,
+            "legacy_data": legacy_value,
+            "clean_calculation": clean_value,
+            "recalculated_from_table": table_value,
+            "legacy_vs_clean_diff": legacy_value - clean_value,
+            "legacy_vs_table_diff": legacy_value - table_value,
+        })
+
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+
+def render_debug_widget_cache_keys():
+    curr_id = str(st.session_state.get("current_proj_id", ""))
+    rows = []
+
+    for key in sorted(list(st.session_state.keys()), key=lambda x: str(x)):
+        key_str = str(key)
+
+        if (
+            (curr_id and curr_id in key_str)
+            or any(key_str.startswith(prefix) for prefix in UI_CACHE_PREFIXES)
+        ):
+            value = st.session_state.get(key)
+            rows.append({
+                "key": key_str,
+                "type": type(value).__name__,
+                "preview": _debug_safe_preview(value),
+            })
+
+    if rows:
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    else:
+        st.info("No current-project widget/cache keys found.")
+
+
+def render_debug_cost_key_summary():
+    _, curr_proj = get_current_project()
+    data = curr_proj.get("data", {}) if isinstance(curr_proj.get("data"), dict) else {}
+
+    rows = []
+
+    for prefix in ["m_", "u_", "r_", "sc_"]:
+        keys = sorted([key for key in data.keys() if str(key).startswith(prefix)])
+        rows.append({
+            "prefix": prefix,
+            "count": len(keys),
+            "sample_keys": ", ".join(keys[:15]),
+        })
+
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+    smart_custom = data.get("smart_custom_costs")
+    info = {
+        "grand_total_project": data.get("grand_total_project"),
+        "smart_custom_costs_exists": "smart_custom_costs" in data,
+        "smart_custom_costs_type": type(smart_custom).__name__,
+        "smart_custom_costs_count": len(smart_custom) if isinstance(smart_custom, list) else None,
+    }
+    st.json(info)
+
+
+def render_debug_summary_calculations_check():
+    value = st.session_state.get("summary_calculations")
+    exists = "summary_calculations" in st.session_state
+
+    info = {
+        "exists": exists,
+        "type": type(value).__name__ if exists else None,
+        "key_count": len(value) if isinstance(value, dict) else None,
+        "row_count": len(value) if isinstance(value, (list, pd.DataFrame)) else None,
+        "summary": _debug_safe_preview(value) if exists else None,
+    }
+
+    st.json(info)
+
+
 def render_app_debugger():
     """
     Streamlit UI page/panel for debugging the full app save/load system.
@@ -2403,6 +2575,12 @@ def render_app_debugger():
             }
             st.json(safe_summary)
 
+        with st.expander("Component Overview", expanded=True):
+            render_debug_component_overview()
+
+        with st.expander("Summary Calculations Check"):
+            render_debug_summary_calculations_check()
+
     with tab_project_data:
         st.subheader("Current Project Saved Data")
         st.write(
@@ -2412,6 +2590,18 @@ def render_app_debugger():
 
         if st.button("Check Current Project Data", key="debug_check_project_data"):
             debug_project_data_snapshot()
+
+        with st.expander("Current Project Buckets", expanded=True):
+            render_debug_current_project_buckets()
+
+        with st.expander("Area Source Check", expanded=True):
+            render_debug_area_source_check()
+
+        with st.expander("Cost Key Summary", expanded=True):
+            render_debug_cost_key_summary()
+
+        with st.expander("Widget Cache Keys For Current Project"):
+            render_debug_widget_cache_keys()
 
         with st.expander("Project data key map"):
             st.dataframe(get_project_data_map(), width="stretch", hide_index=True)
@@ -10660,29 +10850,29 @@ def main_app():
     st.sidebar.caption(f"v{APP_VERSION} | (c) 2026 QS & Procurement - ASG")
     #endregion
 
-    # #debugcode
-    # if st.session_state.get("current_page") == "App Debugger":
-    #     if st.sidebar.button(
-    #         "Back to App",
-    #         key="close_app_debugger",
-    #         width="stretch",
-    #         icon=mi("arrow_back") if "mi" in globals() else None
-    #     ):
-    #         st.session_state.current_page = None
-    #         st.rerun()
-    # elif st.sidebar.button(
-    #     "Debug",
-    #     key="open_app_debugger",
-    #     width="stretch",
-    #     icon=mi("bug_report") if "mi" in globals() else None
-    # ):
-    #     st.session_state.current_page = "App Debugger"
-    #     st.rerun()
+    #debugcode
+    if st.session_state.get("current_page") == "App Debugger":
+        if st.sidebar.button(
+            "Back to App",
+            key="close_app_debugger",
+            width="stretch",
+            icon=mi("arrow_back") if "mi" in globals() else None
+        ):
+            st.session_state.current_page = None
+            st.rerun()
+    elif st.sidebar.button(
+        "Debug",
+        key="open_app_debugger",
+        width="stretch",
+        icon=mi("bug_report") if "mi" in globals() else None
+    ):
+        st.session_state.current_page = "App Debugger"
+        st.rerun()
 
-    # if st.session_state.get("current_page") == "App Debugger":
-    #     render_app_debugger()
-    #     return
-    # #enddebugcode
+    if st.session_state.get("current_page") == "App Debugger":
+        render_app_debugger()
+        return
+    #enddebugcode
 
 
     if page_choice == "Area Analysis":
