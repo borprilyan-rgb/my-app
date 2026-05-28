@@ -8871,8 +8871,7 @@ def generate_recap_excel(port_meta, projects):
             "SOFTCOST": total_soft_cost, "TOTAL, EXCLD PPN": grand_total_project
         }
     
-    if "recap_math_engine" not in st.session_state:
-        st.session_state.recap_math_engine = get_recap_values
+    st.session_state.recap_math_engine = get_recap_values
 
     # --- Generate Global Totals ---
     tot_cache = {}; global_cost = {}; tot_gba = tot_gfa = tot_sgfa = 0
@@ -9733,15 +9732,12 @@ Adjust the fields on the left and the preview will update automatically.
 # --- TAB 3: WIDE RECAP COST ---
     with summary_tabs[2]:
         st.subheader("Comprehensive Recap Matrix (Cost & Ratios)")
-        
-        if "recap_math_engine" not in st.session_state:
-            _ = generate_recap_excel(port_meta, st.session_state.projects)
-            
+
+        recap_excel_data = generate_recap_excel(port_meta, st.session_state.projects)
         math_engine = st.session_state.recap_math_engine
         
         col_btn, col_info = st.columns([1.5, 4.5])
         with col_btn:
-            recap_excel_data = generate_recap_excel(port_meta, st.session_state.projects)
             st.download_button(
                 label="Download Excel",
                 data=recap_excel_data,
@@ -9751,6 +9747,28 @@ Adjust the fields on the left and the preview will update automatically.
                 type="primary"
             )
 
+        with col_info:
+            curr_id, curr_proj = get_current_project()
+            curr_data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+            stored_total = _safe_float(curr_data.get("grand_total_project", 0))
+            recap_values = math_engine(curr_proj) if isinstance(curr_proj, dict) else {}
+            recap_total = _safe_float(recap_values.get("TOTAL, EXCLD PPN", 0))
+            diff_total = recap_total - stored_total
+            diff_pct = (diff_total / stored_total * 100) if stored_total > 0 else 0
+            tolerance = max(1000, stored_total * 0.0001)
+            control_msg = (
+                f"Stored Cost Analysis Total: Rp {stored_total:,.0f} | "
+                f"Recap Calculated Total: Rp {recap_total:,.0f} | "
+                f"Difference: Rp {diff_total:,.0f} ({diff_pct:,.4f}%)"
+            )
+
+            if abs(diff_total) <= tolerance:
+                st.success(f"Recap matches Cost Analysis control total. {control_msg}")
+            else:
+                st.warning(
+                    "Recap differs from stored Cost Analysis total. Check whether Cost Analysis was saved or formulas changed. "
+                    + control_msg
+                )
 
         # --- GENERATE HTML PREVIEW ---
         bg_colors = ["#EAEAEA", "#FCE4D6", "#F2DCDB", "#E1D5E7", "#DDEBF7", "#E2EFDA", "#D9E1F2", "#F4B084", "#FFF2CC"]
