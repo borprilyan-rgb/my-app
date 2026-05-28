@@ -421,6 +421,35 @@ PROJECT_DATA_GROUPS = {
 
 UI_CACHE_PREFIXES = (
     "base_table_",
+    "m_",
+    "r_",
+    "u_",
+    "sc_",
+    "misc_sw_",
+    "wid_",
+    "temp_spec_",
+    "area_committed_",
+    "area_draft_",
+    "door_committed_",
+    "door_draft_",
+    "area_page_",
+    "area_input_mode_",
+    "area_keliling_facade_",
+    "area_panjang_railing_",
+    "area_tinggi_railing_",
+    "area_facade_tolerance_pct_",
+    "excel_form_",
+    "area_excel_upload_",
+    "import_area_excel_",
+    "generate_area_table_",
+    "reset_area_draft_",
+    "save_area_table_",
+    "save_door_table_to_cloud_",
+    "save_external_",
+    "save_res_fac_",
+    "use_area_analysis_",
+    "save_smart_custom_to_cloud_",
+    "save_cost_analysis_",
     "area_editor_",
     "edit_smart_cc_",
     "external_table_",
@@ -643,6 +672,41 @@ def clear_project_ui_cache():
 
     for k in keys_to_delete:
         del st.session_state[k]
+
+def clear_project_ui_cache_for_ids(project_ids):
+    """
+    Clear Streamlit widget/session cache for specific deleted project/component IDs.
+    This prevents deleted component widget values from surviving invisibly.
+    """
+    if not project_ids:
+        return
+
+    project_ids = [str(pid) for pid in project_ids]
+
+    safe_keys = {
+        APP_KEYS["projects"],
+        APP_KEYS["current_proj_id"],
+        APP_KEYS["proj_counter"],
+        APP_KEYS["logged_in"],
+        APP_KEYS["access_token"],
+        APP_KEYS["user"],
+        APP_KEYS["storage_loaded"],
+        APP_KEYS["session_fingerprint"],
+        APP_KEYS["loaded_snapshot_id"],
+        APP_KEYS["loaded_snapshot_name"],
+        APP_KEYS["report_config"],
+    }
+
+    keys_to_delete = []
+
+    for key in list(st.session_state.keys()):
+        key_str = str(key)
+
+        if any(pid in key_str for pid in project_ids) and key not in safe_keys:
+            keys_to_delete.append(key)
+
+    for key in keys_to_delete:
+        del st.session_state[key]
 
 def restore_app_payload(data):
     """
@@ -2725,37 +2789,6 @@ def mi(name):
 
 def icon_safe(name):
     return mi(name) if "mi" in globals() else None    
-
-def cb_add_project():
-    st.session_state.proj_counter += 1
-    new_id = f"proj_{st.session_state.proj_counter}"
-
-    st.session_state.projects[new_id] = {
-        "name": f"New Project {st.session_state.proj_counter}",
-        "type": "Hotel",
-        "data": {}
-    }
-
-    st.session_state.current_proj_id = new_id
-
-    save_ok = save_data_force()
-
-    if not save_ok:
-        st.error("Component was added locally, but cloud save failed. Do not log out yet.")
-
-def cb_delete_project():
-    projects = st.session_state.get("projects", {})
-    curr_id = st.session_state.get("current_proj_id")
-
-    if not isinstance(projects, dict) or len(projects) <= 1:
-        st.warning("At least one project must remain.")
-        repair_projects_state(save=True)
-        return
-
-    if curr_id in projects:
-        del projects[curr_id]
-
-    repair_projects_state(save=True)
 
 def cb_switch_project():
     # Use .get() to avoid the AttributeError if the key is missing
@@ -5852,13 +5885,16 @@ def show_area_calculator():
                         if stale_key in st.session_state:
                             del st.session_state[stale_key]
 
-                    save_data()
+                    save_ok = save_after_user_action("Area Excel Import")
 
-                    st.success(
-                        f"Excel imported successfully. "
-                        f"{len(imported_area_records)} area rows loaded."
-                    )
-                    st.rerun()
+                    if save_ok:
+                        st.success(
+                            f"Excel imported successfully. "
+                            f"{len(imported_area_records)} area rows loaded."
+                        )
+                        st.rerun()
+                    else:
+                        st.error("Cloud save failed. Imported area data changed locally, but was not saved. Do not log out yet.")
 
                 except Exception as e:
                     st.error(f"Excel import failed: {e}")
@@ -5892,9 +5928,13 @@ def show_area_calculator():
 
             clear_area_editor_state()
 
-            save_data()
-            st.success("New area table generated and committed.")
-            st.rerun()
+            save_ok = save_after_user_action("Generate Area Table")
+
+            if save_ok:
+                st.success("New area table generated and committed.")
+                st.rerun()
+            else:
+                st.error("Cloud save failed. Generated area table changed locally, but was not saved. Do not log out yet.")
 
         if reset_clicked:
             st.session_state[area_draft_key] = copy.deepcopy(
@@ -7040,6 +7080,24 @@ def show_cost_estimator(): #cost calculator page
     ])
 
     with tab2:
+        save_cost_placeholder = st.empty()
+
+        with save_cost_placeholder.container():
+            save_cost_clicked = st.button(
+                "Save Cost Analysis",
+                key=f"save_cost_analysis_{curr_id}",
+                type="primary",
+                use_container_width=True
+            )
+
+        if save_cost_clicked:
+            save_ok = save_after_user_action("Save Cost Analysis")
+
+            if save_ok:
+                st.success("Cost Analysis saved to cloud.")
+                st.rerun()
+            else:
+                st.error("Cost Analysis changed locally, but cloud save failed. Do not log out yet.")
 
         # ==================================================
         # IMPORT AREA ANALYSIS TOTALS INTO COST ANALYSIS
@@ -7139,9 +7197,13 @@ def show_cost_estimator(): #cost calculator page
                 sync_area_value("m_door_s", "m_door_s", suggested_door_steel)
                 sync_area_value("m_door_g", "m_door_g", suggested_door_glass)
 
-                save_data()
-                st.success("Area Analysis totals, lobby area, rooms, facade, landscape area, railing length, and door quantities applied to Cost Analysis.")
-                st.rerun()
+                save_ok = save_after_user_action("Use Area Analysis in Cost Analysis")
+
+                if save_ok:
+                    st.success("Area Analysis totals, lobby area, rooms, facade, landscape area, railing length, and door quantities applied to Cost Analysis.")
+                    st.rerun()
+                else:
+                    st.error("Area Analysis values were applied locally, but cloud save failed. Do not log out yet.")
 
             on = st.toggle("Show details of synced values")
 
@@ -7606,7 +7668,7 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
         if save_smart_custom_clicked:
             set_data("smart_custom_costs", edited_smart_cc.to_dict("records"))
 
-            save_ok = save_data_force()
+            save_ok = save_after_user_action("Save Smart Custom Costs")
 
             if save_ok:
                 st.success("Saved to cloud.")
@@ -8014,7 +8076,6 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
         "sc_pm_m": pm_months, "sc_pm_r": pm_rate, "sc_ins": insurance_pct
     })
     st.session_state.projects[curr_id]["data"]["grand_total_project"] = grand_total_project
-    save_data()
 
     with tab8:
         st.header("Detail Pembuktian & Logika Perhitungan")
@@ -9630,7 +9691,7 @@ def show_snapshots():
 
             st.session_state[note_key] = ""
             st.session_state["simple_note_warning"] = ""
-            save_data()
+            save_ok = save_after_user_action("Add Simple Note")
 
         st.text_area(
             "Write a note",
@@ -9681,8 +9742,10 @@ def show_snapshots():
                             width="stretch"
                         ):
                             pdata["data"]["simple_notes"].pop(idx)
-                            save_data()
-                            st.rerun()
+                            save_ok = save_after_user_action("Delete Simple Note")
+
+                            if save_ok:
+                                st.rerun()
 
     with atab1:
         # --- SAVE NEW SNAPSHOT ---
@@ -10540,6 +10603,8 @@ def main_app():
                         for pid in selected_delete_ids:
                             if pid in projects:
                                 del projects[pid]
+
+                        clear_project_ui_cache_for_ids(selected_delete_ids)
 
                         # If active project was deleted, switch to first remaining project
                         if st.session_state.get("current_proj_id") not in projects:
