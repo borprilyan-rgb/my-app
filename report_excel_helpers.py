@@ -173,8 +173,6 @@ def generate_exact_portfolio_excel(port_meta, port_data, port_assumptions):
 
 
 def _normalize_header_token(value, trailing_dot=False):
-    import re
-
     text = str(value or "").strip().upper()
     text = re.sub(r"(?<=[A-Z])\s+(?=\d)", "", text)
     text = re.sub(r"\s+", ".", text)

@@ -31,10 +31,6 @@ import plotly.graph_objects as go
 import num2words as n2w
 import ast
 import numpy as np
-import io
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
-from openpyxl.utils import get_column_letter
 from io import BytesIO
 import json as _json
 
