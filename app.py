@@ -8,9 +8,7 @@ from area_helpers import (
     clean_area_records,
     clean_door_records,
     generate_area_rows,
-    guess_area_f2f_height,
     input_view_to_area_records,
-    normalize_none_records,
     validate_consultant_summary_input,
 )
 from excel_helpers import (
@@ -22,24 +20,16 @@ from excel_helpers import (
 )
 
 import altair as alt
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 import plotly.graph_objects as go
 import num2words as n2w
 import ast
 import numpy as np
-import textwrap
 import io
-import openpyxl
 from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Border, Side, Alignment, Font, Protection
+from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter
-from openpyxl.worksheet.datavalidation import DataValidation
-from openpyxl.chart import BarChart, Reference
 from io import BytesIO
 import json as _json
-import os
-import tempfile
 
 APP_VERSION = "1.1.0" #app version for future compatibility check
 AREA_UNIT = "m2"
@@ -3847,9 +3837,6 @@ def show_project_database():  # database page
                         "Note": st.column_config.TextColumn("Context", width="large"),
                     }
                 )
-
-#region
-import copy
 
 def sync_door_rows_from_area(area_df, old_door_records):
     F2F_COL = "Floor to Floor Height (m)"
@@ -8651,8 +8638,6 @@ def show_snapshots():
             )
 
 #region --- LOGIN SCREEN AND SIDE BAR(INSIDE MAIN APP) ---
-from supabase import create_client, Client
-
 # 1. SETUP & SESSION CHECK
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False

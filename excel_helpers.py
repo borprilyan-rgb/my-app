@@ -1,7 +1,6 @@
 import io
 
 import pandas as pd
-import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font, Protection
 from openpyxl.utils import get_column_letter
