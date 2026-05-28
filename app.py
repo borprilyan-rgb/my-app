@@ -1547,7 +1547,7 @@ def run_local_state_debug_checks():
                 "Loaded snapshot ID",
                 "WARN",
                 "No loaded snapshot linked.",
-                "Quick Save to archive will fail until user uses Save As or loads an archive."
+                "Quick Save to archive will fail until user uses Archive > Online Backup > Save or loads an archive."
             )
         )
 
@@ -1930,7 +1930,7 @@ def run_quick_save_write_test():
                 "Write test prerequisite",
                 "FAIL",
                 "No loaded_snapshot_id.",
-                "Load or Save As a feasibility study first."
+                "Load or use Archive > Online Backup > Save for a feasibility study first."
             )
         )
         return results
