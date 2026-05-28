@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def _safe_float(v, default=0.0):
+def safe_float(v, default=0.0):
     if v is None:
         return default
 
@@ -27,6 +27,9 @@ def _safe_float(v, default=0.0):
         return float(v)
     except Exception:
         return default
+
+
+_safe_float = safe_float
 
 
 def calculate_area_totals_from_table(area_table_data):

@@ -2,15 +2,19 @@
 import streamlit as st
 import pandas as pd
 from area_helpers import (
-    area_records_to_input_view,
-    calculate_area_dataframe,
     calculate_area_totals_from_table,
-    clean_area_records,
-    clean_door_records,
     generate_area_rows,
+    guess_area_f2f_height,
+    normalize_none_records,
+    clean_area_records,
+    calculate_area_dataframe,
+    clean_door_records,
+    area_records_to_input_view,
     input_view_to_area_records,
     validate_consultant_summary_input,
 )
+from area_helpers import safe_float as _safe_float
+
 from excel_helpers import (
     create_area_excel_form_bytes,
     read_area_input_sheet,
@@ -19,11 +23,11 @@ from excel_helpers import (
     read_residential_area_sheet,
 )
 from report_excel_helpers import (
-    _normalize_header_token,
     build_portfolio_meta_from_inputs,
     generate_exact_portfolio_excel,
     generate_recap_excel,
     get_recap_values,
+    normalize_header_token,
 )
 
 import altair as alt
@@ -98,33 +102,6 @@ def get_valid_token():
     
     # Fall back to stored token
     return st.session_state.get("access_token")
-
-def _safe_float(v, default=0.0):
-    if v is None:
-        return default
-
-    try:
-        if pd.isna(v):
-            return default
-    except Exception:
-        pass
-
-    if isinstance(v, str):
-        v = (
-            v.strip()
-            .replace("Rp", "")
-            .replace("rp", "")
-            .replace(",", "")
-            .replace("%", "")
-        )
-
-        if v == "" or v.lower() in ["none", "nan", "null", "-"]:
-            return default
-
-    try:
-        return float(v)
-    except Exception:
-        return default
 
 def clean_for_json(obj):
     """
@@ -7376,7 +7353,7 @@ CREATED &nbsp;: {created}
 
                 c1, c2 = st.columns(2)
 
-                header_inputs["project_location"] = _normalize_header_token(
+                header_inputs["project_location"] = normalize_header_token(
                     c1.text_input(
                         "Project Location",
                         value=header_inputs.get("project_location", "PIK2.D2.")
@@ -7384,7 +7361,7 @@ CREATED &nbsp;: {created}
                     trailing_dot=True,
                 )
 
-                header_inputs["project_name"] = _normalize_header_token(
+                header_inputs["project_name"] = normalize_header_token(
                     c2.text_input(
                         "Project Name",
                         value=header_inputs.get("project_name", "GINZA.MIDTOWN")

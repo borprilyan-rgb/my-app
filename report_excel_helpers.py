@@ -172,7 +172,7 @@ def generate_exact_portfolio_excel(port_meta, port_data, port_assumptions):
     return output.getvalue()
 
 
-def _normalize_header_token(value, trailing_dot=False):
+def normalize_header_token(value, trailing_dot=False):
     text = str(value or "").strip().upper()
     text = re.sub(r"(?<=[A-Z])\s+(?=\d)", "", text)
     text = re.sub(r"\s+", ".", text)
@@ -184,11 +184,11 @@ def _normalize_header_token(value, trailing_dot=False):
 
 
 def build_portfolio_meta_from_inputs(header_inputs):
-    project_location = _normalize_header_token(
+    project_location = normalize_header_token(
         header_inputs.get("project_location", ""),
         trailing_dot=True,
     )
-    project_name = _normalize_header_token(header_inputs.get("project_name", ""))
+    project_name = normalize_header_token(header_inputs.get("project_name", ""))
     option_number = str(header_inputs.get("option_number", "")).strip()
     revision_number = str(header_inputs.get("revision_number", "")).strip()
     drawing_date = str(header_inputs.get("drawing_date", "")).strip()
