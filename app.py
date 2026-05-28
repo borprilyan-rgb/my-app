@@ -6328,11 +6328,45 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                 },
             )
 
-            if any(row.get("Status") == "Different" for row in detail_rate_review_rows):
+            earthwork_review_row = next(
+                (row for row in detail_rate_review_rows if row.get("Section") == "Earthworks"),
+                {},
+            )
+            earthwork_apply_available = (
+                earthwork_review_row.get("Status") == "Different"
+                and _safe_float(earthwork_review_row.get("Detail Total", 0.0)) > 0
+                and _safe_float(earthwork_review_row.get("Detail-Derived Rate", 0.0)) > 0
+            )
+
+            if earthwork_apply_available:
                 st.warning(
                     "Earthworks detail-derived rate differs from the current Cost Analysis Earthwork Rate. "
                     "Cost Analysis has not been updated automatically."
                 )
+                if st.button(
+                    "Apply Earthworks Detail Rate",
+                    key=f"apply_earthwork_detail_rate_{curr_id}",
+                    type="primary",
+                ):
+                    derived_rate = _safe_float(curr_proj["data"].get("earthwork_derived_unit_price", 0.0))
+                    detail_total = _safe_float(curr_proj["data"].get("earthwork_detail_total", 0.0))
+
+                    if derived_rate <= 0 or detail_total <= 0:
+                        st.error("Earthworks detail rate cannot be applied because the detail total or derived rate is zero.")
+                    else:
+                        curr_proj["data"]["u_earth"] = derived_rate
+                        st.session_state[f"u_earth_{curr_type_key}"] = derived_rate
+                        st.session_state.pop("earthwork_import_warning", None)
+
+                        save_ok = save_after_user_action("Apply Earthworks Detail Rate")
+
+                        if save_ok:
+                            st.success("Earthworks detail rate applied to Cost Analysis.")
+                            st.rerun()
+                        else:
+                            st.error(
+                                "Earthworks detail rate was applied locally, but cloud save failed. Do not log out yet."
+                            )
 
         with st.expander("Harga Fondasi & Struktur", expanded=True):
             c1, c2, c3 = st.columns(3)
