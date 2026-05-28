@@ -2790,6 +2790,33 @@ def calculate_earthwork_detail(rows, gba):
 
     return cleaned_rows, detail_total, derived_unit_price
 
+def get_earthwork_price_difference_status(curr_proj, gba):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    derived_rate = _safe_float(data.get("earthwork_derived_unit_price", 0.0))
+    current_rate = _safe_float(data.get("u_earth", 0.0))
+    detail_total = _safe_float(data.get("earthwork_detail_total", 0.0))
+    gba = _safe_float(gba)
+
+    current_total = gba * current_rate
+    rate_difference = derived_rate - current_rate
+    total_difference = current_total - detail_total
+
+    has_difference = (
+        detail_total > 0
+        and derived_rate > 0
+        and abs(rate_difference) > 1
+    )
+
+    return {
+        "has_difference": has_difference,
+        "derived_rate": derived_rate,
+        "current_rate": current_rate,
+        "rate_difference": rate_difference,
+        "detail_total": detail_total,
+        "current_total": current_total,
+        "total_difference": total_difference,
+    }
+
 from project_database import PROJECT_DATABASE
 
 #region --- DO NOT CHANGE#2 (OR I WILL KICK YOUR FACE)---
@@ -4297,9 +4324,10 @@ def show_area_calculator():
             "Edit here first. Calculations and cost sync will not update until you click Save Change."
         )
 
-        st.markdown("##### Excel Form")
-
-        with st.expander("Download Excel Input Form", expanded=False):
+        with st.expander(
+            "Excel Form",
+            expanded=bool(st.session_state.get("earthwork_import_warning")),
+        ):
             fcol1, fcol2, fcol3, fcol4 = st.columns(4)
 
             include_roof_machine = fcol1.checkbox(
@@ -4388,144 +4416,193 @@ def show_area_calculator():
                 width="stretch",
             )
 
-        st.markdown("##### Excel Import / Export")
-
-        uploaded_excel = st.file_uploader(
-            "Upload Area Calculator Excel Form",
-            type=["xlsx"],
-            key=f"area_excel_upload_{curr_id}",
-            help="Upload the Excel form generated from this app.",
-        )
-
-        if uploaded_excel is not None:
-            import_clicked = st.button(
-                "Import Excel to Area Calculator",
-                type="primary",
-                key=f"import_area_excel_{curr_id}",
-                width="stretch",
+            uploaded_excel = st.file_uploader(
+                "Upload Area Calculator Excel Form",
+                type=["xlsx"],
+                key=f"area_excel_upload_{curr_id}",
+                help="Upload the Excel form generated from this app.",
             )
 
-            if import_clicked:
-                excel_bytes = uploaded_excel.getvalue()
+            if uploaded_excel is not None:
+                import_clicked = st.button(
+                    "Import Excel to Area Calculator",
+                    type="primary",
+                    key=f"import_area_excel_{curr_id}",
+                    width="stretch",
+                )
 
-                try:
-                    imported_area_records = read_area_input_sheet(excel_bytes)
-                    st.write("Imported area rows:", len(imported_area_records))
-                    st.dataframe(pd.DataFrame(imported_area_records).head(10), width="stretch")
+                if import_clicked:
+                    excel_bytes = uploaded_excel.getvalue()
 
-                    if not imported_area_records:
-                        st.error("Excel import failed: no area rows found in Area Input.")
-                        st.stop()
-
-                    imported_area_df = calculate_area_dataframe(imported_area_records)
-
-                    imported_door_records = read_pintu_sheet(
-                        excel_bytes,
-                        area_df=imported_area_df,
-                    )
-
-                    imported_external_records, imported_landscape_data = read_external_sheet(
-                        excel_bytes
-                    )
-
-                    imported_res_fac_records = read_residential_area_sheet(excel_bytes)
-
-                    imported_earthwork_rows = None
                     try:
-                        imported_earthwork_rows = read_earthworks_sheet(excel_bytes)
+                        imported_area_records = read_area_input_sheet(excel_bytes)
+                        st.write("Imported area rows:", len(imported_area_records))
+                        st.dataframe(pd.DataFrame(imported_area_records).head(10), width="stretch")
+
+                        if not imported_area_records:
+                            st.error("Excel import failed: no area rows found in Area Input.")
+                            st.stop()
+
+                        imported_area_df = calculate_area_dataframe(imported_area_records)
+
+                        imported_door_records = read_pintu_sheet(
+                            excel_bytes,
+                            area_df=imported_area_df,
+                        )
+
+                        imported_external_records, imported_landscape_data = read_external_sheet(
+                            excel_bytes
+                        )
+
+                        imported_res_fac_records = read_residential_area_sheet(excel_bytes)
+
+                        imported_earthwork_rows = None
+                        try:
+                            imported_earthwork_rows = read_earthworks_sheet(excel_bytes)
+                        except ExcelImportError as e:
+                            st.warning(str(e))
+
+                        st.session_state[area_draft_key] = copy.deepcopy(imported_area_records)
+                        st.session_state[area_committed_key] = copy.deepcopy(imported_area_records)
+                        set_data("area_table", copy.deepcopy(imported_area_records))
+
+                        if imported_door_records:
+                            st.session_state[door_draft_key] = copy.deepcopy(imported_door_records)
+                            st.session_state[door_committed_key] = copy.deepcopy(imported_door_records)
+                            curr_proj["data"]["area_door_table_data"] = copy.deepcopy(imported_door_records)
+
+                            door_df_imported = pd.DataFrame(imported_door_records)
+
+                            curr_proj["data"]["area_door_wood_calc"] = (
+                                int(door_df_imported["Pintu Kayu"].sum())
+                                if "Pintu Kayu" in door_df_imported.columns
+                                else 0
+                            )
+
+                            curr_proj["data"]["area_door_steel_calc"] = (
+                                int(door_df_imported["Pintu Besi"].sum())
+                                if "Pintu Besi" in door_df_imported.columns
+                                else 0
+                            )
+
+                            curr_proj["data"]["area_door_glass_calc"] = (
+                                int(door_df_imported["Pintu Kaca"].sum())
+                                if "Pintu Kaca" in door_df_imported.columns
+                                else 0
+                            )
+
+                        if imported_external_records:
+                            external_key = f"external_table_{curr_id}"
+                            st.session_state[external_key] = copy.deepcopy(imported_external_records)
+                            curr_proj["data"]["area_external_table_data"] = copy.deepcopy(
+                                imported_external_records
+                            )
+
+                        for k, v in imported_landscape_data.items():
+                            curr_proj["data"][k] = v
+
+                        if imported_res_fac_records:
+                            res_fac_key = f"res_fac_table_{curr_id}"
+                            st.session_state[res_fac_key] = copy.deepcopy(imported_res_fac_records)
+                            curr_proj["data"]["area_res_fac_table_data"] = copy.deepcopy(
+                                imported_res_fac_records
+                            )
+
+                        if imported_earthwork_rows is not None:
+                            earthwork_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                            if earthwork_import_gba <= 0:
+                                earthwork_import_gba = safe_sum(imported_area_df, "GBA")
+
+                            (
+                                imported_earthwork_rows,
+                                imported_earthwork_total,
+                                imported_earthwork_derived_unit_price,
+                            ) = calculate_earthwork_detail(imported_earthwork_rows, earthwork_import_gba)
+
+                            curr_proj["data"]["earthwork_detail_enabled"] = True
+                            curr_proj["data"]["earthwork_detail_rows"] = imported_earthwork_rows
+                            curr_proj["data"]["earthwork_detail_total"] = imported_earthwork_total
+                            curr_proj["data"]["earthwork_derived_unit_price"] = imported_earthwork_derived_unit_price
+
+                            earthwork_diff_status = get_earthwork_price_difference_status(
+                                curr_proj,
+                                earthwork_import_gba,
+                            )
+
+                            if earthwork_diff_status["has_difference"]:
+                                st.session_state["earthwork_import_warning"] = {
+                                    "derived_rate": earthwork_diff_status["derived_rate"],
+                                    "current_rate": earthwork_diff_status["current_rate"],
+                                    "rate_difference": earthwork_diff_status["rate_difference"],
+                                    "detail_total": earthwork_diff_status["detail_total"],
+                                    "current_total": earthwork_diff_status["current_total"],
+                                    "total_difference": earthwork_diff_status["total_difference"],
+                                }
+                            else:
+                                st.session_state.pop("earthwork_import_warning", None)
+
+                        clear_area_editor_state()
+
+                        for stale_key in [
+                            door_editor_key,
+                            f"other_external_editor_{curr_id}",
+                            f"res_fac_editor_{curr_id}",
+                            f"earthwork_detail_editor_{curr_id}",
+                        ]:
+                            if stale_key in st.session_state:
+                                del st.session_state[stale_key]
+
+                        save_ok = save_after_user_action("Area Excel Import")
+
+                        if save_ok:
+                            st.success(
+                                f"Excel imported successfully. "
+                                f"{len(imported_area_records)} area rows loaded."
+                            )
+                            st.rerun()
+                        else:
+                            st.error("Cloud save failed. Imported area data changed locally, but was not saved. Do not log out yet.")
+
                     except ExcelImportError as e:
-                        st.warning(str(e))
+                        st.error(f"Excel import failed: {e}")
+                    except Exception as e:
+                        st.error("Excel import failed. Please upload a valid .xlsx file generated from this app.")
+                        with st.expander("Technical details"):
+                            st.code(str(e))
 
-                    st.session_state[area_draft_key] = copy.deepcopy(imported_area_records)
-                    st.session_state[area_committed_key] = copy.deepcopy(imported_area_records)
-                    set_data("area_table", copy.deepcopy(imported_area_records))
+            earthwork_import_warning = st.session_state.get("earthwork_import_warning")
+            if isinstance(earthwork_import_warning, dict):
+                warning_derived_rate = _safe_float(
+                    earthwork_import_warning.get(
+                        "derived_rate",
+                        curr_proj.get("data", {}).get("earthwork_derived_unit_price", 0.0),
+                    )
+                )
 
-                    if imported_door_records:
-                        st.session_state[door_draft_key] = copy.deepcopy(imported_door_records)
-                        st.session_state[door_committed_key] = copy.deepcopy(imported_door_records)
-                        curr_proj["data"]["area_door_table_data"] = copy.deepcopy(imported_door_records)
+                project_type = curr_proj.get("type", "")
+                database_price = _safe_float(
+                    PROJECT_DATABASE.get(project_type, {}).get("struc_earth", 0.0)
+                )
 
-                        door_df_imported = pd.DataFrame(imported_door_records)
+                warn_col, dismiss_col = st.columns([5, 1])
 
-                        curr_proj["data"]["area_door_wood_calc"] = (
-                            int(door_df_imported["Pintu Kayu"].sum())
-                            if "Pintu Kayu" in door_df_imported.columns
-                            else 0
-                        )
+                with warn_col:
+                    st.warning(
+                        f"Default Earthwork rate from database for {project_type} is "
+                        f"Rp {database_price:,.0f}/m2. "
+                        f"Your Earthworks detail calculation is "
+                        f"Rp {warning_derived_rate:,.0f}/m2. "
+                        "Review before finalizing Cost Analysis."
+                    )
 
-                        curr_proj["data"]["area_door_steel_calc"] = (
-                            int(door_df_imported["Pintu Besi"].sum())
-                            if "Pintu Besi" in door_df_imported.columns
-                            else 0
-                        )
-
-                        curr_proj["data"]["area_door_glass_calc"] = (
-                            int(door_df_imported["Pintu Kaca"].sum())
-                            if "Pintu Kaca" in door_df_imported.columns
-                            else 0
-                        )
-
-                    if imported_external_records:
-                        external_key = f"external_table_{curr_id}"
-                        st.session_state[external_key] = copy.deepcopy(imported_external_records)
-                        curr_proj["data"]["area_external_table_data"] = copy.deepcopy(
-                            imported_external_records
-                        )
-
-                    for k, v in imported_landscape_data.items():
-                        curr_proj["data"][k] = v
-
-                    if imported_res_fac_records:
-                        res_fac_key = f"res_fac_table_{curr_id}"
-                        st.session_state[res_fac_key] = copy.deepcopy(imported_res_fac_records)
-                        curr_proj["data"]["area_res_fac_table_data"] = copy.deepcopy(
-                            imported_res_fac_records
-                        )
-
-                    if imported_earthwork_rows is not None:
-                        earthwork_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
-                        if earthwork_import_gba <= 0:
-                            earthwork_import_gba = safe_sum(imported_area_df, "GBA")
-
-                        (
-                            imported_earthwork_rows,
-                            imported_earthwork_total,
-                            imported_earthwork_derived_unit_price,
-                        ) = calculate_earthwork_detail(imported_earthwork_rows, earthwork_import_gba)
-
-                        curr_proj["data"]["earthwork_detail_enabled"] = True
-                        curr_proj["data"]["earthwork_detail_rows"] = imported_earthwork_rows
-                        curr_proj["data"]["earthwork_detail_total"] = imported_earthwork_total
-                        curr_proj["data"]["earthwork_derived_unit_price"] = imported_earthwork_derived_unit_price
-
-                    clear_area_editor_state()
-
-                    for stale_key in [
-                        door_editor_key,
-                        f"other_external_editor_{curr_id}",
-                        f"res_fac_editor_{curr_id}",
-                        f"earthwork_detail_editor_{curr_id}",
-                    ]:
-                        if stale_key in st.session_state:
-                            del st.session_state[stale_key]
-
-                    save_ok = save_after_user_action("Area Excel Import")
-
-                    if save_ok:
-                        st.success(
-                            f"Excel imported successfully. "
-                            f"{len(imported_area_records)} area rows loaded."
-                        )
+                with dismiss_col:
+                    if st.button(
+                        "Dismiss",
+                        key=f"dismiss_earthwork_import_warning_{curr_id}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.pop("earthwork_import_warning", None)
                         st.rerun()
-                    else:
-                        st.error("Cloud save failed. Imported area data changed locally, but was not saved. Do not log out yet.")
-
-                except ExcelImportError as e:
-                    st.error(f"Excel import failed: {e}")
-                except Exception as e:
-                    st.error("Excel import failed. Please upload a valid .xlsx file generated from this app.")
-                    with st.expander("Technical details"):
-                        st.code(str(e))
 
         c_gen, c_reset = st.columns(2)
 
@@ -5498,6 +5575,22 @@ def show_area_calculator():
         ew_c4.metric("Current Manual Earthwork Price", f"Rp {manual_earthwork_price:,.0f}/m2")
         ew_c5.metric("Current Earthworks Total", f"Rp {current_earthworks_total:,.0f}")
         ew_c6.metric("Difference", f"Rp {earthwork_detail_difference:,.0f}")
+
+        curr_proj["data"]["earthwork_detail_total"] = earthwork_detail_total
+        curr_proj["data"]["earthwork_derived_unit_price"] = earthwork_derived_unit_price
+        earthwork_diff_status = get_earthwork_price_difference_status(curr_proj, earthwork_gba)
+
+        if earthwork_diff_status["has_difference"]:
+            st.warning(
+                "Earthworks detail has changed. "
+                f"Derived Earthwork Price is Rp {earthwork_diff_status['derived_rate']:,.0f}/m2, "
+                f"while Cost Analysis currently uses Rp {earthwork_diff_status['current_rate']:,.0f}/m2. "
+                "Cost Analysis has not been updated automatically."
+            )
+            diff_c1, diff_c2, diff_c3 = st.columns(3)
+            diff_c1.metric("Difference per m2", f"Rp {earthwork_diff_status['rate_difference']:,.0f}/m2")
+            diff_c2.metric("Earthworks Detail Total", f"Rp {earthwork_diff_status['detail_total']:,.0f}")
+            diff_c3.metric("Current Total Difference", f"Rp {earthwork_diff_status['total_difference']:,.0f}")
 
         save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
 
