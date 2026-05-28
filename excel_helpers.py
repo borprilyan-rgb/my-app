@@ -556,7 +556,14 @@ def read_earthworks_sheet(excel_bytes):
         if code in ["", "-", "nan", "None"] and description in ["", "-", "nan", "None"]:
             continue
 
-        if code.upper() in ["TOTAL", "GRAND TOTAL"] or description.upper() in ["TOTAL", "GRAND TOTAL"]:
+        summary_labels = {
+            "TOTAL",
+            "GRAND TOTAL",
+            "GBA",
+            "EARTHWORKS DETAIL TOTAL",
+            "DERIVED EARTHWORK PRICE",
+        }
+        if code.upper() in summary_labels or description.upper() in summary_labels:
             continue
 
         unit = str(row.get(unit_col, "")).strip().lower()
