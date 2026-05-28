@@ -1022,7 +1022,7 @@ def overwrite_current_snapshot():
     snapshot_name = st.session_state.get("loaded_snapshot_name")
 
     if not snapshot_id:
-        st.error("No archive linked. Use Archive > Save As first.")
+        st.error("No archive linked. Use Archive > Online Backup > Save first.")
         return False
 
     authed_client, user_id = _get_authed_snapshot_client()
@@ -2950,7 +2950,7 @@ def render_feasibility_study_landing(): #start page
                     # Usually default = Hotel
                     if create_new_feasibility_study(study_name):
                         st.session_state.fs_landing_mode = None
-                        st.success(f"Started local study **{study_name.strip()}**. Use Archive > Save to save it.")
+                        st.success(f"Started local study **{study_name.strip()}**. Use Archive > Online Backup > Save to archive it.")
                         st.rerun()
     
     snapshots = load_snapshots()
@@ -7909,7 +7909,7 @@ def show_snapshots():
             else:
                 save_name = unique_snapshot_name(snapshot_name)
                 if save_snapshot(save_name):
-                    st.success(f"Project **{save_name}** saved!")
+                    st.success(f"Study **{save_name}** saved to archive.")
                     st.rerun()
 
         st.divider()
