@@ -280,6 +280,7 @@ def build_app_payload():
         "projects": st.session_state.get("projects", make_default_projects()),
         "current_proj_id": curr_id,
         "proj_counter": st.session_state.get("proj_counter", 1),
+        "current_study_name": st.session_state.get("current_study_name"),
 
         "loaded_snapshot_id": st.session_state.get("loaded_snapshot_id"),
         "loaded_snapshot_name": st.session_state.get("loaded_snapshot_name"),
@@ -301,6 +302,7 @@ APP_KEYS = {
     "projects": "projects",
     "current_proj_id": "current_proj_id",
     "proj_counter": "proj_counter",
+    "current_study_name": "current_study_name",
 
     # Auth / cloud
     "logged_in": "logged_in",
@@ -447,6 +449,27 @@ def make_default_projects():
             "data": {}
         }
     }
+
+def resolve_current_study_name(projects=None, fallback="Untitled Study"):
+    name = st.session_state.get("current_study_name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+
+    archive_name = st.session_state.get("loaded_snapshot_name")
+    if isinstance(archive_name, str) and archive_name.strip():
+        return archive_name.strip()
+
+    if projects is None:
+        projects = st.session_state.get("projects", {})
+
+    if isinstance(projects, dict) and projects:
+        first_project = next(iter(projects.values()), {})
+        if isinstance(first_project, dict):
+            project_name = first_project.get("name")
+            if isinstance(project_name, str) and project_name.strip():
+                return project_name.strip()
+
+    return fallback
 
 def repair_projects_state(save=False):
     projects = st.session_state.get("projects", {})
@@ -623,6 +646,7 @@ def clear_project_ui_cache():
         APP_KEYS["projects"],
         APP_KEYS["current_proj_id"],
         APP_KEYS["proj_counter"],
+        APP_KEYS["current_study_name"],
         APP_KEYS["logged_in"],
         APP_KEYS["access_token"],
         APP_KEYS["user"],
@@ -659,6 +683,7 @@ def clear_project_ui_cache_for_ids(project_ids):
         APP_KEYS["projects"],
         APP_KEYS["current_proj_id"],
         APP_KEYS["proj_counter"],
+        APP_KEYS["current_study_name"],
         APP_KEYS["logged_in"],
         APP_KEYS["access_token"],
         APP_KEYS["user"],
@@ -727,6 +752,16 @@ def restore_app_payload(data):
     # Active archive reference
     st.session_state.loaded_snapshot_id = data.get("loaded_snapshot_id")
     st.session_state.loaded_snapshot_name = data.get("loaded_snapshot_name")
+
+    current_study_name = data.get("current_study_name")
+    if isinstance(current_study_name, str) and current_study_name.strip():
+        st.session_state.current_study_name = current_study_name.strip()
+    else:
+        if "current_study_name" in st.session_state:
+            del st.session_state["current_study_name"]
+        st.session_state.current_study_name = resolve_current_study_name(
+            st.session_state.projects
+        )
 
     # Optional backward compatibility aliases
     st.session_state.port_meta = st.session_state.report_config["port_meta"]
@@ -1006,6 +1041,7 @@ def save_snapshot(snapshot_name):
         if response.data:
             st.session_state.loaded_snapshot_id = response.data[0].get("id")
             st.session_state.loaded_snapshot_name = response.data[0].get("snapshot_name", snapshot_name)
+            st.session_state.current_study_name = st.session_state.loaded_snapshot_name
 
         save_data()
         return True
@@ -1092,6 +1128,7 @@ def rename_snapshot(snapshot_id, new_name):
 
         if st.session_state.get("loaded_snapshot_id") == snapshot_id:
             st.session_state.loaded_snapshot_name = clean_name
+            st.session_state.current_study_name = clean_name
             save_data()
 
         return True
@@ -1131,6 +1168,7 @@ def overwrite_snapshot(snapshot_id, snapshot_name=None):
 
         if snapshot_name is not None and str(snapshot_name).strip() != "":
             st.session_state.loaded_snapshot_name = str(snapshot_name).strip()
+            st.session_state.current_study_name = st.session_state.loaded_snapshot_name
 
         return True
 
@@ -1173,6 +1211,7 @@ def load_snapshot_data(snapshot_id):
         if response.data:
             st.session_state.loaded_snapshot_id = snapshot_id
             st.session_state.loaded_snapshot_name = response.data[0].get("snapshot_name", "")
+            st.session_state.current_study_name = st.session_state.loaded_snapshot_name
             return response.data[0]["data"]
 
     except Exception as e:
@@ -1205,6 +1244,8 @@ def delete_snapshot(snapshot_id):
         if st.session_state.get("loaded_snapshot_id") == snapshot_id:
             st.session_state.loaded_snapshot_id = None
             st.session_state.loaded_snapshot_name = None
+            if not st.session_state.get("current_study_name"):
+                st.session_state.current_study_name = resolve_current_study_name()
 
         return True
 
@@ -1625,6 +1666,7 @@ def run_payload_debug_checks():
         "projects",
         "current_proj_id",
         "proj_counter",
+        "current_study_name",
         "loaded_snapshot_id",
         "loaded_snapshot_name",
         "report_config"
@@ -2550,6 +2592,7 @@ def render_app_debugger():
                 "user_id": _debug_user_id(),
                 "access_token": _debug_mask(st.session_state.get("access_token")),
                 "session_fingerprint": _debug_mask(st.session_state.get("session_fingerprint")),
+                "current_study_name": st.session_state.get("current_study_name"),
                 "loaded_snapshot_id": st.session_state.get("loaded_snapshot_id"),
                 "loaded_snapshot_name": st.session_state.get("loaded_snapshot_name"),
                 "current_proj_id": st.session_state.get("current_proj_id"),
@@ -2744,6 +2787,8 @@ def create_new_feasibility_study(study_name, project_type="Hotel"):
         st.error("Please enter feasibility study name.")
         return False
 
+    st.session_state.current_study_name = clean_name
+
     st.session_state.projects = {
         "proj_1": {
             "name": clean_name,
@@ -2760,7 +2805,7 @@ def create_new_feasibility_study(study_name, project_type="Hotel"):
 
     st.session_state.report_config = copy.deepcopy(DEFAULT_REPORT_CONFIG)
 
-    safe_keys = {"projects", "current_proj_id", "proj_counter"}
+    safe_keys = {"projects", "current_proj_id", "proj_counter", "current_study_name"}
     keys_to_clear = [
         k for k in st.session_state.keys()
         if "base_table_" in k
@@ -3023,6 +3068,7 @@ def render_feasibility_study_landing(): #start page
 
                         st.session_state.loaded_snapshot_id = snap_id
                         st.session_state.loaded_snapshot_name = snap_name
+                        st.session_state.current_study_name = snap_name
                         st.session_state.fs_landing_mode = None
 
                         save_data()
@@ -7995,6 +8041,7 @@ def show_snapshots():
 
                             st.session_state.loaded_snapshot_id = snap_id
                             st.session_state.loaded_snapshot_name = snap["snapshot_name"]
+                            st.session_state.current_study_name = snap["snapshot_name"]
 
                             save_data()
                             st.success(f"Loaded **{snap['snapshot_name']}**.")
@@ -8044,6 +8091,8 @@ def show_snapshots():
                             if st.session_state.get("loaded_snapshot_id") == snap_id:
                                 st.session_state.loaded_snapshot_id = None
                                 st.session_state.loaded_snapshot_name = None
+                                if not st.session_state.get("current_study_name"):
+                                    st.session_state.current_study_name = resolve_current_study_name()
                                 save_data()
 
                             st.session_state[delete_key] = False
@@ -8439,11 +8488,14 @@ def main_app():
     active_archive_id = st.session_state.get("loaded_snapshot_id")
     active_archive_name = st.session_state.get("loaded_snapshot_name")
     active_file_name = st.session_state.get("loaded_snapshot_name")
+    current_study_name = resolve_current_study_name()
+    st.session_state.current_study_name = current_study_name
 
+    st.sidebar.caption(f"Current study: {current_study_name}")
     if active_archive_id and active_archive_name:
-        st.sidebar.caption(f"Loaded study: {active_archive_name}")
+        st.sidebar.caption("Status: Linked to archive")
     else:
-        st.sidebar.caption("Loaded study: Unsaved / not linked")
+        st.sidebar.caption("Status: Unsaved / not archived")
 
     on = st.sidebar.toggle("Show detailed control.")
     if on:
