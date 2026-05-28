@@ -1023,6 +1023,7 @@ def save_snapshot(snapshot_name):
     if not authed_client or not user_id:
         return False
 
+    st.session_state.current_study_name = snapshot_name
     payload = build_app_payload()
 
     try:
@@ -8087,10 +8088,10 @@ def show_snapshots():
                         st.caption("This archived file will be removed from the library.")
 
                     if col2.button("Confirm", key=f"delete_confirm_{snap_id}", type="primary", width="stretch"):
+                        was_active = st.session_state.get("loaded_snapshot_id") == snap_id
+
                         if delete_snapshot(snap_id):
-                            if st.session_state.get("loaded_snapshot_id") == snap_id:
-                                st.session_state.loaded_snapshot_id = None
-                                st.session_state.loaded_snapshot_name = None
+                            if was_active:
                                 if not st.session_state.get("current_study_name"):
                                     st.session_state.current_study_name = resolve_current_study_name()
                                 save_data()
