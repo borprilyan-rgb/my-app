@@ -2776,7 +2776,13 @@ def create_new_feasibility_study(study_name, project_type="Hotel"):
         if k not in safe_keys:
             del st.session_state[k]
 
-    return save_snapshot(clean_name)
+    for stale_key in ["summary_calculations", "recap_math_engine", "project_selector"]:
+        if stale_key in st.session_state:
+            del st.session_state[stale_key]
+
+    clear_project_ui_cache()
+
+    return True
 
 def generate_excel_template():
     """Generates an Excel template in memory with formatting and data validation."""
@@ -2944,7 +2950,7 @@ def render_feasibility_study_landing(): #start page
                     # Usually default = Hotel
                     if create_new_feasibility_study(study_name):
                         st.session_state.fs_landing_mode = None
-                        st.success(f"Created **{study_name.strip()}**.")
+                        st.success(f"Started local study **{study_name.strip()}**. Use Archive > Save to save it.")
                         st.rerun()
     
     snapshots = load_snapshots()
@@ -7846,28 +7852,70 @@ def show_snapshots():
                                 st.rerun()
 
     with atab1:
-        # --- SAVE NEW SNAPSHOT ---
+        # --- CREATE LOCAL STUDY / SAVE NEW SNAPSHOT ---
         st.header("Online Backup")
         st.subheader("Create New Study")
+
+        snapshots = load_snapshots()
+
+        def unique_snapshot_name(base_name):
+            clean_base = str(base_name).strip()
+            existing_names = {
+                str(snap.get("snapshot_name", "")).strip()
+                for snap in snapshots
+                if isinstance(snap, dict)
+            }
+
+            if clean_base not in existing_names:
+                return clean_base
+
+            idx = 1
+            while f"{clean_base} ({idx})" in existing_names:
+                idx += 1
+
+            return f"{clean_base} ({idx})"
+
+        projects = st.session_state.get("projects", {})
+        curr_id = st.session_state.get("current_proj_id")
+        has_active_working_study = (
+            isinstance(projects, dict)
+            and len(projects) > 0
+            and curr_id in projects
+        )
+
         col1, _ = st.columns([4, 3])
         snapshot_name = col1.text_input(
             "Name", 
             placeholder="e.g. Project X - Opt 1 - Rev 0"
         )
-        col1, _ = st.columns([1, 6])
-        if col1.button("Save", width="stretch", icon=icon_safe("save_as")):
+        col_create, col_save, _ = st.columns([1, 1, 5])
+
+        if col_create.button("Create New", width="stretch", icon=icon_safe("create_new_folder")):
             if snapshot_name.strip() == "":
-                col1.warning("Please enter Project name.")
+                col_create.warning("Please enter Project name.")
             else:
-                if save_snapshot(snapshot_name):
-                    st.success(f"Project **{snapshot_name}** saved!")
+                if create_new_feasibility_study(snapshot_name):
+                    st.success(f"Started local study **{snapshot_name.strip()}**. Use Save to archive it.")
+                    st.rerun()
+
+        if col_save.button(
+            "Save",
+            width="stretch",
+            icon=icon_safe("save_as"),
+            disabled=not has_active_working_study,
+        ):
+            if snapshot_name.strip() == "":
+                col_save.warning("Please enter Project name.")
+            else:
+                save_name = unique_snapshot_name(snapshot_name)
+                if save_snapshot(save_name):
+                    st.success(f"Project **{save_name}** saved!")
                     st.rerun()
 
         st.divider()
 
         # --- LIST EXISTING SNAPSHOTS ---
         st.subheader("Load File")
-        snapshots = load_snapshots()
 
         if not snapshots:
             st.info("No saved projects yet.")
@@ -8391,6 +8439,11 @@ def main_app():
     active_archive_id = st.session_state.get("loaded_snapshot_id")
     active_archive_name = st.session_state.get("loaded_snapshot_name")
     active_file_name = st.session_state.get("loaded_snapshot_name")
+
+    if active_archive_id and active_archive_name:
+        st.sidebar.caption(f"Loaded study: {active_archive_name}")
+    else:
+        st.sidebar.caption("Loaded study: Unsaved / not linked")
 
     on = st.sidebar.toggle("Show detailed control.")
     if on:
