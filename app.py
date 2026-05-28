@@ -2817,6 +2817,39 @@ def get_earthwork_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
+def build_detail_rate_review_rows(curr_proj, gba):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    gba = _safe_float(gba)
+
+    current_rate = _safe_float(data.get("u_earth", 0.0))
+    derived_rate = _safe_float(data.get("earthwork_derived_unit_price", 0.0))
+    detail_total = _safe_float(data.get("earthwork_detail_total", 0.0))
+    current_total = gba * current_rate
+    rate_difference = derived_rate - current_rate
+    total_difference = detail_total - current_total
+
+    if detail_total <= 0:
+        status = "No detail / zero detail"
+    elif abs(rate_difference) <= 1:
+        status = "Matching"
+    else:
+        status = "Different"
+
+    return [
+        {
+            "Section": "Earthworks",
+            "Cost Key": "u_earth",
+            "Basis": "GBA",
+            "Current Cost Rate": current_rate,
+            "Detail-Derived Rate": derived_rate,
+            "Difference / Unit": rate_difference,
+            "Detail Total": detail_total,
+            "Current Total": current_total,
+            "Difference Total": total_difference,
+            "Status": status,
+        }
+    ]
+
 from project_database import PROJECT_DATABASE
 
 #region --- DO NOT CHANGE#2 (OR I WILL KICK YOUR FACE)---
@@ -6258,6 +6291,49 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
 
     # --- TAB 3: UNIT RATES ---
     with tab4:
+        with st.expander("Detail-Derived Rate Review", expanded=True):
+            detail_rate_review_rows = build_detail_rate_review_rows(curr_proj, gba)
+            detail_rate_review_df = pd.DataFrame(detail_rate_review_rows)
+
+            st.caption("Review only. Detail-derived rates are not applied to Cost Analysis automatically.")
+            st.dataframe(
+                detail_rate_review_df,
+                hide_index=True,
+                width="stretch",
+                column_config={
+                    "Current Cost Rate": st.column_config.NumberColumn(
+                        "Current Cost Rate",
+                        format="Rp %.0f",
+                    ),
+                    "Detail-Derived Rate": st.column_config.NumberColumn(
+                        "Detail-Derived Rate",
+                        format="Rp %.0f",
+                    ),
+                    "Difference / Unit": st.column_config.NumberColumn(
+                        "Difference / Unit",
+                        format="Rp %.0f",
+                    ),
+                    "Detail Total": st.column_config.NumberColumn(
+                        "Detail Total",
+                        format="Rp %.0f",
+                    ),
+                    "Current Total": st.column_config.NumberColumn(
+                        "Current Total",
+                        format="Rp %.0f",
+                    ),
+                    "Difference Total": st.column_config.NumberColumn(
+                        "Difference Total",
+                        format="Rp %.0f",
+                    ),
+                },
+            )
+
+            if any(row.get("Status") == "Different" for row in detail_rate_review_rows):
+                st.warning(
+                    "Earthworks detail-derived rate differs from the current Cost Analysis Earthwork Rate. "
+                    "Cost Analysis has not been updated automatically."
+                )
+
         with st.expander("Harga Fondasi & Struktur", expanded=True):
             c1, c2, c3 = st.columns(3)
             struc_earth = c1.number_input("Earthwork Rate (Rp)", value=get_val("u_earth", pt_data["struc_earth"]), key=f"u_earth_{curr_type_key}")
