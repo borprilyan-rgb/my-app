@@ -10,6 +10,11 @@ from openpyxl.chart import BarChart, Reference
 from area_helpers import clean_area_records, clean_door_records
 
 
+class ExcelImportError(Exception):
+    """User-facing Excel import validation error."""
+    pass
+
+
 def _excel_norm_col(x):
     return (
         str(x)
@@ -56,12 +61,23 @@ def _read_excel_sheet_with_header(excel_bytes, sheet_name, header_candidates):
     Prefer hidden stable import key row if available.
     This avoids reading the pretty merged header row as the real header.
     """
-    raw = pd.read_excel(
-        io.BytesIO(excel_bytes),
-        sheet_name=sheet_name,
-        header=None,
-        engine="openpyxl",
-    )
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name=sheet_name,
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError as e:
+        if sheet_name in str(e):
+            raise ExcelImportError(f'The workbook must contain an "{sheet_name}" sheet.') from e
+        raise ExcelImportError(
+            "Could not read the workbook. Please upload a valid .xlsx file generated from this app."
+        ) from e
+    except Exception as e:
+        raise ExcelImportError(
+            "Could not read the workbook. Please upload a valid .xlsx file generated from this app."
+        ) from e
 
     header_row_idx = None
 
@@ -114,13 +130,20 @@ def _read_excel_sheet_with_header(excel_bytes, sheet_name, header_candidates):
                 break
 
     if header_row_idx is None:
-        header_row_idx = 2
+        raise ExcelImportError(
+            "Could not find the header row. Please use the latest downloaded Excel template."
+        )
 
     df = raw.iloc[header_row_idx + 1:].copy()
     df.columns = raw.iloc[header_row_idx].tolist()
 
     df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
     df = df.dropna(how="all").reset_index(drop=True)
+
+    if df.empty:
+        raise ExcelImportError(
+            f'The "{sheet_name}" sheet is empty after the header row. Please use the latest downloaded Excel template.'
+        )
 
     # Remove accidental repeated header rows.
     if "FL" in df.columns:
@@ -155,6 +178,20 @@ def read_area_input_sheet(excel_bytes):
     gfa_col = _excel_find_col(df, ["GFA"])
     sgfa_col = _excel_find_col(df, ["SGFA", "SG FA"])
     nfa_col = _excel_find_col(df, ["NFA"])
+
+    missing_required = []
+    if not fl_col:
+        missing_required.append("FL")
+    if not space_col:
+        missing_required.append("Space Type")
+    if not unit_col:
+        missing_required.append("Unit Area")
+
+    if missing_required:
+        raise ExcelImportError(
+            'The "Area Input" sheet is missing required columns: '
+            f'{", ".join(missing_required)}. Please use the latest downloaded Excel template.'
+        )
 
     records = []
 

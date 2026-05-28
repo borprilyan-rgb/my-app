@@ -16,6 +16,7 @@ from area_helpers import (
 from area_helpers import safe_float as _safe_float
 
 from excel_helpers import (
+    ExcelImportError,
     create_area_excel_form_bytes,
     read_area_input_sheet,
     read_external_sheet,
@@ -4435,8 +4436,12 @@ def show_area_calculator():
                     else:
                         st.error("Cloud save failed. Imported area data changed locally, but was not saved. Do not log out yet.")
 
-                except Exception as e:
+                except ExcelImportError as e:
                     st.error(f"Excel import failed: {e}")
+                except Exception as e:
+                    st.error("Excel import failed. Please upload a valid .xlsx file generated from this app.")
+                    with st.expander("Technical details"):
+                        st.code(str(e))
 
         c_gen, c_reset = st.columns(2)
 
