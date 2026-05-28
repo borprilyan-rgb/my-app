@@ -783,10 +783,14 @@ def calculate_project_totals(pdata, curr_type):
 
     # --- Area Calculations ---
     area_table = get_val("area_table_data", [])
+    table_totals = {
+        "gba": 0.0,
+        "gfa": 0.0,
+        "sgfa": 0.0,
+        "nfa": 0.0,
+    }
+
     if isinstance(area_table, list) and len(area_table) > 0:
-        calc_gba = 0.0
-        calc_gfa = 0.0
-        calc_sgfa = 0.0
         unit_area_col = "Unit Area"
         breakdown_cols = ["Parkir", "Roof/Deck", "MEP Outdoor", "Koridor/Lobby", "Stair, MEP, Etc", unit_area_col, "Office"]
         
@@ -794,14 +798,20 @@ def calculate_project_totals(pdata, curr_type):
             row_total = sum(_safe_float(row.get(c, 0)) for c in breakdown_cols)
             if unit_area_col not in row and "Unit" in row:
                 row_total += _safe_float(row.get("Unit", 0))
-            calc_gba += row_total
-            calc_gfa += row_total - sum(_safe_float(row.get(c, 0)) for c in ["Parkir", "Roof/Deck", "MEP Outdoor"])
+            table_totals["gba"] += row_total
+            table_totals["gfa"] += row_total - sum(_safe_float(row.get(c, 0)) for c in ["Parkir", "Roof/Deck", "MEP Outdoor"])
             unit_area = _safe_float(row.get(unit_area_col, row.get("Unit", 0)))
-            calc_sgfa += unit_area + sum(_safe_float(row.get(c, 0)) for c in ["Office", "Koridor/Lobby"])
-    else:
-        calc_gba = get_val("m_gba", 0.0)
-        calc_gfa = get_val("m_gfa", 0.0)
-        calc_sgfa = get_val("m_sgfa", 0.0)
+            table_totals["sgfa"] += unit_area + sum(_safe_float(row.get(c, 0)) for c in ["Office", "Koridor/Lobby"])
+            table_totals["nfa"] += unit_area + _safe_float(row.get("Office", 0))
+
+    def resolve_area_value(manual_key, table_key):
+        manual_value = _safe_float(get_val(manual_key, 0.0))
+        return manual_value if manual_value > 0 else table_totals[table_key]
+
+    calc_gba = resolve_area_value("m_gba", "gba")
+    calc_gfa = resolve_area_value("m_gfa", "gfa")
+    calc_sgfa = resolve_area_value("m_sgfa", "sgfa")
+    calc_nfa = resolve_area_value("m_nfa", "nfa")
 
     # --- Cost Calculations ---
     struc_earth = get_val("u_earth", pt_data.get("struc_earth", 0))
