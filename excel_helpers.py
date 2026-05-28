@@ -476,12 +476,119 @@ def read_residential_area_sheet(excel_bytes):
 
     return records
 
+
+def _default_earthwork_detail_rows():
+    return [
+        {"code": "1.2.1", "description": "Cut Fill", "unit": "m2", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "1.2.2", "description": "Dewatering", "unit": "ls", "quantity": 1.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "1.2.3", "description": "Soil Improvement", "unit": "m2", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "1.2.4", "description": "Shoring System", "unit": "ls", "quantity": 1.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "1.2.5", "description": "Others", "unit": "ls", "quantity": 1.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+
+def read_earthworks_sheet(excel_bytes):
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="Earthworks",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError:
+        return None
+    except Exception:
+        return None
+
+    header_row_idx = None
+
+    for i in range(min(12, len(raw))):
+        row_norm = [_excel_norm_col(v) for v in raw.iloc[i].tolist()]
+        required_hits = sum(
+            1 for key in ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)"]
+            if _excel_norm_col(key) in row_norm
+        )
+
+        if required_hits >= 4:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ExcelImportError(
+            'The "Earthworks" sheet header could not be read. Earthworks import was skipped.'
+        )
+
+    df = raw.iloc[header_row_idx + 1:].copy()
+    df.columns = raw.iloc[header_row_idx].tolist()
+    df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    code_col = _excel_find_col(df, ["Code", "Item Code"])
+    desc_col = _excel_find_col(df, ["Description", "Item"])
+    unit_col = _excel_find_col(df, ["Unit"])
+    qty_col = _excel_find_col(df, ["Quantity", "Qty"])
+    unit_price_col = _excel_find_col(df, ["Unit Price (Rp)", "Unit Price", "Rate", "Harga"])
+
+    missing = []
+    if not code_col:
+        missing.append("Code")
+    if not desc_col:
+        missing.append("Description")
+    if not unit_col:
+        missing.append("Unit")
+    if not qty_col:
+        missing.append("Quantity")
+    if not unit_price_col:
+        missing.append("Unit Price (Rp)")
+
+    if missing:
+        raise ExcelImportError(
+            'The "Earthworks" sheet is missing required columns: '
+            f'{", ".join(missing)}. Earthworks import was skipped.'
+        )
+
+    rows = []
+
+    for _, row in df.iterrows():
+        code = str(row.get(code_col, "")).strip()
+        description = str(row.get(desc_col, "")).strip()
+
+        if code in ["", "-", "nan", "None"] and description in ["", "-", "nan", "None"]:
+            continue
+
+        if code.upper() in ["TOTAL", "GRAND TOTAL"] or description.upper() in ["TOTAL", "GRAND TOTAL"]:
+            continue
+
+        unit = str(row.get(unit_col, "")).strip().lower()
+        unit = unit if unit in ["m2", "ls"] else "ls"
+
+        raw_quantity = row.get(qty_col, "")
+        quantity_is_blank = raw_quantity is None or str(raw_quantity).strip() in ["", "nan", "None"]
+        quantity = 1.0 if unit == "ls" and quantity_is_blank else _excel_safe_float(raw_quantity, 0.0)
+
+        unit_price = _excel_safe_float(row.get(unit_price_col, 0.0))
+        amount = quantity * unit_price
+
+        rows.append({
+            "code": code,
+            "description": description,
+            "unit": unit,
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return rows
+
+
 def create_area_excel_form_bytes(
     project_name="",
     upper_floors=5,
     basements=1,
     include_roof_machine=True,
     include_roof=True,
+    earthwork_detail_rows=None,
+    earthwork_gba=0.0,
 ):
     output = io.BytesIO()
 
@@ -1026,6 +1133,94 @@ def create_area_excel_form_bytes(
     ws_res.protection.password = "area"
 
     # ==================================================
+    # EARTHWORKS SHEET
+    # ==================================================
+    ws_earth = wb.create_sheet("Earthworks")
+    ws_earth.sheet_view.showGridLines = False
+
+    ws_earth.merge_cells("A1:F1")
+    ws_earth["A1"] = "EARTHWORKS DETAIL BREAKDOWN"
+    ws_earth["A1"].font = Font(bold=True, color=white, size=14)
+    ws_earth["A1"].fill = PatternFill("solid", fgColor=dark)
+    ws_earth["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws_earth.merge_cells("A2:F2")
+    ws_earth["A2"] = "Preview only: this Earthworks breakdown does not control Cost Analysis yet."
+    ws_earth["A2"].font = Font(italic=True, color=dark, size=10)
+    ws_earth["A2"].alignment = Alignment(horizontal="left", vertical="center")
+
+    earth_headers = ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)", "Amount (Rp)"]
+    for c, h in enumerate(earth_headers, start=1):
+        ws_earth.cell(3, c).value = h
+
+    style_range(ws_earth, "A3:F3", dark, font_color=white, bold=True)
+
+    earth_rows = earthwork_detail_rows if isinstance(earthwork_detail_rows, list) and earthwork_detail_rows else _default_earthwork_detail_rows()
+
+    for r, row in enumerate(earth_rows, start=4):
+        row = row if isinstance(row, dict) else {}
+        unit = str(row.get("unit", "ls") or "ls").strip().lower()
+        unit = unit if unit in ["m2", "ls"] else "ls"
+        quantity = _excel_safe_float(row.get("quantity", 1.0 if unit == "ls" else 0.0))
+        unit_price = _excel_safe_float(row.get("unit_price", 0.0))
+
+        ws_earth.cell(r, 1).value = str(row.get("code", "")).strip()
+        ws_earth.cell(r, 2).value = str(row.get("description", "")).strip()
+        ws_earth.cell(r, 3).value = unit
+        ws_earth.cell(r, 4).value = quantity
+        ws_earth.cell(r, 5).value = unit_price
+        ws_earth.cell(r, 6).value = f"=D{r}*E{r}"
+
+    earth_total_row = 4 + len(earth_rows)
+    ws_earth.cell(earth_total_row, 1).value = "TOTAL"
+    ws_earth.cell(earth_total_row, 6).value = f"=SUM(F4:F{earth_total_row - 1})"
+
+    summary_start = earth_total_row + 2
+    ws_earth.cell(summary_start, 1).value = "GBA"
+    ws_earth.cell(summary_start, 2).value = _excel_safe_float(earthwork_gba)
+    ws_earth.cell(summary_start + 1, 1).value = "Earthworks Detail Total"
+    ws_earth.cell(summary_start + 1, 2).value = f"=F{earth_total_row}"
+    ws_earth.cell(summary_start + 2, 1).value = "Derived Earthwork Price"
+    ws_earth.cell(summary_start + 2, 2).value = f"=IF(B{summary_start}>0,B{summary_start + 1}/B{summary_start},0)"
+
+    style_range(ws_earth, f"A4:F{earth_total_row}", None)
+    style_range(ws_earth, f"A{earth_total_row}:F{earth_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_earth, f"A{summary_start}:B{summary_start + 2}", formula_fill, bold=True)
+    style_range(ws_earth, f"F4:F{earth_total_row}", formula_fill)
+
+    lock_range(ws_earth, f"A1:F{summary_start + 2}")
+    unlock_range(ws_earth, f"A4:E{earth_total_row - 1}")
+
+    dv_earth_unit = DataValidation(
+        type="list",
+        formula1='"m2,ls"',
+        allow_blank=False,
+    )
+    ws_earth.add_data_validation(dv_earth_unit)
+    dv_earth_unit.add(f"C4:C{earth_total_row - 1}")
+
+    for col, width in {
+        "A": 12,
+        "B": 28,
+        "C": 12,
+        "D": 14,
+        "E": 18,
+        "F": 18,
+    }.items():
+        ws_earth.column_dimensions[col].width = width
+
+    for row in ws_earth.iter_rows(min_row=4, max_row=summary_start + 2, min_col=4, max_col=6):
+        for cell in row:
+            cell.number_format = '#,##0.00'
+
+    for cell in [ws_earth.cell(summary_start, 2), ws_earth.cell(summary_start + 1, 2), ws_earth.cell(summary_start + 2, 2)]:
+        cell.number_format = '#,##0.00'
+
+    ws_earth.freeze_panes = "A4"
+    ws_earth.protection.sheet = True
+    ws_earth.protection.password = "area"
+
+    # ==================================================
     # IMPORT GUIDE
     # ==================================================
     ws_guide = wb.create_sheet("Import Guide")
@@ -1035,6 +1230,7 @@ def create_area_excel_form_bytes(
         ["Pintu", "Door quantity input", "Floor, Space Type, Height, and Typical Unit are linked from Area Input. Edit only Pintu Kayu, Pintu Besi, Pintu Kaca."],
         ["Eksternal", "External works input", "No, Item, Unit, Qty, Rate"],
         ["Residential Area", "Residential facility input", "No, Item, Unit, Qty, Rate"],
+        ["Earthworks", "Earthworks detail preview input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
     ]
 
     for r, row in enumerate(guide_rows, start=1):

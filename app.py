@@ -19,6 +19,7 @@ from excel_helpers import (
     ExcelImportError,
     create_area_excel_form_bytes,
     read_area_input_sheet,
+    read_earthworks_sheet,
     read_external_sheet,
     read_pintu_sheet,
     read_residential_area_sheet,
@@ -402,6 +403,7 @@ UI_CACHE_PREFIXES = (
     "use_area_analysis_",
     "save_smart_custom_to_cloud_",
     "save_cost_analysis_",
+    "earthwork_detail_",
     "area_editor_",
     "edit_smart_cc_",
     "external_table_",
@@ -2735,6 +2737,59 @@ def n2w(amount):
         return "0"
 #endregion
 
+def get_default_earthwork_detail_rows():
+    return [
+        {"code": "1.2.1", "description": "Cut Fill", "unit": "m2", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "1.2.2", "description": "Dewatering", "unit": "ls", "quantity": 1.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "1.2.3", "description": "Soil Improvement", "unit": "m2", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "1.2.4", "description": "Shoring System", "unit": "ls", "quantity": 1.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "1.2.5", "description": "Others", "unit": "ls", "quantity": 1.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+def clean_earthwork_detail_rows(rows):
+    if isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    if not isinstance(rows, list) or len(rows) == 0:
+        rows = get_default_earthwork_detail_rows()
+
+    cleaned_rows = []
+
+    default_rows = get_default_earthwork_detail_rows()
+
+    for idx, default_row in enumerate(default_rows):
+        row = rows[idx] if idx < len(rows) else {}
+        row = row if isinstance(row, dict) else {}
+        unit = str(row.get("unit", default_row["unit"]) or default_row["unit"]).strip().lower()
+
+        raw_quantity = row.get("quantity", default_row["quantity"])
+        if unit == "ls" and (raw_quantity is None or str(raw_quantity).strip() == ""):
+            quantity = 1.0
+        else:
+            quantity = _safe_float(raw_quantity, default_row["quantity"])
+
+        unit_price = _safe_float(row.get("unit_price", 0.0))
+        amount = quantity * unit_price
+
+        cleaned_rows.append({
+            "code": str(row.get("code", default_row["code"]) or default_row["code"]).strip(),
+            "description": str(row.get("description", default_row["description"]) or default_row["description"]).strip(),
+            "unit": unit,
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return cleaned_rows
+
+def calculate_earthwork_detail(rows, gba):
+    cleaned_rows = clean_earthwork_detail_rows(rows)
+    detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
+    gba = _safe_float(gba)
+    derived_unit_price = detail_total / gba if gba > 0 else 0.0
+
+    return cleaned_rows, detail_total, derived_unit_price
+
 from project_database import PROJECT_DATABASE
 
 #region --- DO NOT CHANGE#2 (OR I WILL KICK YOUR FACE)---
@@ -4214,6 +4269,7 @@ def show_area_calculator():
             "Pintu",
             "Eksternal",
             "Residential Area",
+            "Earthworks",
             "Details",
     ]
 
@@ -4281,6 +4337,11 @@ def show_area_calculator():
                 basements=excel_basements,
                 include_roof_machine=include_roof_machine,
                 include_roof=include_roof,
+                earthwork_detail_rows=curr_proj["data"].get(
+                    "earthwork_detail_rows",
+                    get_default_earthwork_detail_rows(),
+                ),
+                earthwork_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
             )
 
             def safe_filename_part(value, fallback="Unnamed"):
@@ -4369,6 +4430,12 @@ def show_area_calculator():
 
                     imported_res_fac_records = read_residential_area_sheet(excel_bytes)
 
+                    imported_earthwork_rows = None
+                    try:
+                        imported_earthwork_rows = read_earthworks_sheet(excel_bytes)
+                    except ExcelImportError as e:
+                        st.warning(str(e))
+
                     st.session_state[area_draft_key] = copy.deepcopy(imported_area_records)
                     st.session_state[area_committed_key] = copy.deepcopy(imported_area_records)
                     set_data("area_table", copy.deepcopy(imported_area_records))
@@ -4415,12 +4482,29 @@ def show_area_calculator():
                             imported_res_fac_records
                         )
 
+                    if imported_earthwork_rows is not None:
+                        earthwork_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                        if earthwork_import_gba <= 0:
+                            earthwork_import_gba = safe_sum(imported_area_df, "GBA")
+
+                        (
+                            imported_earthwork_rows,
+                            imported_earthwork_total,
+                            imported_earthwork_derived_unit_price,
+                        ) = calculate_earthwork_detail(imported_earthwork_rows, earthwork_import_gba)
+
+                        curr_proj["data"]["earthwork_detail_enabled"] = True
+                        curr_proj["data"]["earthwork_detail_rows"] = imported_earthwork_rows
+                        curr_proj["data"]["earthwork_detail_total"] = imported_earthwork_total
+                        curr_proj["data"]["earthwork_derived_unit_price"] = imported_earthwork_derived_unit_price
+
                     clear_area_editor_state()
 
                     for stale_key in [
                         door_editor_key,
                         f"other_external_editor_{curr_id}",
                         f"res_fac_editor_{curr_id}",
+                        f"earthwork_detail_editor_{curr_id}",
                     ]:
                         if stale_key in st.session_state:
                             del st.session_state[stale_key]
@@ -5346,7 +5430,98 @@ def show_area_calculator():
                 st.error("Cloud save failed. Do not log out yet.")
 
     # ==================================================
-    # TAB 6 - DETAILS
+    # TAB 6 - EARTHWORKS
+    # ==================================================
+    elif area_page == "Earthworks":
+        st.subheader("Area Analysis (Earthworks)")
+        st.caption("Preview only: this Earthworks breakdown does not control Cost Analysis yet.")
+
+        earthwork_detail_enabled = st.checkbox(
+            "Use detailed Earthworks breakdown",
+            value=bool(curr_proj["data"].get("earthwork_detail_enabled", False)),
+            key=f"earthwork_detail_enabled_{curr_id}",
+        )
+
+        saved_earthwork_detail_rows = curr_proj["data"].get(
+            "earthwork_detail_rows",
+            get_default_earthwork_detail_rows(),
+        )
+        earthwork_detail_rows, earthwork_detail_total, earthwork_derived_unit_price = calculate_earthwork_detail(
+            saved_earthwork_detail_rows,
+            _safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
+        )
+
+        edited_earthwork_detail = st.data_editor(
+            pd.DataFrame(earthwork_detail_rows),
+            key=f"earthwork_detail_editor_{curr_id}",
+            hide_index=True,
+            width="stretch",
+            num_rows="fixed",
+            disabled=["amount"],
+            column_config={
+                "code": st.column_config.TextColumn("Item code"),
+                "description": st.column_config.TextColumn("Description"),
+                "unit": st.column_config.SelectboxColumn("Unit", options=["m2", "ls"]),
+                "quantity": st.column_config.NumberColumn("Quantity", min_value=0.0, step=1.0),
+                "unit_price": st.column_config.NumberColumn("Unit Price", min_value=0.0, step=100000.0, format="Rp %.0f"),
+                "amount": st.column_config.NumberColumn("Amount", format="Rp %.0f"),
+            },
+        )
+
+        earthwork_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+        if earthwork_gba <= 0:
+            earthwork_gba = safe_sum(edited_df, "GBA")
+
+        earthwork_detail_rows, earthwork_detail_total, earthwork_derived_unit_price = calculate_earthwork_detail(
+            edited_earthwork_detail,
+            earthwork_gba,
+        )
+
+        manual_earthwork_price = _safe_float(
+            curr_proj["data"].get(
+                "u_earth",
+                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("struc_earth", 0.0),
+            )
+        )
+        current_earthworks_total = earthwork_gba * manual_earthwork_price
+        earthwork_detail_difference = current_earthworks_total - earthwork_detail_total
+
+        if earthwork_detail_enabled and earthwork_gba <= 0:
+            st.warning("Detailed Earthworks preview needs GBA greater than 0 to derive an Earthwork Price.")
+
+        ew_c1, ew_c2, ew_c3 = st.columns(3)
+        ew_c1.metric("GBA", f"{earthwork_gba:,.0f} m2")
+        ew_c2.metric("Earthworks Detail Total", f"Rp {earthwork_detail_total:,.0f}")
+        ew_c3.metric("Derived Earthwork Price", f"Rp {earthwork_derived_unit_price:,.0f}/m2")
+
+        ew_c4, ew_c5, ew_c6 = st.columns(3)
+        ew_c4.metric("Current Manual Earthwork Price", f"Rp {manual_earthwork_price:,.0f}/m2")
+        ew_c5.metric("Current Earthworks Total", f"Rp {current_earthworks_total:,.0f}")
+        ew_c6.metric("Difference", f"Rp {earthwork_detail_difference:,.0f}")
+
+        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
+
+        with save_c1:
+            save_earthwork_detail_clicked = st.button(
+                "Save Earthworks Detail",
+                key=f"earthwork_detail_save_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        if save_earthwork_detail_clicked:
+            curr_proj["data"]["earthwork_detail_enabled"] = earthwork_detail_enabled
+            curr_proj["data"]["earthwork_detail_rows"] = earthwork_detail_rows
+            curr_proj["data"]["earthwork_detail_total"] = earthwork_detail_total
+            curr_proj["data"]["earthwork_derived_unit_price"] = earthwork_derived_unit_price
+
+            save_ok = save_after_user_action("Save Earthworks Detail")
+
+            if save_ok:
+                st.rerun()
+
+    # ==================================================
+    # TAB 7 - DETAILS
     # ==================================================
     elif area_page == "Details":
         st.subheader("Details")
