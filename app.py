@@ -9581,15 +9581,21 @@ Adjust the fields on the left and the preview will update automatically.
         
         # Loop through projects to build the data list
         for sn, (pid, pdata) in enumerate(st.session_state.projects.items(), 1):
-            # Recalculate fresh numbers
-            gba, gfa, sgfa, budget, qty = calculate_project_totals(pdata, pdata.get("type", "Hotel"))
+            d = pdata.get("data", {})
+            ptype = pdata.get("type", "")
+
+            gba = _safe_float(d.get("m_gba", 0.0))
+            gfa = _safe_float(d.get("m_gfa", 0.0))
+            sgfa = _safe_float(d.get("m_sgfa", 0.0))
+            qty = _safe_float(d.get("m_rooms", 0.0))
+            budget = _safe_float(d.get("grand_total_project", 0.0))
             
             raw_data.append({
                 "SN": sn,
                 "AREA": pdata.get("name", f"Project {sn}"),
                 "GBA": gba, "GFA": gfa, "SGFA": sgfa,
                 "QTY": qty, 
-                "UNIT": "Units" if "Hotel" not in pdata.get("type", "") else "RoomKey",
+                "UNIT": "Units" if "Hotel" not in ptype else "RoomKey",
                 "BUDGET": budget,
                 "R_GBA": budget / gba if gba > 0 else 0,
                 "R_GFA": budget / gfa if gfa > 0 else 0,
