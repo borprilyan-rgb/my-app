@@ -5160,50 +5160,119 @@ def show_area_calculator():
     # PAGE SELECTOR
     # ==================================================
     area_page_options = [
+            "Excel",
             "GBA Input",
-            "GBA Summary",
             "Pintu",
             "Eksternal",
-            "Residential Area",
+            "Residential",
             "Earthworks",
-            "Foundation",
             "Structural",
+            "Foundation",
             "Architectural",
-            "Consultancy",
             "FF&E",
             "MEP",
             "Utility",
-            "Details",
+            "Consultancy",
     ]
+
+    area_page_key = f"area_page_{curr_id}"
+    if st.session_state.get(area_page_key) not in [None, *area_page_options]:
+        st.session_state[area_page_key] = "Excel"
 
     if callable(getattr(st, "segmented_control", None)):
         area_page = st.segmented_control(
             "Area Page",
             options=area_page_options,
-            default="GBA Input",
-            key=f"area_page_{curr_id}",
+            default="Excel",
+            key=area_page_key,
         )
     else:
         area_page = st.radio(
             "Area Page",
             options=area_page_options,
             horizontal=True,
-            key=f"area_page_{curr_id}",
+            key=area_page_key,
         )
 
     # ==================================================
-    # TAB 1 - GBA INPUT DRAFT ONLY
+    # TAB 1 - EXCEL FORM
     # ==================================================
-    if area_page == "GBA Input":
-        st.subheader("GBA Input Draft")
+    if area_page == "Excel":
+        st.subheader("Area Analysis (Excel)")
         st.caption(
-            "Edit here first. Calculations and cost sync will not update until you click Save Change."
+            "Download or upload the Area Calculator Excel Form, then review the current values below."
         )
 
-        with st.expander(
-            "Excel Form",
-            expanded=bool(st.session_state.get("earthwork_import_warning")),
-        ):
+        summary_area_totals = calculate_area_totals_from_table(
+            curr_proj["data"].get("area_table_data", [])
+        )
+        summary_residential_total = _safe_float(
+            curr_proj["data"].get("area_res_fac_amount_calc", 0.0)
+        )
+        summary_external_total = _safe_float(
+            curr_proj["data"].get("area_external_amount_calc", 0.0)
+        )
+        summary_external_rate = _safe_float(curr_proj["data"].get("u_ext", 0.0))
+        summary_residential_rate = _safe_float(curr_proj["data"].get("u_fac_res", 0.0))
+        summary_landscape = (
+            summary_external_total / summary_external_rate
+            if summary_external_total > 0 and summary_external_rate > 0
+            else _safe_float(curr_proj["data"].get("area_landscape_qty_calc", 0.0))
+        )
+        summary_residential_facility = (
+            summary_residential_total / summary_residential_rate
+            if summary_residential_total > 0 and summary_residential_rate > 0
+            else 0.0
+        )
+
+        core_summary_df = pd.DataFrame(
+            [
+                {"Item": "Luas Tanah", "Value": _safe_float(curr_proj["data"].get("m_land", 0.0)), "Unit": "m2"},
+                {"Item": "GBA", "Value": summary_area_totals["gba"], "Unit": "m2"},
+                {"Item": "GFA", "Value": summary_area_totals["gfa"], "Unit": "m2"},
+                {"Item": "SGFA", "Value": summary_area_totals["sgfa"], "Unit": "m2"},
+                {"Item": "NFA", "Value": summary_area_totals["nfa"], "Unit": "m2"},
+                {"Item": "Lobby/Koridor", "Value": _safe_float(curr_proj["data"].get("area_lobby_interior_calc", 0.0)), "Unit": "m2"},
+                {"Item": "Rooms/Units", "Value": _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0)), "Unit": "unit"},
+            ]
+        )
+        opening_summary_df = pd.DataFrame(
+            [
+                {"Item": "Facade", "Value": _safe_float(curr_proj["data"].get("area_facade_calc", 0.0)), "Unit": "m2"},
+                {"Item": "Landscape", "Value": summary_landscape, "Unit": "m2"},
+                {"Item": "Residential Facility", "Value": summary_residential_facility, "Unit": "m2"},
+                {"Item": "Railing", "Value": _safe_float(curr_proj["data"].get("area_railing_length_per_room_calc", curr_proj["data"].get("area_panjang_railing", 0.0))), "Unit": "m'/room"},
+                {"Item": "Wooden Door", "Value": _safe_float(curr_proj["data"].get("area_door_wood_calc", 0.0)), "Unit": "unit"},
+                {"Item": "Steel Door", "Value": _safe_float(curr_proj["data"].get("area_door_steel_calc", 0.0)), "Unit": "unit"},
+                {"Item": "Glass Door", "Value": _safe_float(curr_proj["data"].get("area_door_glass_calc", 0.0)), "Unit": "unit"},
+            ]
+        )
+
+        s1, s2 = st.columns(2)
+        with s1:
+            st.markdown("##### Core Area")
+            st.dataframe(
+                core_summary_df,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
+                },
+            )
+        with s2:
+            st.markdown("##### Opening / External")
+            st.dataframe(
+                opening_summary_df,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
+                },
+            )
+
+        st.markdown("##### Excel Form")
+
+        with st.container():
             fcol1, fcol2, fcol3, fcol4 = st.columns(4)
 
             include_roof_machine = fcol1.checkbox(
@@ -5721,6 +5790,15 @@ def show_area_calculator():
                     ):
                         st.session_state.pop("earthwork_import_warning", None)
                         st.rerun()
+
+    # ==================================================
+    # TAB 2 - GBA INPUT DRAFT ONLY
+    # ==================================================
+    elif area_page == "GBA Input":
+        st.subheader("GBA Input Draft")
+        st.caption(
+            "Edit here first. Calculations and cost sync will not update until you click Save Change."
+        )
 
         c_gen, c_reset = st.columns(2)
 
@@ -6530,7 +6608,7 @@ def show_area_calculator():
     # ==================================================
     # TAB 5 - RESIDENTIAL FACILITY
     # ==================================================
-    elif area_page == "Residential Area":
+    elif area_page == "Residential":
         st.subheader("Area Analysis (Residential Facility Works)")
 
         res_fac_key = f"res_fac_table_{curr_id}"
