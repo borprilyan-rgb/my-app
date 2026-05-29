@@ -10697,7 +10697,7 @@ def show_snapshots():
             "Name", 
             placeholder="e.g. Project X - Opt 1 - Rev 0"
         )
-        col_create, col_save, _ = st.columns([1, 1, 5])
+        col_create, col_save, _ = st.columns([2, 2, 3])
 
         if col_create.button("Create New", width="stretch", icon=icon_safe("create_new_folder")):
             if snapshot_name.strip() == "":
@@ -10712,6 +10712,7 @@ def show_snapshots():
             width="stretch",
             icon=icon_safe("save_as"),
             disabled=not has_active_working_study,
+            type="primary"
         ):
             if snapshot_name.strip() == "":
                 col_save.warning("Please enter Project name.")
