@@ -698,6 +698,125 @@ def read_foundation_sheet(excel_bytes):
     return rows
 
 
+def _default_ffe_detail_rows():
+    return [
+        {"code": "1", "description": "Seater & Chair", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Beds & Linen", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Kitchen Cabinet, Drawer", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Electronic: TV 32\", Minibar, Kettle, SDB", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Housewares", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "Stove with 2 burner + Hoods", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "Microwave, Refrigerator, Washing Machine", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Others: Artworks", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "9", "description": "Misc (Linen/Gym)", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+
+def read_ffe_sheet(excel_bytes):
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="FF&E",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError:
+        return None
+    except Exception:
+        return None
+
+    header_row_idx = None
+
+    for i in range(min(12, len(raw))):
+        row_norm = [_excel_norm_col(v) for v in raw.iloc[i].tolist()]
+        required_hits = sum(
+            1 for key in ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)"]
+            if _excel_norm_col(key) in row_norm
+        )
+
+        if required_hits >= 4:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ExcelImportError(
+            'The "FF&E" sheet header could not be read. FF&E import was skipped.'
+        )
+
+    df = raw.iloc[header_row_idx + 1:].copy()
+    df.columns = raw.iloc[header_row_idx].tolist()
+    df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    code_col = _excel_find_col(df, ["Code", "Item Code"])
+    desc_col = _excel_find_col(df, ["Description", "Item"])
+    unit_col = _excel_find_col(df, ["Unit"])
+    qty_col = _excel_find_col(df, ["Quantity", "Qty"])
+    unit_price_col = _excel_find_col(df, ["Unit Price (Rp)", "Unit Price", "Rate", "Harga"])
+
+    missing = []
+    if not code_col:
+        missing.append("Code")
+    if not desc_col:
+        missing.append("Description")
+    if not unit_col:
+        missing.append("Unit")
+    if not qty_col:
+        missing.append("Quantity")
+    if not unit_price_col:
+        missing.append("Unit Price (Rp)")
+
+    if missing:
+        raise ExcelImportError(
+            'The "FF&E" sheet is missing required columns: '
+            f'{", ".join(missing)}. FF&E import was skipped.'
+        )
+
+    by_code = {}
+    summary_labels = {
+        "TOTAL",
+        "GRAND TOTAL",
+        "ROOMS",
+        "CURRENT PROJECT ROOMS",
+        "REMINDER",
+        "FF&E DETAIL TOTAL",
+        "DERIVED FF&E RATE",
+        "CURRENT FF&E RATE",
+        "DIFFERENCE",
+    }
+
+    for _, row in df.iterrows():
+        code = str(row.get(code_col, "")).strip()
+        description = str(row.get(desc_col, "")).strip()
+
+        if code in ["", "-", "nan", "None"] and description in ["", "-", "nan", "None"]:
+            continue
+
+        if code.upper() in summary_labels or description.upper() in summary_labels:
+            continue
+
+        by_code[code] = {
+            "code": code,
+            "description": description,
+            "unit": str(row.get(unit_col, "")).strip(),
+            "quantity": _excel_safe_float(row.get(qty_col, 0.0)),
+            "unit_price": _excel_safe_float(row.get(unit_price_col, 0.0)),
+            "amount": 0.0,
+        }
+
+    rows = []
+    for default_row in _default_ffe_detail_rows():
+        imported = by_code.get(default_row["code"], {})
+        row = {**default_row, **imported}
+        row["code"] = default_row["code"]
+        row["description"] = default_row["description"]
+        row["unit"] = default_row["unit"]
+        row["amount"] = _excel_safe_float(row.get("quantity", 0.0)) * _excel_safe_float(row.get("unit_price", 0.0))
+        rows.append(row)
+
+    return rows
+
+
 def _default_structural_detail_rows():
     return [
         {"code": "1", "description": "Sub/Superstructure", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -968,9 +1087,11 @@ def create_area_excel_form_bytes(
     include_roof=True,
     architectural_detail_rows=None,
     earthwork_detail_rows=None,
+    ffe_detail_rows=None,
     foundation_detail_rows=None,
     structural_detail_rows=None,
     architectural_base_values=None,
+    ffe_rooms=0.0,
     earthwork_gba=0.0,
     foundation_gba=0.0,
     structural_gba=0.0,
@@ -1945,6 +2066,89 @@ def create_area_excel_form_bytes(
     ws_arch.protection.password = "area"
 
     # ==================================================
+    # FF&E SHEET
+    # ==================================================
+    ws_ffe = wb.create_sheet("FF&E")
+    ws_ffe.sheet_view.showGridLines = False
+
+    ws_ffe.merge_cells("A1:F1")
+    ws_ffe["A1"] = "FF&E DETAIL BREAKDOWN"
+    ws_ffe["A1"].font = Font(bold=True, color=white, size=14)
+    ws_ffe["A1"].fill = PatternFill("solid", fgColor=dark)
+    ws_ffe["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws_ffe.merge_cells("A2:F2")
+    ws_ffe["A2"] = "Detail-derived rate only. Cost Analysis changes only after Apply FF&E Detail Rate in the app."
+    ws_ffe["A2"].font = Font(italic=True, color=dark, size=10)
+    ws_ffe["A2"].alignment = Alignment(horizontal="left", vertical="center")
+
+    ws_ffe["A3"] = "Current Project Rooms"
+    ws_ffe["B3"] = _excel_safe_float(ffe_rooms)
+    ws_ffe["C3"] = "Reminder only - not imported as a detail row"
+    style_range(ws_ffe, "A3:C3", formula_fill, bold=True)
+
+    ffe_headers = ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)", "Amount (Rp)"]
+    for c, h in enumerate(ffe_headers, start=1):
+        ws_ffe.cell(5, c).value = h
+
+    style_range(ws_ffe, "A5:F5", dark, font_color=white, bold=True)
+
+    ffe_rows = ffe_detail_rows if isinstance(ffe_detail_rows, list) and ffe_detail_rows else _default_ffe_detail_rows()
+    ffe_defaults = _default_ffe_detail_rows()
+    ffe_start_row = 6
+
+    for idx, default_row in enumerate(ffe_defaults):
+        r = ffe_start_row + idx
+        row = ffe_rows[idx] if idx < len(ffe_rows) and isinstance(ffe_rows[idx], dict) else {}
+        quantity = _excel_safe_float(row.get("quantity", 0.0))
+        unit_price = _excel_safe_float(row.get("unit_price", 0.0))
+
+        ws_ffe.cell(r, 1).value = default_row["code"]
+        ws_ffe.cell(r, 2).value = default_row["description"]
+        ws_ffe.cell(r, 3).value = default_row["unit"]
+        ws_ffe.cell(r, 4).value = quantity
+        ws_ffe.cell(r, 5).value = unit_price
+        ws_ffe.cell(r, 6).value = f"=D{r}*E{r}"
+
+    ffe_total_row = ffe_start_row + len(ffe_defaults)
+    ws_ffe.cell(ffe_total_row, 1).value = "TOTAL"
+    ws_ffe.cell(ffe_total_row, 6).value = f"=SUM(F{ffe_start_row}:F{ffe_total_row - 1})"
+
+    ffe_summary_start = ffe_total_row + 2
+    ws_ffe.cell(ffe_summary_start, 1).value = "Rooms"
+    ws_ffe.cell(ffe_summary_start, 2).value = _excel_safe_float(ffe_rooms)
+    ws_ffe.cell(ffe_summary_start + 1, 1).value = "FF&E Detail Total"
+    ws_ffe.cell(ffe_summary_start + 1, 2).value = f"=F{ffe_total_row}"
+    ws_ffe.cell(ffe_summary_start + 2, 1).value = "Derived FF&E Rate"
+    ws_ffe.cell(ffe_summary_start + 2, 2).value = f"=IF(B{ffe_summary_start}>0,B{ffe_summary_start + 1}/B{ffe_summary_start},0)"
+
+    style_range(ws_ffe, f"A{ffe_start_row}:F{ffe_total_row}", None)
+    style_range(ws_ffe, f"A{ffe_total_row}:F{ffe_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_ffe, f"A{ffe_summary_start}:B{ffe_summary_start + 2}", formula_fill, bold=True)
+    style_range(ws_ffe, f"F{ffe_start_row}:F{ffe_total_row}", formula_fill)
+
+    lock_range(ws_ffe, f"A1:F{ffe_summary_start + 2}")
+    unlock_range(ws_ffe, f"D{ffe_start_row}:E{ffe_total_row - 1}")
+
+    for col, width in {
+        "A": 12,
+        "B": 42,
+        "C": 12,
+        "D": 14,
+        "E": 18,
+        "F": 18,
+    }.items():
+        ws_ffe.column_dimensions[col].width = width
+
+    for row in ws_ffe.iter_rows(min_row=3, max_row=ffe_summary_start + 2, min_col=2, max_col=6):
+        for cell in row:
+            cell.number_format = '#,##0.00'
+
+    ws_ffe.freeze_panes = "A6"
+    ws_ffe.protection.sheet = True
+    ws_ffe.protection.password = "area"
+
+    # ==================================================
     # IMPORT GUIDE
     # ==================================================
     ws_guide = wb.create_sheet("Import Guide")
@@ -1958,6 +2162,7 @@ def create_area_excel_form_bytes(
         ["Foundation", "Foundation detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["Structural", "Structural detail-derived rate input", "Ratio, Waste Factor for Rebar, Quantity for Prestress Works and Steelworks, Unit Price (Rp)"],
         ["Architectural", "Architectural detail-derived rate input", "Factor / %, Overlap, Waste, manual Quantity rows, Unit Price (Rp)"],
+        ["FF&E", "FF&E detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
     ]
 
     for r, row in enumerate(guide_rows, start=1):

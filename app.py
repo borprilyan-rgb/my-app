@@ -22,6 +22,7 @@ from excel_helpers import (
     read_architectural_sheet,
     read_earthworks_sheet,
     read_external_sheet,
+    read_ffe_sheet,
     read_foundation_sheet,
     read_pintu_sheet,
     read_residential_area_sheet,
@@ -408,6 +409,7 @@ UI_CACHE_PREFIXES = (
     "save_cost_analysis_",
     "architectural_detail_",
     "earthwork_detail_",
+    "ffe_detail_",
     "foundation_detail_",
     "structural_detail_",
     "area_editor_",
@@ -2838,6 +2840,55 @@ def calculate_foundation_detail(rows, gba):
 
     return cleaned_rows, detail_total, derived_unit_price
 
+def get_default_ffe_detail_rows():
+    return [
+        {"code": "1", "description": "Seater & Chair", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Beds & Linen", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Kitchen Cabinet, Drawer", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Electronic: TV 32\", Minibar, Kettle, SDB", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Housewares", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "Stove with 2 burner + Hoods", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "Microwave, Refrigerator, Washing Machine", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Others: Artworks", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "9", "description": "Misc (Linen/Gym)", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+def clean_ffe_detail_rows(rows):
+    if isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    if not isinstance(rows, list) or len(rows) == 0:
+        rows = get_default_ffe_detail_rows()
+
+    cleaned_rows = []
+    default_rows = get_default_ffe_detail_rows()
+
+    for idx, default_row in enumerate(default_rows):
+        row = rows[idx] if idx < len(rows) else {}
+        row = row if isinstance(row, dict) else {}
+        quantity = _safe_float(row.get("quantity", 0.0))
+        unit_price = _safe_float(row.get("unit_price", 0.0))
+        amount = quantity * unit_price
+
+        cleaned_rows.append({
+            "code": default_row["code"],
+            "description": default_row["description"],
+            "unit": default_row["unit"],
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return cleaned_rows
+
+def calculate_ffe_detail(rows, rooms):
+    cleaned_rows = clean_ffe_detail_rows(rows)
+    detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
+    rooms = _safe_float(rooms)
+    derived_unit_price = detail_total / rooms if rooms > 0 else 0.0
+
+    return cleaned_rows, detail_total, derived_unit_price
+
 def get_default_architectural_detail_rows():
     return [
         {"code": "1", "description": "Basic Finishes Work", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -3099,6 +3150,33 @@ def get_foundation_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
+def get_ffe_price_difference_status(curr_proj, rooms):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    derived_rate = _safe_float(data.get("ffe_derived_unit_price", 0.0))
+    current_rate = _safe_float(data.get("u_ffe", 0.0))
+    detail_total = _safe_float(data.get("ffe_detail_total", 0.0))
+    rooms = _safe_float(rooms)
+
+    current_total = rooms * current_rate
+    rate_difference = derived_rate - current_rate
+    total_difference = detail_total - current_total
+
+    has_difference = (
+        detail_total > 0
+        and derived_rate > 0
+        and abs(rate_difference) > 1
+    )
+
+    return {
+        "has_difference": has_difference,
+        "derived_rate": derived_rate,
+        "current_rate": current_rate,
+        "rate_difference": rate_difference,
+        "detail_total": detail_total,
+        "current_total": current_total,
+        "total_difference": total_difference,
+    }
+
 def get_architectural_price_difference_status(curr_proj, gfa):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     derived_rate = _safe_float(data.get("architectural_derived_unit_price", 0.0))
@@ -3153,10 +3231,11 @@ def get_structural_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
-def build_detail_rate_review_rows(curr_proj, gba, gfa=None):
+def build_detail_rate_review_rows(curr_proj, gba, gfa=None, rooms=None):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     gba = _safe_float(gba)
     gfa = _safe_float(gfa if gfa is not None else gba)
+    rooms = _safe_float(rooms if rooms is not None else data.get("m_rooms", 0.0))
 
     review_specs = [
         {
@@ -3194,6 +3273,15 @@ def build_detail_rate_review_rows(curr_proj, gba, gfa=None):
             "current_rate": _safe_float(data.get("u_arch", 0.0)),
             "derived_rate": _safe_float(data.get("architectural_derived_unit_price", 0.0)),
             "detail_total": _safe_float(data.get("architectural_detail_total", 0.0)),
+        },
+        {
+            "Section": "FF&E",
+            "Cost Key": "u_ffe",
+            "Basis": "Rooms",
+            "basis_value": rooms,
+            "current_rate": _safe_float(data.get("u_ffe", 0.0)),
+            "derived_rate": _safe_float(data.get("ffe_derived_unit_price", 0.0)),
+            "detail_total": _safe_float(data.get("ffe_detail_total", 0.0)),
         },
     ]
 
@@ -4712,6 +4800,7 @@ def show_area_calculator():
             "Foundation",
             "Structural",
             "Architectural",
+            "FF&E",
             "Details",
     ]
 
@@ -4784,6 +4873,10 @@ def show_area_calculator():
                     "earthwork_detail_rows",
                     get_default_earthwork_detail_rows(),
                 ),
+                ffe_detail_rows=curr_proj["data"].get(
+                    "ffe_detail_rows",
+                    get_default_ffe_detail_rows(),
+                ),
                 foundation_detail_rows=curr_proj["data"].get(
                     "foundation_detail_rows",
                     get_default_foundation_detail_rows(),
@@ -4800,6 +4893,7 @@ def show_area_calculator():
                 foundation_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 structural_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 architectural_base_values=get_architectural_detail_base_values(curr_proj["data"], edited_df),
+                ffe_rooms=_safe_float(curr_proj["data"].get("m_rooms", 0.0)) or _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0)),
             )
 
             def safe_filename_part(value, fallback="Unnamed"):
@@ -4901,6 +4995,12 @@ def show_area_calculator():
                         imported_foundation_rows = None
                         try:
                             imported_foundation_rows = read_foundation_sheet(excel_bytes)
+                        except ExcelImportError as e:
+                            st.warning(str(e))
+
+                        imported_ffe_rows = None
+                        try:
+                            imported_ffe_rows = read_ffe_sheet(excel_bytes)
                         except ExcelImportError as e:
                             st.warning(str(e))
 
@@ -5020,6 +5120,21 @@ def show_area_calculator():
                             curr_proj["data"]["foundation_detail_total"] = imported_foundation_total
                             curr_proj["data"]["foundation_derived_unit_price"] = imported_foundation_derived_unit_price
 
+                        if imported_ffe_rows is not None:
+                            ffe_import_rooms = _safe_float(curr_proj["data"].get("m_rooms", 0.0))
+                            if ffe_import_rooms <= 0:
+                                ffe_import_rooms = _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0))
+
+                            (
+                                imported_ffe_rows,
+                                imported_ffe_total,
+                                imported_ffe_derived_unit_price,
+                            ) = calculate_ffe_detail(imported_ffe_rows, ffe_import_rooms)
+
+                            curr_proj["data"]["ffe_detail_rows"] = imported_ffe_rows
+                            curr_proj["data"]["ffe_detail_total"] = imported_ffe_total
+                            curr_proj["data"]["ffe_derived_unit_price"] = imported_ffe_derived_unit_price
+
                         if imported_structural_rows is not None:
                             structural_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
                             if structural_import_gba <= 0:
@@ -5043,6 +5158,7 @@ def show_area_calculator():
                             f"res_fac_editor_{curr_id}",
                             f"architectural_detail_editor_{curr_id}",
                             f"earthwork_detail_editor_{curr_id}",
+                            f"ffe_detail_editor_{curr_id}",
                             f"foundation_detail_editor_{curr_id}",
                             f"structural_detail_editor_{curr_id}",
                         ]:
@@ -6449,7 +6565,125 @@ def show_area_calculator():
                 st.rerun()
 
     # ==================================================
-    # TAB 10 - DETAILS
+    # TAB 10 - FF&E
+    # ==================================================
+    elif area_page == "FF&E":
+        st.subheader("Area Analysis (FF&E)")
+        st.caption("FF&E Detail calculates a suggested FF&E Rate only. Cost Analysis is updated only from the explicit Apply button.")
+
+        ffe_rooms = _safe_float(curr_proj["data"].get("m_rooms", 0.0))
+        if ffe_rooms <= 0:
+            ffe_rooms = _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0))
+        if ffe_rooms <= 0:
+            ffe_rooms = _safe_float(curr_proj["data"].get("area_typical_units_total_calc", 0.0))
+
+        saved_ffe_detail_rows = curr_proj["data"].get(
+            "ffe_detail_rows",
+            get_default_ffe_detail_rows(),
+        )
+        ffe_detail_rows, ffe_detail_total, ffe_derived_unit_price = calculate_ffe_detail(
+            saved_ffe_detail_rows,
+            ffe_rooms,
+        )
+
+        current_ffe_rate = _safe_float(
+            curr_proj["data"].get(
+                "u_ffe",
+                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("ffe", 0.0),
+            )
+        )
+
+        st.metric("Current Project Rooms", f"{ffe_rooms:,.0f}")
+        reminder_df = pd.DataFrame([{
+            "Reminder": "Current Project Rooms",
+            "Rooms": ffe_rooms,
+            "Import Rule": "Reminder only - not imported as a detail row",
+        }])
+        st.dataframe(reminder_df, hide_index=True, width="stretch")
+
+        edited_ffe_detail = st.data_editor(
+            pd.DataFrame(ffe_detail_rows),
+            key=f"ffe_detail_editor_{curr_id}",
+            hide_index=True,
+            width="stretch",
+            num_rows="fixed",
+            disabled=["code", "description", "unit", "amount"],
+            column_config={
+                "code": st.column_config.TextColumn("No"),
+                "description": st.column_config.TextColumn("Description", width="large"),
+                "unit": st.column_config.TextColumn("Unit"),
+                "quantity": st.column_config.NumberColumn("Qty", min_value=0.0, step=1.0, format="%.2f"),
+                "unit_price": st.column_config.NumberColumn("Rate", min_value=0.0, step=100000.0, format="Rp %.0f"),
+                "amount": st.column_config.NumberColumn("Amount", format="Rp %.0f"),
+            },
+        )
+
+        ffe_detail_rows, ffe_detail_total, ffe_derived_unit_price = calculate_ffe_detail(
+            edited_ffe_detail,
+            ffe_rooms,
+        )
+
+        current_ffe_total = ffe_rooms * current_ffe_rate
+        ffe_rate_difference = ffe_derived_unit_price - current_ffe_rate
+        ffe_total_difference = ffe_detail_total - current_ffe_total
+
+        if ffe_rooms <= 0:
+            st.warning("FF&E Detail needs Rooms greater than 0 to derive an FF&E Rate.")
+
+        st.info(
+            "FF&E Detail Review\n\n"
+            f"Rooms: {ffe_rooms:,.0f}\n\n"
+            f"FF&E Detail Total: Rp {ffe_detail_total:,.0f}\n\n"
+            f"Derived FF&E Rate: Rp {ffe_derived_unit_price:,.0f}/room\n\n"
+            f"Current FF&E Rate from Cost Analysis: Rp {current_ffe_rate:,.0f}/room\n\n"
+            f"Difference: Rp {ffe_rate_difference:,.0f}/room "
+            f"(Rp {ffe_total_difference:,.0f} total)"
+        )
+
+        fe_c1, fe_c2, fe_c3 = st.columns(3)
+        fe_c1.metric("Rooms", f"{ffe_rooms:,.0f}")
+        fe_c2.metric("FF&E Detail Total", f"Rp {ffe_detail_total:,.0f}")
+        fe_c3.metric("Derived FF&E Rate", f"Rp {ffe_derived_unit_price:,.0f}/room")
+
+        fe_c4, fe_c5, fe_c6 = st.columns(3)
+        fe_c4.metric("Current FF&E Rate", f"Rp {current_ffe_rate:,.0f}/room")
+        fe_c5.metric("Current FF&E Total", f"Rp {current_ffe_total:,.0f}")
+        fe_c6.metric("Difference", f"Rp {ffe_rate_difference:,.0f}/room")
+
+        curr_proj["data"]["ffe_detail_total"] = ffe_detail_total
+        curr_proj["data"]["ffe_derived_unit_price"] = ffe_derived_unit_price
+        ffe_diff_status = get_ffe_price_difference_status(curr_proj, ffe_rooms)
+
+        if ffe_diff_status["has_difference"]:
+            st.warning(
+                "FF&E detail has changed. "
+                f"Derived FF&E Rate is Rp {ffe_diff_status['derived_rate']:,.0f}/room, "
+                f"while Cost Analysis currently uses Rp {ffe_diff_status['current_rate']:,.0f}/room. "
+                "Cost Analysis has not been updated automatically."
+            )
+
+        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
+
+        with save_c1:
+            save_ffe_detail_clicked = st.button(
+                "Save FF&E Detail",
+                key=f"ffe_detail_save_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        if save_ffe_detail_clicked:
+            curr_proj["data"]["ffe_detail_rows"] = ffe_detail_rows
+            curr_proj["data"]["ffe_detail_total"] = ffe_detail_total
+            curr_proj["data"]["ffe_derived_unit_price"] = ffe_derived_unit_price
+
+            save_ok = save_after_user_action("Save FF&E Detail")
+
+            if save_ok:
+                st.rerun()
+
+    # ==================================================
+    # TAB 11 - DETAILS
     # ==================================================
     elif area_page == "Details":
         st.subheader("Details")
@@ -7094,7 +7328,7 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
     # --- TAB 3: UNIT RATES ---
     with tab4:
         with st.expander("Detail-Derived Rate Review", expanded=True):
-            detail_rate_review_rows = build_detail_rate_review_rows(curr_proj, gba, gfa)
+            detail_rate_review_rows = build_detail_rate_review_rows(curr_proj, gba, gfa, rooms)
             detail_rate_review_df = pd.DataFrame(detail_rate_review_rows)
 
             st.caption("Review only. Detail-derived rates are not applied to Cost Analysis automatically.")
@@ -7264,6 +7498,54 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                         else:
                             st.error(
                                 "Architectural detail rate was applied locally, but cloud save failed. Do not log out yet."
+                            )
+
+            ffe_review_row = next(
+                (row for row in detail_rate_review_rows if row.get("Section") == "FF&E"),
+                {},
+            )
+            ffe_apply_available = (
+                ffe_review_row.get("Status") == "Different"
+                and _safe_float(ffe_review_row.get("Detail Total", 0.0)) > 0
+                and _safe_float(ffe_review_row.get("Detail-Derived Rate", 0.0)) > 0
+            )
+
+            if ffe_review_row:
+                st.info(
+                    "FF&E Detail-Derived Rate Review\n\n"
+                    f"Current FF&E Rate: Rp {_safe_float(ffe_review_row.get('Current Cost Rate', 0.0)):,.0f}/room\n\n"
+                    f"Derived FF&E Rate: Rp {_safe_float(ffe_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/room\n\n"
+                    f"Difference: Rp {_safe_float(ffe_review_row.get('Difference / Unit', 0.0)):,.0f}/room\n\n"
+                    f"Status: {ffe_review_row.get('Status', '')}"
+                )
+
+            if ffe_apply_available:
+                st.warning(
+                    "FF&E detail-derived rate differs from the current Cost Analysis FF&E Rate. "
+                    "Cost Analysis has not been updated automatically."
+                )
+                if st.button(
+                    "Apply FF&E Detail Rate",
+                    key=f"apply_ffe_detail_rate_{curr_id}",
+                    type="primary",
+                ):
+                    derived_rate = _safe_float(curr_proj["data"].get("ffe_derived_unit_price", 0.0))
+                    detail_total = _safe_float(curr_proj["data"].get("ffe_detail_total", 0.0))
+
+                    if derived_rate <= 0 or detail_total <= 0:
+                        st.error("FF&E detail rate cannot be applied because the detail total or derived rate is zero.")
+                    else:
+                        curr_proj["data"]["u_ffe"] = derived_rate
+                        st.session_state[f"u_ffe_{curr_type_key}"] = derived_rate
+
+                        save_ok = save_after_user_action("Apply FF&E Detail Rate")
+
+                        if save_ok:
+                            st.success("FF&E detail rate applied to Cost Analysis.")
+                            st.rerun()
+                        else:
+                            st.error(
+                                "FF&E detail rate was applied locally, but cloud save failed. Do not log out yet."
                             )
 
             structural_review_row = next(
