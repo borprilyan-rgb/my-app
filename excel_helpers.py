@@ -1067,6 +1067,144 @@ def read_utility_sheet(excel_bytes):
     return rows
 
 
+def _default_consultancy_detail_rows():
+    return [
+        {"code": "1", "description": "Master Plan", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Feasibility Study", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Quantity Surveyor", "unit": "bln", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Project Management Fee", "unit": "bln", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Architectural Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "Structural Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "M.E.P Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Interior Designer", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "9", "description": "Landscaping Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "10", "description": "Soil Investigation Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "11", "description": "Signage Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "12", "description": "Special Lighting", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13", "description": "Infrastructure Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "14", "description": "Amdal", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "15", "description": "Traffic Analysis", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16", "description": "Technical Assistant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "17", "description": "Topografi", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+
+def read_consultancy_sheet(excel_bytes):
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="Consultancy",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError:
+        return None
+    except Exception:
+        return None
+
+    header_row_idx = None
+
+    for i in range(min(14, len(raw))):
+        row_norm = [_excel_norm_col(v) for v in raw.iloc[i].tolist()]
+        required_hits = sum(
+            1 for key in ["Code", "Description", "Unit", "Manual Qty", "Quantity", "Unit Price (Rp)"]
+            if _excel_norm_col(key) in row_norm
+        )
+
+        if required_hits >= 5:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ExcelImportError(
+            'The "Consultancy" sheet header could not be read. Consultancy import was skipped.'
+        )
+
+    df = raw.iloc[header_row_idx + 1:].copy()
+    df.columns = raw.iloc[header_row_idx].tolist()
+    df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    code_col = _excel_find_col(df, ["Code", "Item Code"])
+    desc_col = _excel_find_col(df, ["Description", "Item"])
+    unit_col = _excel_find_col(df, ["Unit"])
+    manual_qty_col = _excel_find_col(df, ["Manual Qty", "Manual Quantity", "Month Qty"])
+    qty_col = _excel_find_col(df, ["Quantity", "Qty"])
+    unit_price_col = _excel_find_col(df, ["Unit Price (Rp)", "Unit Price", "Rate", "Harga"])
+
+    missing = []
+    if not code_col:
+        missing.append("Code")
+    if not desc_col:
+        missing.append("Description")
+    if not unit_col:
+        missing.append("Unit")
+    if not manual_qty_col:
+        missing.append("Manual Qty")
+    if not qty_col:
+        missing.append("Quantity")
+    if not unit_price_col:
+        missing.append("Unit Price (Rp)")
+
+    if missing:
+        raise ExcelImportError(
+            'The "Consultancy" sheet is missing required columns: '
+            f'{", ".join(missing)}. Consultancy import was skipped.'
+        )
+
+    by_code = {}
+    summary_labels = {
+        "TOTAL",
+        "GRAND TOTAL",
+        "GFA",
+        "CURRENT PROJECT GFA",
+        "CURRENT KORIDOR/LOBBY AREA",
+        "CURRENT LANDSCAPE QTY",
+        "KORIDOR/LOBBY SOURCE",
+        "LANDSCAPE SOURCE",
+        "REMINDER",
+        "SOURCE",
+        "CONSULTANCY DETAIL TOTAL",
+        "DERIVED CONSULTANCY RATE",
+        "CURRENT CONSULTANCY RATE",
+        "DIFFERENCE",
+    }
+
+    for _, row in df.iterrows():
+        code = str(row.get(code_col, "")).strip()
+        description = str(row.get(desc_col, "")).strip()
+
+        if code in ["", "-", "nan", "None"] and description in ["", "-", "nan", "None"]:
+            continue
+
+        if code.upper() in summary_labels or description.upper() in summary_labels:
+            continue
+
+        by_code[code] = {
+            "code": code,
+            "description": description,
+            "unit": str(row.get(unit_col, "")).strip(),
+            "manual_quantity": _excel_safe_float(row.get(manual_qty_col, 0.0)),
+            "quantity": _excel_safe_float(row.get(qty_col, 0.0)),
+            "unit_price": _excel_safe_float(row.get(unit_price_col, 0.0)),
+            "amount": 0.0,
+        }
+
+    rows = []
+    for default_row in _default_consultancy_detail_rows():
+        imported = by_code.get(default_row["code"], {})
+        row = {**default_row, **imported}
+        row["code"] = default_row["code"]
+        row["description"] = default_row["description"]
+        row["unit"] = default_row["unit"]
+        if row["code"] not in ["3", "4"]:
+            row["manual_quantity"] = 0.0
+        row["amount"] = _excel_safe_float(row.get("quantity", 0.0)) * _excel_safe_float(row.get("unit_price", 0.0))
+        rows.append(row)
+
+    return rows
+
+
 def _default_structural_detail_rows():
     return [
         {"code": "1", "description": "Sub/Superstructure", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -1336,6 +1474,7 @@ def create_area_excel_form_bytes(
     include_roof_machine=True,
     include_roof=True,
     architectural_detail_rows=None,
+    consultancy_detail_rows=None,
     earthwork_detail_rows=None,
     ffe_detail_rows=None,
     foundation_detail_rows=None,
@@ -1343,6 +1482,7 @@ def create_area_excel_form_bytes(
     structural_detail_rows=None,
     utility_detail_rows=None,
     architectural_base_values=None,
+    consultancy_base_values=None,
     ffe_rooms=0.0,
     earthwork_gba=0.0,
     foundation_gba=0.0,
@@ -2569,6 +2709,109 @@ def create_area_excel_form_bytes(
     ws_utility.protection.password = "area"
 
     # ==================================================
+    # CONSULTANCY SHEET
+    # ==================================================
+    ws_consultancy = wb.create_sheet("Consultancy")
+    ws_consultancy.sheet_view.showGridLines = False
+
+    ws_consultancy.merge_cells("A1:G1")
+    ws_consultancy["A1"] = "CONSULTANCY DETAIL BREAKDOWN"
+    ws_consultancy["A1"].font = Font(bold=True, color=white, size=14)
+    ws_consultancy["A1"].fill = PatternFill("solid", fgColor=dark)
+    ws_consultancy["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws_consultancy.merge_cells("A2:G2")
+    ws_consultancy["A2"] = "Detail-derived rate only. Cost Analysis changes only after Apply Consultancy Detail Rate in the app."
+    ws_consultancy["A2"].font = Font(italic=True, color=dark, size=10)
+    ws_consultancy["A2"].alignment = Alignment(horizontal="left", vertical="center")
+
+    ws_consultancy["A3"] = "Current Project GFA"
+    ws_consultancy["B3"] = "='Area Input'!N13"
+    ws_consultancy["C3"] = "Reminder/source only - not imported as a detail row"
+    ws_consultancy["A4"] = "Current Koridor/Lobby area"
+    ws_consultancy["B4"] = "='Area Input'!I13"
+    ws_consultancy["C4"] = "Source for Interior Designer quantity"
+    ws_consultancy["A5"] = "Current Landscape qty"
+    ws_consultancy["B5"] = "=Eksternal!D4"
+    ws_consultancy["C5"] = "Source for Landscaping Consultant quantity"
+    style_range(ws_consultancy, "A3:C5", formula_fill, bold=True)
+
+    consultancy_headers = ["Code", "Description", "Unit", "Manual Qty", "Quantity", "Unit Price (Rp)", "Amount (Rp)"]
+    for c, h in enumerate(consultancy_headers, start=1):
+        ws_consultancy.cell(7, c).value = h
+
+    style_range(ws_consultancy, "A7:G7", dark, font_color=white, bold=True)
+
+    consultancy_rows = consultancy_detail_rows if isinstance(consultancy_detail_rows, list) and consultancy_detail_rows else _default_consultancy_detail_rows()
+    consultancy_defaults = _default_consultancy_detail_rows()
+    consultancy_start_row = 8
+
+    for idx, default_row in enumerate(consultancy_defaults):
+        r = consultancy_start_row + idx
+        row = consultancy_rows[idx] if idx < len(consultancy_rows) and isinstance(consultancy_rows[idx], dict) else {}
+        manual_quantity = _excel_safe_float(row.get("manual_quantity", row.get("quantity", 0.0)))
+        unit_price = _excel_safe_float(row.get("unit_price", 0.0))
+        code = default_row["code"]
+
+        if code in ["3", "4"]:
+            quantity_formula = f"=D{r}"
+        elif code == "8":
+            quantity_formula = "='Area Input'!I13"
+        elif code == "9":
+            quantity_formula = "=Eksternal!D4"
+        else:
+            quantity_formula = "='Area Input'!N13"
+
+        ws_consultancy.cell(r, 1).value = default_row["code"]
+        ws_consultancy.cell(r, 2).value = default_row["description"]
+        ws_consultancy.cell(r, 3).value = default_row["unit"]
+        ws_consultancy.cell(r, 4).value = manual_quantity if code in ["3", "4"] else 0.0
+        ws_consultancy.cell(r, 5).value = quantity_formula
+        ws_consultancy.cell(r, 6).value = unit_price
+        ws_consultancy.cell(r, 7).value = f"=E{r}*F{r}"
+
+    consultancy_total_row = consultancy_start_row + len(consultancy_defaults)
+    ws_consultancy.cell(consultancy_total_row, 1).value = "TOTAL"
+    ws_consultancy.cell(consultancy_total_row, 7).value = f"=SUM(G{consultancy_start_row}:G{consultancy_total_row - 1})"
+
+    consultancy_summary_start = consultancy_total_row + 2
+    ws_consultancy.cell(consultancy_summary_start, 1).value = "GFA"
+    ws_consultancy.cell(consultancy_summary_start, 2).value = "='Area Input'!N13"
+    ws_consultancy.cell(consultancy_summary_start + 1, 1).value = "Consultancy Detail Total"
+    ws_consultancy.cell(consultancy_summary_start + 1, 2).value = f"=G{consultancy_total_row}"
+    ws_consultancy.cell(consultancy_summary_start + 2, 1).value = "Derived Consultancy Rate"
+    ws_consultancy.cell(consultancy_summary_start + 2, 2).value = f"=IF(B{consultancy_summary_start}>0,B{consultancy_summary_start + 1}/B{consultancy_summary_start},0)"
+
+    style_range(ws_consultancy, f"A{consultancy_start_row}:G{consultancy_total_row}", None)
+    style_range(ws_consultancy, f"A{consultancy_total_row}:G{consultancy_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_consultancy, f"A{consultancy_summary_start}:B{consultancy_summary_start + 2}", formula_fill, bold=True)
+    style_range(ws_consultancy, f"E{consultancy_start_row}:E{consultancy_total_row}", formula_fill)
+    style_range(ws_consultancy, f"G{consultancy_start_row}:G{consultancy_total_row}", formula_fill)
+
+    lock_range(ws_consultancy, f"A1:G{consultancy_summary_start + 2}")
+    unlock_range(ws_consultancy, f"D{consultancy_start_row + 2}:D{consultancy_start_row + 3}")
+    unlock_range(ws_consultancy, f"F{consultancy_start_row}:F{consultancy_total_row - 1}")
+
+    for col, width in {
+        "A": 12,
+        "B": 42,
+        "C": 12,
+        "D": 14,
+        "E": 14,
+        "F": 18,
+        "G": 18,
+    }.items():
+        ws_consultancy.column_dimensions[col].width = width
+
+    for row in ws_consultancy.iter_rows(min_row=3, max_row=consultancy_summary_start + 2, min_col=2, max_col=7):
+        for cell in row:
+            cell.number_format = '#,##0.00'
+
+    ws_consultancy.freeze_panes = "A8"
+    ws_consultancy.protection.sheet = True
+    ws_consultancy.protection.password = "area"
+
+    # ==================================================
     # IMPORT GUIDE
     # ==================================================
     ws_guide = wb.create_sheet("Import Guide")
@@ -2585,6 +2828,7 @@ def create_area_excel_form_bytes(
         ["FF&E", "FF&E detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["MEP", "MEP detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["Utility", "Utility detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
+        ["Consultancy", "Consultancy detail-derived rate input", "Manual Qty for QS/PM, Unit Price (Rp)"],
     ]
 
     for r, row in enumerate(guide_rows, start=1):

@@ -20,6 +20,7 @@ from excel_helpers import (
     create_area_excel_form_bytes,
     read_area_input_sheet,
     read_architectural_sheet,
+    read_consultancy_sheet,
     read_earthworks_sheet,
     read_external_sheet,
     read_ffe_sheet,
@@ -410,6 +411,7 @@ UI_CACHE_PREFIXES = (
     "save_smart_custom_to_cloud_",
     "save_cost_analysis_",
     "architectural_detail_",
+    "consultancy_detail_",
     "earthwork_detail_",
     "ffe_detail_",
     "foundation_detail_",
@@ -3003,6 +3005,105 @@ def calculate_utility_detail(rows, gba):
 
     return cleaned_rows, detail_total, derived_unit_price
 
+def get_default_consultancy_detail_rows():
+    return [
+        {"code": "1", "description": "Master Plan", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Feasibility Study", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Quantity Surveyor", "unit": "bln", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Project Management Fee", "unit": "bln", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Architectural Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "Structural Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "M.E.P Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Interior Designer", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "9", "description": "Landscaping Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "10", "description": "Soil Investigation Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "11", "description": "Signage Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "12", "description": "Special Lighting", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13", "description": "Infrastructure Consultant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "14", "description": "Amdal", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "15", "description": "Traffic Analysis", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16", "description": "Technical Assistant", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "17", "description": "Topografi", "unit": "m2", "manual_quantity": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+def get_consultancy_detail_base_values(data, area_df=None):
+    data = data if isinstance(data, dict) else {}
+
+    gfa = _safe_float(data.get("m_gfa", 0.0))
+    if gfa <= 0 and area_df is not None and "GFA" in getattr(area_df, "columns", []):
+        gfa = _safe_float(area_df["GFA"].sum())
+
+    koridor_lobby = _safe_float(data.get("area_lobby_interior_calc", 0.0))
+    if koridor_lobby <= 0:
+        koridor_lobby = _safe_float(data.get("m_lobby", 0.0))
+    if koridor_lobby <= 0 and area_df is not None and "Koridor/Lobby" in getattr(area_df, "columns", []):
+        koridor_lobby = _safe_float(area_df["Koridor/Lobby"].sum())
+
+    landscape_qty = _safe_float(data.get("area_landscape_qty_calc", 0.0))
+    if landscape_qty <= 0:
+        landscape_qty = _safe_float(data.get("m_land_m2", 0.0))
+
+    return {
+        "gfa": gfa,
+        "koridor_lobby": koridor_lobby,
+        "landscape_qty": landscape_qty,
+    }
+
+def clean_consultancy_detail_rows(rows, base_values):
+    if isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    if not isinstance(rows, list) or len(rows) == 0:
+        rows = get_default_consultancy_detail_rows()
+
+    base_values = base_values if isinstance(base_values, dict) else {}
+    default_rows = get_default_consultancy_detail_rows()
+    cleaned_rows = []
+
+    gfa = _safe_float(base_values.get("gfa", 0.0))
+    koridor_lobby = _safe_float(base_values.get("koridor_lobby", 0.0))
+    landscape_qty = _safe_float(base_values.get("landscape_qty", 0.0))
+
+    for idx, default_row in enumerate(default_rows):
+        row = rows[idx] if idx < len(rows) else {}
+        row = row if isinstance(row, dict) else {}
+
+        code = default_row["code"]
+        manual_quantity = _safe_float(row.get("manual_quantity", row.get("quantity", 0.0)))
+        unit_price = _safe_float(row.get("unit_price", 0.0))
+
+        if code in ["3", "4"]:
+            quantity = manual_quantity
+        elif code == "8":
+            quantity = koridor_lobby
+        elif code == "9":
+            quantity = landscape_qty
+        else:
+            quantity = gfa
+
+        amount = quantity * unit_price
+
+        cleaned_rows.append({
+            "code": code,
+            "description": default_row["description"],
+            "unit": default_row["unit"],
+            "manual_quantity": manual_quantity if code in ["3", "4"] else 0.0,
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return cleaned_rows
+
+def calculate_consultancy_detail(rows, base_values):
+    base_values = base_values if isinstance(base_values, dict) else {}
+    cleaned_rows = clean_consultancy_detail_rows(rows, base_values)
+    detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
+    gfa = _safe_float(base_values.get("gfa", 0.0))
+    derived_unit_price = detail_total / gfa if gfa > 0 else 0.0
+
+    return cleaned_rows, detail_total, derived_unit_price
+
 def get_default_architectural_detail_rows():
     return [
         {"code": "1", "description": "Basic Finishes Work", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -3345,6 +3446,33 @@ def get_utility_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
+def get_consultancy_price_difference_status(curr_proj, gfa):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    derived_rate = _safe_float(data.get("consultancy_derived_unit_price", 0.0))
+    current_rate = _safe_float(data.get("sc_cons", 0.0))
+    detail_total = _safe_float(data.get("consultancy_detail_total", 0.0))
+    gfa = _safe_float(gfa)
+
+    current_total = gfa * current_rate
+    rate_difference = derived_rate - current_rate
+    total_difference = detail_total - current_total
+
+    has_difference = (
+        detail_total > 0
+        and derived_rate > 0
+        and abs(rate_difference) > 1
+    )
+
+    return {
+        "has_difference": has_difference,
+        "derived_rate": derived_rate,
+        "current_rate": current_rate,
+        "rate_difference": rate_difference,
+        "detail_total": detail_total,
+        "current_total": current_total,
+        "total_difference": total_difference,
+    }
+
 def get_architectural_price_difference_status(curr_proj, gfa):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     derived_rate = _safe_float(data.get("architectural_derived_unit_price", 0.0))
@@ -3441,6 +3569,15 @@ def build_detail_rate_review_rows(curr_proj, gba, gfa=None, rooms=None):
             "current_rate": _safe_float(data.get("u_arch", 0.0)),
             "derived_rate": _safe_float(data.get("architectural_derived_unit_price", 0.0)),
             "detail_total": _safe_float(data.get("architectural_detail_total", 0.0)),
+        },
+        {
+            "Section": "Consultancy",
+            "Cost Key": "sc_cons",
+            "Basis": "GFA",
+            "basis_value": gfa,
+            "current_rate": _safe_float(data.get("sc_cons", 0.0)),
+            "derived_rate": _safe_float(data.get("consultancy_derived_unit_price", 0.0)),
+            "detail_total": _safe_float(data.get("consultancy_detail_total", 0.0)),
         },
         {
             "Section": "FF&E",
@@ -4986,6 +5123,7 @@ def show_area_calculator():
             "Foundation",
             "Structural",
             "Architectural",
+            "Consultancy",
             "FF&E",
             "MEP",
             "Utility",
@@ -5061,6 +5199,10 @@ def show_area_calculator():
                     "earthwork_detail_rows",
                     get_default_earthwork_detail_rows(),
                 ),
+                consultancy_detail_rows=curr_proj["data"].get(
+                    "consultancy_detail_rows",
+                    get_default_consultancy_detail_rows(),
+                ),
                 ffe_detail_rows=curr_proj["data"].get(
                     "ffe_detail_rows",
                     get_default_ffe_detail_rows(),
@@ -5089,6 +5231,7 @@ def show_area_calculator():
                 foundation_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 structural_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 architectural_base_values=get_architectural_detail_base_values(curr_proj["data"], edited_df),
+                consultancy_base_values=get_consultancy_detail_base_values(curr_proj["data"], edited_df),
                 ffe_rooms=_safe_float(curr_proj["data"].get("m_rooms", 0.0)) or _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0)),
                 mep_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 utility_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
@@ -5187,6 +5330,12 @@ def show_area_calculator():
                         imported_architectural_rows = None
                         try:
                             imported_architectural_rows = read_architectural_sheet(excel_bytes)
+                        except ExcelImportError as e:
+                            st.warning(str(e))
+
+                        imported_consultancy_rows = None
+                        try:
+                            imported_consultancy_rows = read_consultancy_sheet(excel_bytes)
                         except ExcelImportError as e:
                             st.warning(str(e))
 
@@ -5315,6 +5464,22 @@ def show_area_calculator():
                             curr_proj["data"]["architectural_detail_total"] = imported_architectural_total
                             curr_proj["data"]["architectural_derived_unit_price"] = imported_architectural_derived_unit_price
 
+                        if imported_consultancy_rows is not None:
+                            consultancy_base_values = get_consultancy_detail_base_values(
+                                curr_proj["data"],
+                                imported_area_df,
+                            )
+
+                            (
+                                imported_consultancy_rows,
+                                imported_consultancy_total,
+                                imported_consultancy_derived_unit_price,
+                            ) = calculate_consultancy_detail(imported_consultancy_rows, consultancy_base_values)
+
+                            curr_proj["data"]["consultancy_detail_rows"] = imported_consultancy_rows
+                            curr_proj["data"]["consultancy_detail_total"] = imported_consultancy_total
+                            curr_proj["data"]["consultancy_derived_unit_price"] = imported_consultancy_derived_unit_price
+
                         if imported_foundation_rows is not None:
                             foundation_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
                             if foundation_import_gba <= 0:
@@ -5397,6 +5562,7 @@ def show_area_calculator():
                             f"other_external_editor_{curr_id}",
                             f"res_fac_editor_{curr_id}",
                             f"architectural_detail_editor_{curr_id}",
+                            f"consultancy_detail_editor_{curr_id}",
                             f"earthwork_detail_editor_{curr_id}",
                             f"ffe_detail_editor_{curr_id}",
                             f"foundation_detail_editor_{curr_id}",
@@ -6807,7 +6973,131 @@ def show_area_calculator():
                 st.rerun()
 
     # ==================================================
-    # TAB 10 - FF&E
+    # TAB 10 - CONSULTANCY
+    # ==================================================
+    elif area_page == "Consultancy":
+        st.subheader("Area Analysis (Consultancy)")
+        st.caption("Consultancy Detail calculates a suggested Consultancy Rate only. Cost Analysis is updated only from the explicit Apply button.")
+
+        consultancy_base_values = get_consultancy_detail_base_values(curr_proj["data"], edited_df)
+        consultancy_gfa = _safe_float(consultancy_base_values.get("gfa", 0.0))
+        consultancy_koridor_lobby = _safe_float(consultancy_base_values.get("koridor_lobby", 0.0))
+        consultancy_landscape_qty = _safe_float(consultancy_base_values.get("landscape_qty", 0.0))
+
+        saved_consultancy_detail_rows = curr_proj["data"].get(
+            "consultancy_detail_rows",
+            get_default_consultancy_detail_rows(),
+        )
+        consultancy_detail_rows, consultancy_detail_total, consultancy_derived_unit_price = calculate_consultancy_detail(
+            saved_consultancy_detail_rows,
+            consultancy_base_values,
+        )
+
+        current_consultancy_rate = _safe_float(
+            curr_proj["data"].get(
+                "sc_cons",
+                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("cons", 0.0),
+            )
+        )
+
+        cons_base_c1, cons_base_c2, cons_base_c3 = st.columns(3)
+        cons_base_c1.metric("Current Project GFA", f"{consultancy_gfa:,.0f} m2")
+        cons_base_c2.metric("Current Koridor/Lobby", f"{consultancy_koridor_lobby:,.0f} m2")
+        cons_base_c3.metric("Current Landscape Qty", f"{consultancy_landscape_qty:,.0f} m2")
+
+        reminder_df = pd.DataFrame([
+            {"Source": "Current Project GFA", "Value": consultancy_gfa, "Unit": "m2", "Import Rule": "Reminder only - not imported as a detail row"},
+            {"Source": "Current Koridor/Lobby area", "Value": consultancy_koridor_lobby, "Unit": "m2", "Import Rule": "Source for Interior Designer quantity"},
+            {"Source": "Current Landscape qty", "Value": consultancy_landscape_qty, "Unit": "m2", "Import Rule": "Source for Landscaping Consultant quantity"},
+        ])
+        st.dataframe(reminder_df, hide_index=True, width="stretch")
+
+        edited_consultancy_detail = st.data_editor(
+            pd.DataFrame(consultancy_detail_rows),
+            key=f"consultancy_detail_editor_{curr_id}",
+            hide_index=True,
+            width="stretch",
+            num_rows="fixed",
+            disabled=["code", "description", "unit", "quantity", "amount"],
+            column_config={
+                "code": st.column_config.TextColumn("No"),
+                "description": st.column_config.TextColumn("Description", width="large"),
+                "unit": st.column_config.TextColumn("Unit"),
+                "manual_quantity": st.column_config.NumberColumn("Manual Month Qty", min_value=0.0, step=1.0, format="%.2f", help="Used only for Quantity Surveyor and Project Management Fee."),
+                "quantity": st.column_config.NumberColumn("Calculated Qty", min_value=0.0, step=1.0, format="%.2f"),
+                "unit_price": st.column_config.NumberColumn("Rate", min_value=0.0, step=100000.0, format="Rp %.0f"),
+                "amount": st.column_config.NumberColumn("Amount", format="Rp %.0f"),
+            },
+        )
+
+        consultancy_detail_rows, consultancy_detail_total, consultancy_derived_unit_price = calculate_consultancy_detail(
+            edited_consultancy_detail,
+            consultancy_base_values,
+        )
+
+        current_consultancy_total = consultancy_gfa * current_consultancy_rate
+        consultancy_rate_difference = consultancy_derived_unit_price - current_consultancy_rate
+        consultancy_total_difference = consultancy_detail_total - current_consultancy_total
+
+        if consultancy_gfa <= 0:
+            st.warning("Consultancy Detail needs GFA greater than 0 to derive a Consultancy Rate.")
+
+        st.info(
+            "Consultancy Detail Review\n\n"
+            f"GFA: {consultancy_gfa:,.0f} m2\n\n"
+            f"Koridor/Lobby: {consultancy_koridor_lobby:,.0f} m2\n\n"
+            f"Landscape Qty: {consultancy_landscape_qty:,.0f} m2\n\n"
+            f"Consultancy Detail Total: Rp {consultancy_detail_total:,.0f}\n\n"
+            f"Derived Consultancy Rate: Rp {consultancy_derived_unit_price:,.0f}/m2\n\n"
+            f"Current Consultancy Rate from Cost Analysis: Rp {current_consultancy_rate:,.0f}/m2\n\n"
+            f"Difference: Rp {consultancy_rate_difference:,.0f}/m2 "
+            f"(Rp {consultancy_total_difference:,.0f} total)"
+        )
+
+        cons_c1, cons_c2, cons_c3 = st.columns(3)
+        cons_c1.metric("GFA", f"{consultancy_gfa:,.0f} m2")
+        cons_c2.metric("Consultancy Detail Total", f"Rp {consultancy_detail_total:,.0f}")
+        cons_c3.metric("Derived Consultancy Rate", f"Rp {consultancy_derived_unit_price:,.0f}/m2")
+
+        cons_c4, cons_c5, cons_c6 = st.columns(3)
+        cons_c4.metric("Current Consultancy Rate", f"Rp {current_consultancy_rate:,.0f}/m2")
+        cons_c5.metric("Current Consultancy Total", f"Rp {current_consultancy_total:,.0f}")
+        cons_c6.metric("Difference", f"Rp {consultancy_rate_difference:,.0f}/m2")
+
+        curr_proj["data"]["consultancy_detail_total"] = consultancy_detail_total
+        curr_proj["data"]["consultancy_derived_unit_price"] = consultancy_derived_unit_price
+        consultancy_diff_status = get_consultancy_price_difference_status(curr_proj, consultancy_gfa)
+
+        if consultancy_diff_status["has_difference"]:
+            st.warning(
+                "Consultancy detail has changed. "
+                f"Derived Consultancy Rate is Rp {consultancy_diff_status['derived_rate']:,.0f}/m2, "
+                f"while Cost Analysis currently uses Rp {consultancy_diff_status['current_rate']:,.0f}/m2. "
+                "Cost Analysis has not been updated automatically."
+            )
+
+        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
+
+        with save_c1:
+            save_consultancy_detail_clicked = st.button(
+                "Save Consultancy Detail",
+                key=f"consultancy_detail_save_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        if save_consultancy_detail_clicked:
+            curr_proj["data"]["consultancy_detail_rows"] = consultancy_detail_rows
+            curr_proj["data"]["consultancy_detail_total"] = consultancy_detail_total
+            curr_proj["data"]["consultancy_derived_unit_price"] = consultancy_derived_unit_price
+
+            save_ok = save_after_user_action("Save Consultancy Detail")
+
+            if save_ok:
+                st.rerun()
+
+    # ==================================================
+    # TAB 11 - FF&E
     # ==================================================
     elif area_page == "FF&E":
         st.subheader("Area Analysis (FF&E)")
@@ -7972,6 +8262,54 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                         else:
                             st.error(
                                 "Architectural detail rate was applied locally, but cloud save failed. Do not log out yet."
+                            )
+
+            consultancy_review_row = next(
+                (row for row in detail_rate_review_rows if row.get("Section") == "Consultancy"),
+                {},
+            )
+            consultancy_apply_available = (
+                consultancy_review_row.get("Status") == "Different"
+                and _safe_float(consultancy_review_row.get("Detail Total", 0.0)) > 0
+                and _safe_float(consultancy_review_row.get("Detail-Derived Rate", 0.0)) > 0
+            )
+
+            if consultancy_review_row:
+                st.info(
+                    "Consultancy Detail-Derived Rate Review\n\n"
+                    f"Current Consultancy Rate: Rp {_safe_float(consultancy_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Derived Consultancy Rate: Rp {_safe_float(consultancy_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Difference: Rp {_safe_float(consultancy_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
+                    f"Status: {consultancy_review_row.get('Status', '')}"
+                )
+
+            if consultancy_apply_available:
+                st.warning(
+                    "Consultancy detail-derived rate differs from the current Cost Analysis Consultancy Rate. "
+                    "Cost Analysis has not been updated automatically."
+                )
+                if st.button(
+                    "Apply Consultancy Detail Rate",
+                    key=f"apply_consultancy_detail_rate_{curr_id}",
+                    type="primary",
+                ):
+                    derived_rate = _safe_float(curr_proj["data"].get("consultancy_derived_unit_price", 0.0))
+                    detail_total = _safe_float(curr_proj["data"].get("consultancy_detail_total", 0.0))
+
+                    if derived_rate <= 0 or detail_total <= 0:
+                        st.error("Consultancy detail rate cannot be applied because the detail total or derived rate is zero.")
+                    else:
+                        curr_proj["data"]["sc_cons"] = derived_rate
+                        st.session_state[f"sc_cons_{curr_type_key}"] = derived_rate
+
+                        save_ok = save_after_user_action("Apply Consultancy Detail Rate")
+
+                        if save_ok:
+                            st.success("Consultancy detail rate applied to Cost Analysis.")
+                            st.rerun()
+                        else:
+                            st.error(
+                                "Consultancy detail rate was applied locally, but cloud save failed. Do not log out yet."
                             )
 
             ffe_review_row = next(
