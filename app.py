@@ -7858,6 +7858,53 @@ def show_cost_estimator(): #cost calculator page
                     ).fillna(0).sum()
                 )
 
+        sync_groups = [
+            {
+                "title": "Core Area",
+                "items": [
+                    {"label": "Luas Tanah", "data_key": "m_land", "widget_key": "m_land", "value": area_land, "unit": "m2"},
+                    {"label": "GBA", "data_key": "m_gba", "widget_key": "m_gba", "value": area_totals["gba"], "unit": "m2"},
+                    {"label": "GFA", "data_key": "m_gfa", "widget_key": "m_gfa", "value": area_totals["gfa"], "unit": "m2"},
+                    {"label": "SGFA", "data_key": "m_sgfa", "widget_key": "m_sgfa", "value": area_totals["sgfa"], "unit": "m2"},
+                    {"label": "NFA", "data_key": "m_nfa", "widget_key": "m_nfa", "value": area_totals["nfa"], "unit": "m2"},
+                    {"label": "Lobby/Koridor", "data_key": "m_lobby", "widget_key": "m_lobby", "value": area_lobby_interior, "unit": "m2"},
+                    {"label": "Rooms/Units", "data_key": "m_rooms", "widget_key": "m_rooms", "value": area_rooms, "unit": "unit"},
+                ],
+            },
+            {
+                "title": "Opening / External",
+                "items": [
+                    {"label": "Facade", "data_key": "m_facade", "widget_key": "m_facade", "value": suggested_facade, "unit": "m2"},
+                    {"label": "Landscape", "data_key": "m_land_m2", "widget_key": "m_land_m2", "value": suggested_landscape_area, "unit": "m2"},
+                    {"label": "Residential Facility", "data_key": "m_fac_res", "widget_key": "m_fac_res", "value": suggested_res_fac_area, "unit": "m2"},
+                    {"label": "Railing", "data_key": "r_rail_qty", "widget_key": "r_rail_qty", "value": suggested_railing_qty, "unit": "m'/room"},
+                    {"label": "Wooden Door", "data_key": "m_door_w", "widget_key": "m_door_w", "value": suggested_door_wood, "unit": "unit"},
+                    {"label": "Steel Door", "data_key": "m_door_s", "widget_key": "m_door_s", "value": suggested_door_steel, "unit": "unit"},
+                    {"label": "Glass Door", "data_key": "m_door_g", "widget_key": "m_door_g", "value": suggested_door_glass, "unit": "unit"},
+                ],
+            },
+            {
+                "title": "Detail-Derived Rates",
+                "items": [
+                    {"label": "Earthworks Rate", "data_key": "u_earth", "widget_key": "u_earth", "session_key": f"u_earth_{curr_type_key}", "value": curr_proj["data"].get("earthwork_derived_unit_price", 0.0), "unit": "Rp/m2"},
+                    {"label": "Foundation Rate", "data_key": "u_found", "widget_key": "u_found", "session_key": f"u_found_{curr_type_key}", "value": curr_proj["data"].get("foundation_derived_unit_price", 0.0), "unit": "Rp/m2"},
+                    {"label": "Structural Rate", "data_key": "u_struc", "widget_key": "u_struc", "session_key": f"u_struc_{curr_type_key}", "value": curr_proj["data"].get("structural_derived_unit_price", 0.0), "unit": "Rp/m2"},
+                    {"label": "Architectural Rate", "data_key": "u_arch", "widget_key": "u_arch", "session_key": f"u_arch_{curr_type_key}", "value": curr_proj["data"].get("architectural_derived_unit_price", 0.0), "unit": "Rp/m2"},
+                    {"label": "FF&E Rate", "data_key": "u_ffe", "widget_key": "u_ffe", "session_key": f"u_ffe_{curr_type_key}", "value": curr_proj["data"].get("ffe_derived_unit_price", 0.0), "unit": "Rp/room"},
+                    {"label": "MEP Rate", "data_key": "u_mep", "widget_key": "u_mep", "session_key": f"u_mep_{curr_type_key}", "value": curr_proj["data"].get("mep_derived_unit_price", 0.0), "unit": "Rp/m2"},
+                    {"label": "Utility Rate", "data_key": "u_util", "widget_key": "u_util", "session_key": f"u_util_{curr_type_key}", "value": curr_proj["data"].get("utility_derived_unit_price", 0.0), "unit": "Rp/m2"},
+                    {"label": "Consultancy Rate", "data_key": "sc_cons", "widget_key": "sc_cons", "session_key": f"sc_cons_{curr_type_key}", "value": curr_proj["data"].get("consultancy_derived_unit_price", 0.0), "unit": "Rp/m2"},
+                ],
+            },
+        ]
+
+        syncable_items = [
+            item
+            for group in sync_groups
+            for item in group["items"]
+            if _safe_float(item.get("value", 0.0)) > 0
+        ]
+
         sync_col1, sync_col2 = st.columns([1, 3], vertical_alignment="center")
 
         with sync_col1:
@@ -7869,7 +7916,7 @@ def show_cost_estimator(): #cost calculator page
                 icon=mi("sync") if "mi" in globals() else None,
             ):
 
-                def sync_area_value(data_key, widget_key, value):
+                def sync_area_value(data_key, widget_key, value, session_key=None):
                     """
                     Sync Area Analysis value into Cost Analysis only if value > 0.
                     This prevents empty / unfilled Area Analysis values from overwriting existing Cost Analysis inputs.
@@ -7878,27 +7925,21 @@ def show_cost_estimator(): #cost calculator page
 
                     if value > 0:
                         st.session_state.projects[curr_id]["data"][data_key] = value
-                        st.session_state[f"{widget_key}_{curr_id}"] = value
+                        st.session_state[session_key or f"{widget_key}_{curr_id}"] = value
 
-                sync_area_value("m_land", "m_land", area_land)
-                sync_area_value("m_gba", "m_gba", area_totals["gba"])
-                sync_area_value("m_gfa", "m_gfa", area_totals["gfa"])
-                sync_area_value("m_sgfa", "m_sgfa", area_totals["sgfa"])
-                sync_area_value("m_nfa", "m_nfa", area_totals["nfa"])
-                sync_area_value("m_lobby", "m_lobby", area_lobby_interior)
-                sync_area_value("m_rooms", "m_rooms", area_rooms)
-                sync_area_value("m_facade", "m_facade", suggested_facade)
-                sync_area_value("m_land_m2", "m_land_m2", suggested_landscape_area)
-                sync_area_value("m_fac_res", "m_fac_res", suggested_res_fac_area)
-                sync_area_value("r_rail_qty", "r_rail_qty", suggested_railing_qty)
-                sync_area_value("m_door_w", "m_door_w", suggested_door_wood)
-                sync_area_value("m_door_s", "m_door_s", suggested_door_steel)
-                sync_area_value("m_door_g", "m_door_g", suggested_door_glass)
+                for group in sync_groups:
+                    for item in group["items"]:
+                        sync_area_value(
+                            item["data_key"],
+                            item["widget_key"],
+                            item["value"],
+                            item.get("session_key"),
+                        )
 
                 save_ok = save_after_user_action("Use Area Analysis in Cost Analysis")
 
                 if save_ok:
-                    st.success("Area Analysis totals, lobby area, rooms, facade, landscape area, railing length, and door quantities applied to Cost Analysis.")
+                    st.success("Area metrics, opening/external quantities, and detail-derived rates applied to Cost Analysis.")
                     st.rerun()
                 else:
                     st.error("Area Analysis values were applied locally, but cloud save failed. Do not log out yet.")
@@ -7907,25 +7948,32 @@ def show_cost_estimator(): #cost calculator page
 
         if on:
             with sync_col2:
-            
-                if area_land+area_totals["gba"]+area_totals["gfa"]+area_totals["sgfa"]+area_totals["nfa"]+area_lobby_interior+area_rooms+suggested_facade+suggested_landscape_area+suggested_railing_qty+suggested_door_wood+suggested_door_steel+suggested_door_glass > 0:
-                    st.info(f"""
-                        **Data from Area Analysis** (Data tidak akan berubah jika angka masih 0):  
-                        **Luas Tanah** {area_land:,.0f} m2 |
-                        **GBA** {area_totals['gba']:,.0f} m2 |
-                        **GFA** {area_totals['gfa']:,.0f} m2 |
-                        **SGFA** {area_totals['sgfa']:,.0f} m2 |
-                        **NFA** {area_totals['nfa']:,.0f} m2 |  
-                        **Lobby** {area_lobby_interior:,.0f} m2 |
-                        **Ruang** {area_rooms:,} unit |
-                        **Facade** {suggested_facade:,.0f} m2 |  
-                        **Lanskap** {suggested_landscape_area:,.2f} m2 |
-                        **Fasilitas Penghuni** {suggested_res_fac_area:,.2f} m2 |
-                        **Railing** {suggested_railing_qty:,.2f} m'/room |  
-                        **Pintu Kayu** {suggested_door_wood:,} unit |
-                        **Pintu Besi** {suggested_door_steel:,} unit |
-                        **Pintu Kaca** {suggested_door_glass:,} unit
-                        """)
+                if syncable_items:
+                    st.info("Source values available from Area Analysis. Values of 0 will not overwrite existing Cost Analysis inputs.")
+
+                    for group in sync_groups:
+                        preview_rows = []
+                        for item in group["items"]:
+                            value = _safe_float(item.get("value", 0.0))
+                            preview_rows.append({
+                                "Value": item["label"],
+                                "Source Value": value,
+                                "Unit": item.get("unit", ""),
+                                "Will Sync": "Yes" if value > 0 else "No - zero skipped",
+                            })
+
+                        st.markdown(f"**{group['title']}**")
+                        st.dataframe(
+                            pd.DataFrame(preview_rows),
+                            hide_index=True,
+                            width="stretch",
+                            column_config={
+                                "Source Value": st.column_config.NumberColumn(
+                                    "Source Value",
+                                    format="%.2f",
+                                ),
+                            },
+                        )
                 else:
                     st.info("No data found in Area Analysis to sync.")
             
