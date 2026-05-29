@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Earthworks is the first detail cost page pattern for future cost detail workflows. The pattern separates detailed input and rate review from the final project cost formula.
+Earthworks is the first detail cost page pattern, and Structural is the second implemented pattern. The pattern separates detailed input and rate review from the final project cost formula.
 
 ## Ownership Model
 
@@ -22,17 +22,26 @@ This keeps detailed review work close to area inputs while keeping final cost lo
 | Never silently overwrite cost rates | Detail calculations must not automatically change active Cost Analysis rates |
 | Final formulas stay in Cost Analysis | Detail pages support the formula; they do not own it |
 
+Earthworks and Structural both follow detail-derived-rate logic. Each detail page calculates a suggested rate from detail rows, then Cost Analysis decides whether that rate becomes active.
+
 For Earthworks, the detail page calculates:
 
 | Derived Value | Calculation |
 | --- | --- |
 | Earthwork Rate | Earthworks Detail Total / GBA |
 
-The final Earthworks cost remains calculated in Cost Analysis as:
+For Structural, the detail page calculates:
+
+| Derived Value | Calculation |
+| --- | --- |
+| Structural Rate | Structural Detail Total / GBA |
+
+The final Earthworks and Structural costs remain calculated in Cost Analysis as:
 
 | Final Cost | Calculation |
 | --- | --- |
 | Earthworks Total | GBA x Earthwork Rate |
+| Structural Total | GBA x Structural Rate |
 
 ## Excel Import and Export Pattern
 
@@ -48,13 +57,12 @@ Summary and total rows must not be imported as detail input rows.
 
 ## Future Candidates
 
-Future detail cost pages can follow the Earthworks pattern:
+Future detail cost pages can follow the Earthworks and Structural pattern:
 
 | Candidate |
 | --- |
 | Foundation |
 | Shoring |
-| Structure |
 | External works |
 | Residential detail |
 | Door/detail items |
