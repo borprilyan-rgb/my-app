@@ -23,6 +23,7 @@ from excel_helpers import (
     read_external_sheet,
     read_pintu_sheet,
     read_residential_area_sheet,
+    read_structural_sheet,
 )
 from report_excel_helpers import (
     build_portfolio_meta_from_inputs,
@@ -404,6 +405,7 @@ UI_CACHE_PREFIXES = (
     "save_smart_custom_to_cloud_",
     "save_cost_analysis_",
     "earthwork_detail_",
+    "structural_detail_",
     "area_editor_",
     "edit_smart_cc_",
     "external_table_",
@@ -2790,6 +2792,74 @@ def calculate_earthwork_detail(rows, gba):
 
     return cleaned_rows, detail_total, derived_unit_price
 
+def get_default_structural_detail_rows():
+    return [
+        {"code": "1", "description": "Sub/Superstructure", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Bekisting", "unit": "m2", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Pembesian", "unit": "kg", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Readymix Concrete", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Rebar", "unit": "kg", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "Prestress Works", "unit": "ls", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "Steelworks", "unit": "kg", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Others", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+def clean_structural_detail_rows(rows, gba):
+    if isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    if not isinstance(rows, list) or len(rows) == 0:
+        rows = get_default_structural_detail_rows()
+
+    gba = _safe_float(gba)
+    default_rows = get_default_structural_detail_rows()
+    cleaned_rows = []
+    sub_super_qty = 0.0
+
+    for idx, default_row in enumerate(default_rows):
+        row = rows[idx] if idx < len(rows) else {}
+        row = row if isinstance(row, dict) else {}
+
+        ratio = _safe_float(row.get("ratio", default_row["ratio"]))
+        waste_factor = _safe_float(row.get("waste_factor", default_row["waste_factor"]))
+        unit_price = _safe_float(row.get("unit_price", 0.0))
+        description = default_row["description"]
+
+        if idx == 0:
+            quantity = gba * ratio
+            sub_super_qty = quantity
+        elif idx in [1, 2, 3]:
+            quantity = sub_super_qty * ratio
+        elif idx == 4:
+            quantity = sub_super_qty * ratio * waste_factor
+        elif idx in [5, 6]:
+            quantity = _safe_float(row.get("quantity", 0.0))
+        else:
+            quantity = sub_super_qty
+
+        amount = quantity * unit_price
+
+        cleaned_rows.append({
+            "code": default_row["code"],
+            "description": description,
+            "unit": default_row["unit"],
+            "ratio": ratio,
+            "waste_factor": waste_factor,
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return cleaned_rows
+
+def calculate_structural_detail(rows, gba):
+    cleaned_rows = clean_structural_detail_rows(rows, gba)
+    detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
+    gba = _safe_float(gba)
+    derived_unit_price = detail_total / gba if gba > 0 else 0.0
+
+    return cleaned_rows, detail_total, derived_unit_price
+
 def get_earthwork_price_difference_status(curr_proj, gba):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     derived_rate = _safe_float(data.get("earthwork_derived_unit_price", 0.0))
@@ -2817,28 +2887,73 @@ def get_earthwork_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
-def build_detail_rate_review_rows(curr_proj, gba):
+def get_structural_price_difference_status(curr_proj, gba):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    derived_rate = _safe_float(data.get("structural_derived_unit_price", 0.0))
+    current_rate = _safe_float(data.get("u_struc", 0.0))
+    detail_total = _safe_float(data.get("structural_detail_total", 0.0))
     gba = _safe_float(gba)
 
-    current_rate = _safe_float(data.get("u_earth", 0.0))
-    derived_rate = _safe_float(data.get("earthwork_derived_unit_price", 0.0))
-    detail_total = _safe_float(data.get("earthwork_detail_total", 0.0))
     current_total = gba * current_rate
     rate_difference = derived_rate - current_rate
     total_difference = detail_total - current_total
 
-    if detail_total <= 0:
-        status = "No detail / zero detail"
-    elif abs(rate_difference) <= 1:
-        status = "Matching"
-    else:
-        status = "Different"
+    has_difference = (
+        detail_total > 0
+        and derived_rate > 0
+        and abs(rate_difference) > 1
+    )
 
-    return [
+    return {
+        "has_difference": has_difference,
+        "derived_rate": derived_rate,
+        "current_rate": current_rate,
+        "rate_difference": rate_difference,
+        "detail_total": detail_total,
+        "current_total": current_total,
+        "total_difference": total_difference,
+    }
+
+def build_detail_rate_review_rows(curr_proj, gba):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    gba = _safe_float(gba)
+
+    review_specs = [
         {
             "Section": "Earthworks",
             "Cost Key": "u_earth",
+            "current_rate": _safe_float(data.get("u_earth", 0.0)),
+            "derived_rate": _safe_float(data.get("earthwork_derived_unit_price", 0.0)),
+            "detail_total": _safe_float(data.get("earthwork_detail_total", 0.0)),
+        },
+        {
+            "Section": "Structural",
+            "Cost Key": "u_struc",
+            "current_rate": _safe_float(data.get("u_struc", 0.0)),
+            "derived_rate": _safe_float(data.get("structural_derived_unit_price", 0.0)),
+            "detail_total": _safe_float(data.get("structural_detail_total", 0.0)),
+        }
+    ]
+
+    rows = []
+    for spec in review_specs:
+        current_rate = spec["current_rate"]
+        derived_rate = spec["derived_rate"]
+        detail_total = spec["detail_total"]
+        current_total = gba * current_rate
+        rate_difference = derived_rate - current_rate
+        total_difference = detail_total - current_total
+
+        if detail_total <= 0:
+            status = "No detail / zero detail"
+        elif abs(rate_difference) <= 1:
+            status = "Matching"
+        else:
+            status = "Different"
+
+        rows.append({
+            "Section": spec["Section"],
+            "Cost Key": spec["Cost Key"],
             "Basis": "GBA",
             "Current Cost Rate": current_rate,
             "Detail-Derived Rate": derived_rate,
@@ -2847,8 +2962,9 @@ def build_detail_rate_review_rows(curr_proj, gba):
             "Current Total": current_total,
             "Difference Total": total_difference,
             "Status": status,
-        }
-    ]
+        })
+
+    return rows
 
 from project_database import PROJECT_DATABASE
 
@@ -4330,6 +4446,7 @@ def show_area_calculator():
             "Eksternal",
             "Residential Area",
             "Earthworks",
+            "Structural",
             "Details",
     ]
 
@@ -4402,7 +4519,12 @@ def show_area_calculator():
                     "earthwork_detail_rows",
                     get_default_earthwork_detail_rows(),
                 ),
+                structural_detail_rows=curr_proj["data"].get(
+                    "structural_detail_rows",
+                    get_default_structural_detail_rows(),
+                ),
                 earthwork_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
+                structural_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
             )
 
             def safe_filename_part(value, fallback="Unnamed"):
@@ -4495,6 +4617,12 @@ def show_area_calculator():
                         except ExcelImportError as e:
                             st.warning(str(e))
 
+                        imported_structural_rows = None
+                        try:
+                            imported_structural_rows = read_structural_sheet(excel_bytes)
+                        except ExcelImportError as e:
+                            st.warning(str(e))
+
                         st.session_state[area_draft_key] = copy.deepcopy(imported_area_records)
                         st.session_state[area_committed_key] = copy.deepcopy(imported_area_records)
                         set_data("area_table", copy.deepcopy(imported_area_records))
@@ -4574,6 +4702,21 @@ def show_area_calculator():
                             else:
                                 st.session_state.pop("earthwork_import_warning", None)
 
+                        if imported_structural_rows is not None:
+                            structural_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                            if structural_import_gba <= 0:
+                                structural_import_gba = safe_sum(imported_area_df, "GBA")
+
+                            (
+                                imported_structural_rows,
+                                imported_structural_total,
+                                imported_structural_derived_unit_price,
+                            ) = calculate_structural_detail(imported_structural_rows, structural_import_gba)
+
+                            curr_proj["data"]["structural_detail_rows"] = imported_structural_rows
+                            curr_proj["data"]["structural_detail_total"] = imported_structural_total
+                            curr_proj["data"]["structural_derived_unit_price"] = imported_structural_derived_unit_price
+
                         clear_area_editor_state()
 
                         for stale_key in [
@@ -4581,6 +4724,7 @@ def show_area_calculator():
                             f"other_external_editor_{curr_id}",
                             f"res_fac_editor_{curr_id}",
                             f"earthwork_detail_editor_{curr_id}",
+                            f"structural_detail_editor_{curr_id}",
                         ]:
                             if stale_key in st.session_state:
                                 del st.session_state[stale_key]
@@ -5647,7 +5791,121 @@ def show_area_calculator():
                 st.rerun()
 
     # ==================================================
-    # TAB 7 - DETAILS
+    # TAB 7 - STRUCTURAL
+    # ==================================================
+    elif area_page == "Structural":
+        st.subheader("Area Analysis (Structural)")
+        st.caption("Structural Detail calculates a suggested Structural Rate only. Cost Analysis is updated only from the explicit Apply button.")
+
+        structural_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+        if structural_gba <= 0:
+            structural_gba = safe_sum(edited_df, "GBA")
+
+        saved_structural_detail_rows = curr_proj["data"].get(
+            "structural_detail_rows",
+            get_default_structural_detail_rows(),
+        )
+        structural_detail_rows, structural_detail_total, structural_derived_unit_price = calculate_structural_detail(
+            saved_structural_detail_rows,
+            structural_gba,
+        )
+
+        current_structural_rate = _safe_float(
+            curr_proj["data"].get(
+                "u_struc",
+                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("struc_work", 0.0),
+            )
+        )
+        current_structural_total = structural_gba * current_structural_rate
+        structural_rate_difference = structural_derived_unit_price - current_structural_rate
+        structural_total_difference = structural_detail_total - current_structural_total
+
+        edited_structural_detail = st.data_editor(
+            pd.DataFrame(structural_detail_rows),
+            key=f"structural_detail_editor_{curr_id}",
+            hide_index=True,
+            width="stretch",
+            num_rows="fixed",
+            disabled=["code", "description", "unit", "amount"],
+            column_config={
+                "code": st.column_config.TextColumn("No"),
+                "description": st.column_config.TextColumn("Description", width="large"),
+                "unit": st.column_config.TextColumn("Unit"),
+                "ratio": st.column_config.NumberColumn("Ratio", min_value=0.0, step=0.01, format="%.4f"),
+                "waste_factor": st.column_config.NumberColumn("Waste Factor", min_value=0.0, step=0.01, format="%.4f"),
+                "quantity": st.column_config.NumberColumn("Qty", format="%.2f"),
+                "unit_price": st.column_config.NumberColumn("Rate", min_value=0.0, step=100000.0, format="Rp %.0f"),
+                "amount": st.column_config.NumberColumn("Amount", format="Rp %.0f"),
+            },
+        )
+
+        structural_detail_rows, structural_detail_total, structural_derived_unit_price = calculate_structural_detail(
+            edited_structural_detail,
+            structural_gba,
+        )
+
+        current_structural_total = structural_gba * current_structural_rate
+        structural_rate_difference = structural_derived_unit_price - current_structural_rate
+        structural_total_difference = structural_detail_total - current_structural_total
+
+        if structural_gba <= 0:
+            st.warning("Structural Detail needs GBA greater than 0 to derive a Structural Rate.")
+
+        st.info(
+            "Structural Detail Review\n\n"
+            f"GBA: {structural_gba:,.0f} m2\n\n"
+            f"Structural Detail Total: Rp {structural_detail_total:,.0f}\n\n"
+            f"Derived Structural Rate: Rp {structural_derived_unit_price:,.0f}/m2\n\n"
+            f"Current Structural Rate from Cost Analysis: Rp {current_structural_rate:,.0f}/m2\n\n"
+            f"Difference: Rp {structural_rate_difference:,.0f}/m2 "
+            f"(Rp {structural_total_difference:,.0f} total)"
+        )
+
+        st.markdown("##### Structural Detail Review")
+        sd_c1, sd_c2, sd_c3 = st.columns(3)
+        sd_c1.metric("GBA", f"{structural_gba:,.0f} m2")
+        sd_c2.metric("Structural Detail Total", f"Rp {structural_detail_total:,.0f}")
+        sd_c3.metric("Derived Structural Rate", f"Rp {structural_derived_unit_price:,.0f}/m2")
+
+        sd_c4, sd_c5, sd_c6 = st.columns(3)
+        sd_c4.metric("Current Structural Rate", f"Rp {current_structural_rate:,.0f}/m2")
+        sd_c5.metric("Current Structural Total", f"Rp {current_structural_total:,.0f}")
+        sd_c6.metric("Difference", f"Rp {structural_rate_difference:,.0f}/m2")
+
+        curr_proj["data"]["structural_detail_total"] = structural_detail_total
+        curr_proj["data"]["structural_derived_unit_price"] = structural_derived_unit_price
+        structural_diff_status = get_structural_price_difference_status(curr_proj, structural_gba)
+
+        if structural_diff_status["has_difference"]:
+            st.warning(
+                "Structural detail has changed. "
+                f"Derived Structural Rate is Rp {structural_diff_status['derived_rate']:,.0f}/m2, "
+                f"while Cost Analysis currently uses Rp {structural_diff_status['current_rate']:,.0f}/m2. "
+                "Cost Analysis has not been updated automatically."
+            )
+
+        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
+
+        with save_c1:
+            save_structural_detail_clicked = st.button(
+                "Save Structural Detail",
+                key=f"structural_detail_save_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        if save_structural_detail_clicked:
+            curr_proj["data"]["structural_detail_rows"] = structural_detail_rows
+            curr_proj["data"]["structural_detail_total"] = structural_detail_total
+            curr_proj["data"]["structural_derived_unit_price"] = structural_derived_unit_price
+
+            save_ok = save_after_user_action("Save Structural Detail")
+
+            if save_ok:
+                st.rerun()
+
+    # ==================================================
+    # TAB 8 - DETAILS
     # ==================================================
     elif area_page == "Details":
         st.subheader("Details")
@@ -6366,6 +6624,54 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                         else:
                             st.error(
                                 "Earthworks detail rate was applied locally, but cloud save failed. Do not log out yet."
+                            )
+
+            structural_review_row = next(
+                (row for row in detail_rate_review_rows if row.get("Section") == "Structural"),
+                {},
+            )
+            structural_apply_available = (
+                structural_review_row.get("Status") == "Different"
+                and _safe_float(structural_review_row.get("Detail Total", 0.0)) > 0
+                and _safe_float(structural_review_row.get("Detail-Derived Rate", 0.0)) > 0
+            )
+
+            if structural_review_row:
+                st.info(
+                    "Structural Detail-Derived Rate Review\n\n"
+                    f"Current Structural Rate: Rp {_safe_float(structural_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Derived Structural Rate: Rp {_safe_float(structural_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Difference: Rp {_safe_float(structural_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
+                    f"Status: {structural_review_row.get('Status', '')}"
+                )
+
+            if structural_apply_available:
+                st.warning(
+                    "Structural detail-derived rate differs from the current Cost Analysis Structural Rate. "
+                    "Cost Analysis has not been updated automatically."
+                )
+                if st.button(
+                    "Apply Structural Detail Rate",
+                    key=f"apply_structural_detail_rate_{curr_id}",
+                    type="primary",
+                ):
+                    derived_rate = _safe_float(curr_proj["data"].get("structural_derived_unit_price", 0.0))
+                    detail_total = _safe_float(curr_proj["data"].get("structural_detail_total", 0.0))
+
+                    if derived_rate <= 0 or detail_total <= 0:
+                        st.error("Structural detail rate cannot be applied because the detail total or derived rate is zero.")
+                    else:
+                        curr_proj["data"]["u_struc"] = derived_rate
+                        st.session_state[f"u_struc_{curr_type_key}"] = derived_rate
+
+                        save_ok = save_after_user_action("Apply Structural Detail Rate")
+
+                        if save_ok:
+                            st.success("Structural detail rate applied to Cost Analysis.")
+                            st.rerun()
+                        else:
+                            st.error(
+                                "Structural detail rate was applied locally, but cloud save failed. Do not log out yet."
                             )
 
         with st.expander("Harga Fondasi & Struktur", expanded=True):

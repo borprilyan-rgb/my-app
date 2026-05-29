@@ -588,6 +588,127 @@ def read_earthworks_sheet(excel_bytes):
     return rows
 
 
+def _default_structural_detail_rows():
+    return [
+        {"code": "1", "description": "Sub/Superstructure", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Bekisting", "unit": "m2", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Pembesian", "unit": "kg", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Readymix Concrete", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Rebar", "unit": "kg", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "Prestress Works", "unit": "ls", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "Steelworks", "unit": "kg", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Others", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+
+def read_structural_sheet(excel_bytes):
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="Structural",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError:
+        return None
+    except Exception:
+        return None
+
+    header_row_idx = None
+
+    for i in range(min(12, len(raw))):
+        row_norm = [_excel_norm_col(v) for v in raw.iloc[i].tolist()]
+        required_hits = sum(
+            1 for key in ["Code", "Description", "Unit", "Ratio", "Quantity", "Unit Price (Rp)"]
+            if _excel_norm_col(key) in row_norm
+        )
+
+        if required_hits >= 5:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ExcelImportError(
+            'The "Structural" sheet header could not be read. Structural import was skipped.'
+        )
+
+    df = raw.iloc[header_row_idx + 1:].copy()
+    df.columns = raw.iloc[header_row_idx].tolist()
+    df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    code_col = _excel_find_col(df, ["Code", "Item Code"])
+    desc_col = _excel_find_col(df, ["Description", "Item"])
+    unit_col = _excel_find_col(df, ["Unit"])
+    ratio_col = _excel_find_col(df, ["Ratio"])
+    waste_col = _excel_find_col(df, ["Waste Factor", "Waste"])
+    qty_col = _excel_find_col(df, ["Quantity", "Qty"])
+    unit_price_col = _excel_find_col(df, ["Unit Price (Rp)", "Unit Price", "Rate", "Harga"])
+
+    missing = []
+    if not code_col:
+        missing.append("Code")
+    if not desc_col:
+        missing.append("Description")
+    if not unit_col:
+        missing.append("Unit")
+    if not ratio_col:
+        missing.append("Ratio")
+    if not qty_col:
+        missing.append("Quantity")
+    if not unit_price_col:
+        missing.append("Unit Price (Rp)")
+
+    if missing:
+        raise ExcelImportError(
+            'The "Structural" sheet is missing required columns: '
+            f'{", ".join(missing)}. Structural import was skipped.'
+        )
+
+    by_code = {}
+    summary_labels = {
+        "TOTAL",
+        "GRAND TOTAL",
+        "GBA",
+        "STRUCTURAL DETAIL TOTAL",
+        "DERIVED STRUCTURAL RATE",
+        "CURRENT STRUCTURAL RATE",
+        "DIFFERENCE",
+    }
+
+    for _, row in df.iterrows():
+        code = str(row.get(code_col, "")).strip()
+        description = str(row.get(desc_col, "")).strip()
+
+        if code in ["", "-", "nan", "None"] and description in ["", "-", "nan", "None"]:
+            continue
+
+        if code.upper() in summary_labels or description.upper() in summary_labels:
+            continue
+
+        by_code[code] = {
+            "code": code,
+            "description": description,
+            "unit": str(row.get(unit_col, "")).strip().lower(),
+            "ratio": _excel_safe_float(row.get(ratio_col, 0.0)),
+            "waste_factor": _excel_safe_float(row.get(waste_col, 0.0)) if waste_col else 0.0,
+            "quantity": _excel_safe_float(row.get(qty_col, 0.0)),
+            "unit_price": _excel_safe_float(row.get(unit_price_col, 0.0)),
+            "amount": 0.0,
+        }
+
+    rows = []
+    for default_row in _default_structural_detail_rows():
+        imported = by_code.get(default_row["code"], {})
+        row = {**default_row, **imported}
+        row["code"] = default_row["code"]
+        row["description"] = default_row["description"]
+        row["unit"] = default_row["unit"]
+        rows.append(row)
+
+    return rows
+
+
 def create_area_excel_form_bytes(
     project_name="",
     upper_floors=5,
@@ -595,7 +716,9 @@ def create_area_excel_form_bytes(
     include_roof_machine=True,
     include_roof=True,
     earthwork_detail_rows=None,
+    structural_detail_rows=None,
     earthwork_gba=0.0,
+    structural_gba=0.0,
 ):
     output = io.BytesIO()
 
@@ -1228,6 +1351,117 @@ def create_area_excel_form_bytes(
     ws_earth.protection.password = "area"
 
     # ==================================================
+    # STRUCTURAL SHEET
+    # ==================================================
+    ws_struct = wb.create_sheet("Structural")
+    ws_struct.sheet_view.showGridLines = False
+
+    ws_struct.merge_cells("A1:H1")
+    ws_struct["A1"] = "STRUCTURAL DETAIL BREAKDOWN"
+    ws_struct["A1"].font = Font(bold=True, color=white, size=14)
+    ws_struct["A1"].fill = PatternFill("solid", fgColor=dark)
+    ws_struct["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws_struct.merge_cells("A2:H2")
+    ws_struct["A2"] = "Detail-derived rate only. Cost Analysis changes only after Apply Structural Detail Rate in the app."
+    ws_struct["A2"].font = Font(italic=True, color=dark, size=10)
+    ws_struct["A2"].alignment = Alignment(horizontal="left", vertical="center")
+
+    structural_headers = [
+        "Code",
+        "Description",
+        "Unit",
+        "Ratio",
+        "Waste Factor",
+        "Quantity",
+        "Unit Price (Rp)",
+        "Amount (Rp)",
+    ]
+    for c, h in enumerate(structural_headers, start=1):
+        ws_struct.cell(3, c).value = h
+
+    style_range(ws_struct, "A3:H3", dark, font_color=white, bold=True)
+
+    struct_rows = structural_detail_rows if isinstance(structural_detail_rows, list) and structural_detail_rows else _default_structural_detail_rows()
+    struct_defaults = _default_structural_detail_rows()
+    struct_start_row = 4
+
+    for idx, default_row in enumerate(struct_defaults):
+        r = struct_start_row + idx
+        row = struct_rows[idx] if idx < len(struct_rows) and isinstance(struct_rows[idx], dict) else {}
+
+        ws_struct.cell(r, 1).value = default_row["code"]
+        ws_struct.cell(r, 2).value = default_row["description"]
+        ws_struct.cell(r, 3).value = default_row["unit"]
+        ws_struct.cell(r, 4).value = _excel_safe_float(row.get("ratio", 0.0))
+        ws_struct.cell(r, 5).value = _excel_safe_float(row.get("waste_factor", 0.0))
+        ws_struct.cell(r, 7).value = _excel_safe_float(row.get("unit_price", 0.0))
+
+        if idx == 0:
+            ws_struct.cell(r, 6).value = f"={_excel_safe_float(structural_gba)}*D{r}"
+        elif idx in [1, 2, 3]:
+            ws_struct.cell(r, 6).value = f"=F{struct_start_row}*D{r}"
+        elif idx == 4:
+            ws_struct.cell(r, 6).value = f"=F{struct_start_row}*D{r}*E{r}"
+        elif idx in [5, 6]:
+            ws_struct.cell(r, 6).value = _excel_safe_float(row.get("quantity", 0.0))
+        else:
+            ws_struct.cell(r, 6).value = f"=F{struct_start_row}"
+
+        ws_struct.cell(r, 8).value = f"=F{r}*G{r}"
+
+    struct_total_row = struct_start_row + len(struct_defaults)
+    ws_struct.cell(struct_total_row, 1).value = "TOTAL"
+    ws_struct.cell(struct_total_row, 8).value = f"=SUM(H{struct_start_row}:H{struct_total_row - 1})"
+
+    struct_summary_start = struct_total_row + 2
+    ws_struct.cell(struct_summary_start, 1).value = "GBA"
+    ws_struct.cell(struct_summary_start, 2).value = _excel_safe_float(structural_gba)
+    ws_struct.cell(struct_summary_start + 1, 1).value = "Structural Detail Total"
+    ws_struct.cell(struct_summary_start + 1, 2).value = f"=H{struct_total_row}"
+    ws_struct.cell(struct_summary_start + 2, 1).value = "Derived Structural Rate"
+    ws_struct.cell(struct_summary_start + 2, 2).value = f"=IF(B{struct_summary_start}>0,B{struct_summary_start + 1}/B{struct_summary_start},0)"
+
+    style_range(ws_struct, f"A{struct_start_row}:H{struct_total_row}", None)
+    style_range(ws_struct, f"A{struct_total_row}:H{struct_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_struct, f"A{struct_summary_start}:B{struct_summary_start + 2}", formula_fill, bold=True)
+    style_range(ws_struct, f"F{struct_start_row}:F{struct_total_row}", formula_fill)
+    style_range(ws_struct, f"H{struct_start_row}:H{struct_total_row}", formula_fill)
+
+    lock_range(ws_struct, f"A1:H{struct_summary_start + 2}")
+    unlock_range(ws_struct, f"D{struct_start_row}:D{struct_start_row + 4}")
+    unlock_range(ws_struct, f"E{struct_start_row + 4}:E{struct_start_row + 4}")
+    unlock_range(ws_struct, f"F{struct_start_row + 5}:F{struct_start_row + 6}")
+    unlock_range(ws_struct, f"G{struct_start_row}:G{struct_total_row - 1}")
+
+    for col, width in {
+        "A": 12,
+        "B": 28,
+        "C": 12,
+        "D": 14,
+        "E": 14,
+        "F": 14,
+        "G": 18,
+        "H": 18,
+    }.items():
+        ws_struct.column_dimensions[col].width = width
+
+    for row in ws_struct.iter_rows(min_row=struct_start_row, max_row=struct_summary_start + 2, min_col=4, max_col=8):
+        for cell in row:
+            cell.number_format = '#,##0.00'
+
+    for cell in [
+        ws_struct.cell(struct_summary_start, 2),
+        ws_struct.cell(struct_summary_start + 1, 2),
+        ws_struct.cell(struct_summary_start + 2, 2),
+    ]:
+        cell.number_format = '#,##0.00'
+
+    ws_struct.freeze_panes = "A4"
+    ws_struct.protection.sheet = True
+    ws_struct.protection.password = "area"
+
+    # ==================================================
     # IMPORT GUIDE
     # ==================================================
     ws_guide = wb.create_sheet("Import Guide")
@@ -1238,6 +1472,7 @@ def create_area_excel_form_bytes(
         ["Eksternal", "External works input", "No, Item, Unit, Qty, Rate"],
         ["Residential Area", "Residential facility input", "No, Item, Unit, Qty, Rate"],
         ["Earthworks", "Earthworks detail preview input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
+        ["Structural", "Structural detail-derived rate input", "Ratio, Waste Factor for Rebar, Quantity for Prestress Works and Steelworks, Unit Price (Rp)"],
     ]
 
     for r, row in enumerate(guide_rows, start=1):
