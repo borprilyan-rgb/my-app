@@ -5264,8 +5264,8 @@ def show_area_calculator():
                                 excel_bytes
                             )
 
-                        imported_res_fac_records = read_residential_area_sheet(excel_bytes)
-                        imported_facility_misc_inputs = read_facility_misc_inputs(excel_bytes)
+                            imported_res_fac_records = read_residential_area_sheet(excel_bytes)
+                            imported_facility_misc_inputs = read_facility_misc_inputs(excel_bytes)
 
                             imported_earthwork_rows = None
                             try:
@@ -5402,35 +5402,35 @@ def show_area_calculator():
                                 curr_proj["data"]["area_facade_tolerance_area_calc"] = imported_facade_tolerance_area
                                 curr_proj["data"]["area_facade_calc"] = imported_total_facade_area
 
-                        if imported_res_fac_records:
-                            res_fac_key = f"res_fac_table_{curr_id}"
-                            st.session_state[res_fac_key] = copy.deepcopy(imported_res_fac_records)
-                            curr_proj["data"]["area_res_fac_table_data"] = copy.deepcopy(
-                                imported_res_fac_records
-                            )
-                            imported_res_fac_amount = sum(
-                                _safe_float(row.get("Qty", 0.0)) * _safe_float(row.get("Rate", 0.0))
-                                for row in imported_res_fac_records
-                                if isinstance(row, dict)
-                            )
-                            curr_proj["data"]["area_res_fac_amount_calc"] = imported_res_fac_amount
+                            if imported_res_fac_records:
+                                res_fac_key = f"res_fac_table_{curr_id}"
+                                st.session_state[res_fac_key] = copy.deepcopy(imported_res_fac_records)
+                                curr_proj["data"]["area_res_fac_table_data"] = copy.deepcopy(
+                                    imported_res_fac_records
+                                )
+                                imported_res_fac_amount = sum(
+                                    _safe_float(row.get("Qty", 0.0)) * _safe_float(row.get("Rate", 0.0))
+                                    for row in imported_res_fac_records
+                                    if isinstance(row, dict)
+                                )
+                                curr_proj["data"]["area_res_fac_amount_calc"] = imported_res_fac_amount
 
-                        if imported_facility_misc_inputs:
-                            for k, v in imported_facility_misc_inputs.items():
-                                curr_proj["data"][k] = v
-                            curr_proj["data"]["area_fac_pub_amount_calc"] = (
-                                _safe_float(curr_proj["data"].get("m_fac_pub", 0.0))
-                                * _safe_float(curr_proj["data"].get("fac_pub_rate", 0.0))
-                            )
-                            curr_proj["data"]["area_fac_proj_amount_calc"] = (
-                                _safe_float(curr_proj["data"].get("m_fac_proj", 0.0))
-                                * _safe_float(curr_proj["data"].get("fac_proj_rate", 0.0))
-                            )
-                            curr_proj["data"]["group_misc"] = (
-                                _safe_float(curr_proj["data"].get("area_fac_pub_amount_calc", 0.0))
-                                + _safe_float(curr_proj["data"].get("area_res_fac_amount_calc", 0.0))
-                                + _safe_float(curr_proj["data"].get("area_fac_proj_amount_calc", 0.0))
-                            )
+                            if imported_facility_misc_inputs:
+                                for k, v in imported_facility_misc_inputs.items():
+                                    curr_proj["data"][k] = v
+                                curr_proj["data"]["area_fac_pub_amount_calc"] = (
+                                    _safe_float(curr_proj["data"].get("m_fac_pub", 0.0))
+                                    * _safe_float(curr_proj["data"].get("fac_pub_rate", 0.0))
+                                )
+                                curr_proj["data"]["area_fac_proj_amount_calc"] = (
+                                    _safe_float(curr_proj["data"].get("m_fac_proj", 0.0))
+                                    * _safe_float(curr_proj["data"].get("fac_proj_rate", 0.0))
+                                )
+                                curr_proj["data"]["group_misc"] = (
+                                    _safe_float(curr_proj["data"].get("area_fac_pub_amount_calc", 0.0))
+                                    + _safe_float(curr_proj["data"].get("area_res_fac_amount_calc", 0.0))
+                                    + _safe_float(curr_proj["data"].get("area_fac_proj_amount_calc", 0.0))
+                                )
 
                             if imported_earthwork_rows is not None:
                                 earthwork_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
