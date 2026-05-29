@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Earthworks is the first detail cost page pattern, Structural is the second implemented pattern, Foundation is the third implemented pattern, and Architectural is the fourth implemented pattern. The pattern separates detailed input and rate review from the final project cost formula.
+Earthworks is the first detail cost page pattern, Structural is the second implemented pattern, Foundation is the third implemented pattern, Architectural is the fourth implemented pattern, and FF&E is an implemented pattern. The pattern separates detailed input and rate review from the final project cost formula.
 
 ## Ownership Model
 
@@ -22,9 +22,9 @@ This keeps detailed review work close to area inputs while keeping final cost lo
 | Never silently overwrite cost rates | Detail calculations must not automatically change active Cost Analysis rates |
 | Final formulas stay in Cost Analysis | Detail pages support the formula; they do not own it |
 
-Earthworks, Structural, Foundation, and Architectural all follow detail-derived-rate logic. Each detail page calculates a suggested rate from detail rows, then Cost Analysis decides whether that rate becomes active.
+Earthworks, Structural, Foundation, Architectural, and FF&E all follow detail-derived-rate logic. Each detail page calculates a suggested rate from detail rows, then Cost Analysis decides whether that rate becomes active.
 
-Earthworks, Foundation, and Structural are GBA-based workflows. Architectural is a GFA-based workflow.
+Earthworks, Foundation, and Structural are GBA-based workflows. Architectural is a GFA-based workflow. FF&E is a Rooms-based workflow.
 
 For Earthworks, the detail page calculates:
 
@@ -50,7 +50,13 @@ For Architectural, the detail page calculates:
 | --- | --- |
 | Architectural Rate | Architectural Detail Total / GFA |
 
-The final Earthworks, Structural, Foundation, and Architectural costs remain calculated in Cost Analysis as:
+For FF&E, the detail page calculates:
+
+| Derived Value | Calculation |
+| --- | --- |
+| FF&E Rate | FF&E Detail Total / Rooms |
+
+The final Earthworks, Structural, Foundation, Architectural, and FF&E costs remain calculated in Cost Analysis as:
 
 | Final Cost | Calculation |
 | --- | --- |
@@ -58,6 +64,7 @@ The final Earthworks, Structural, Foundation, and Architectural costs remain cal
 | Structural Total | GBA x Structural Rate |
 | Foundation Total | GBA x Foundation Rate |
 | Architectural Total | GFA x Architectural Rate |
+| FF&E Total | Rooms x FF&E Rate |
 
 ## Excel Import and Export Pattern
 
@@ -73,7 +80,7 @@ Summary and total rows must not be imported as detail input rows.
 
 ## Future Candidates
 
-Future detail cost pages can follow the Earthworks, Structural, Foundation, and Architectural pattern:
+Future detail cost pages can follow the Earthworks, Structural, Foundation, Architectural, and FF&E pattern:
 
 | Candidate |
 | --- |
