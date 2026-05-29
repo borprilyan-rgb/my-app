@@ -1709,7 +1709,8 @@ def create_area_excel_form_bytes(
 
     style_range(ws, f"A{start_row}:N{total_row}", None)
     style_range(ws, f"L{start_row}:N{total_row}", formula_fill)
-    style_range(ws, f"A{total_row}:N{total_row}", dark, font_color=white, bold=True)
+    style_range(ws, f"A{total_row}:B{total_row}", dark, font_color=white, bold=True)
+    style_range(ws, f"C{total_row}:N{total_row}", "FFFFFF", font_color="000000", bold=True)
 
     # Editable cells only
     lock_range(ws, f"A1:N{total_row}")
@@ -1931,7 +1932,10 @@ def create_area_excel_form_bytes(
         ws_door.cell(door_total_row, c).value = f"=SUM({col}4:{col}{door_total_row - 1})"
 
     style_range(ws_door, f"A4:G{door_total_row}", None)
-    style_range(ws_door, f"A{door_total_row}:G{door_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_door, f"A{door_total_row}:C{door_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_door, f"D{door_total_row}:G{door_total_row}", "FFFFFF", font_color="000000", bold=True)
+    
+
 
     lock_range(ws_door, f"A1:G{door_total_row}")
     unlock_range(ws_door, f"E4:G{door_total_row - 1}")
@@ -2988,6 +2992,85 @@ def create_area_excel_form_bytes(
     ws_guide.protection.sheet = True
     ws_guide.protection.password = "area"
 
+    # ==================================================
+    # VISUAL EDITABILITY GUIDANCE
+    # ==================================================
+    dark_red = "800000"
+
+    def mark_dark_red(cell):
+        if cell.value is not None:
+            _set_font_color(cell, dark_red)
+
+    def mark_range_dark_red(ws_, cell_range):
+        for row in ws_[cell_range]:
+            for cell in row:
+                mark_dark_red(cell)
+
+    def mark_formula_cells_dark_red(ws_):
+        for row in ws_.iter_rows():
+            for cell in row:
+                if isinstance(cell.value, str) and cell.value.startswith("="):
+                    mark_dark_red(cell)
+
+    def mark_locked_range_dark_red(ws_, cell_range):
+        for row in ws_[cell_range]:
+            for cell in row:
+                if cell.protection.locked:
+                    mark_dark_red(cell)
+
+    for worksheet in wb.worksheets:
+        mark_formula_cells_dark_red(worksheet)
+
+    # Area Input
+    mark_range_dark_red(ws, f"L{start_row}:N{total_row}")
+    mark_range_dark_red(ws, f"C{total_row}:N{total_row}")
+
+    # Area Chart is retained for formulas/references but hidden by default.
+    ws_chart.sheet_state = "hidden"
+
+    # Pintu
+    mark_range_dark_red(ws_door, f"A4:D{door_total_row}")
+    mark_range_dark_red(ws_door, f"D{door_total_row}:G{door_total_row}")
+
+    # Eksternal and Residential
+    mark_dark_red(ws_ext["E4"])
+    mark_range_dark_red(ws_ext, f"F4:F{ext_total_row}")
+    mark_range_dark_red(ws_res, f"F4:F{res_total_row}")
+
+    # Detail-derived sheets
+    mark_range_dark_red(ws_earth, f"F4:F{earth_total_row}")
+    mark_range_dark_red(ws_earth, f"B{summary_start}:B{summary_start + 2}")
+
+    mark_range_dark_red(ws_found, f"F4:F{foundation_total_row}")
+    mark_range_dark_red(ws_found, f"B{foundation_summary_start}:B{foundation_summary_start + 2}")
+
+    mark_locked_range_dark_red(ws_struct, f"F{struct_start_row}:F{struct_total_row - 1}")
+    mark_range_dark_red(ws_struct, f"H{struct_start_row}:H{struct_total_row}")
+    mark_range_dark_red(ws_struct, f"B{struct_summary_start}:B{struct_summary_start + 2}")
+    mark_range_dark_red(ws_struct, "E4:E7")
+    mark_range_dark_red(ws_struct, "D9:E11")
+
+    mark_range_dark_red(ws_ffe, "B3:B3")
+    mark_range_dark_red(ws_ffe, f"F{ffe_start_row}:F{ffe_total_row}")
+    mark_range_dark_red(ws_ffe, f"B{ffe_summary_start}:B{ffe_summary_start + 2}")
+
+    mark_range_dark_red(ws_mep, "B3:B3")
+    mark_range_dark_red(ws_mep, f"F{mep_start_row}:F{mep_total_row}")
+    mark_range_dark_red(ws_mep, f"B{mep_summary_start}:B{mep_summary_start + 2}")
+
+    mark_range_dark_red(ws_utility, "B3:B3")
+    mark_range_dark_red(ws_utility, f"F{utility_start_row}:F{utility_total_row}")
+    mark_range_dark_red(ws_utility, f"B{utility_summary_start}:B{utility_summary_start + 2}")
+
+    mark_range_dark_red(ws_consultancy, "B3:B5")
+    mark_range_dark_red(ws_consultancy, f"E{consultancy_start_row}:E{consultancy_total_row - 1}")
+    mark_range_dark_red(ws_consultancy, f"G{consultancy_start_row}:G{consultancy_total_row}")
+    mark_range_dark_red(ws_consultancy, f"B{consultancy_summary_start}:B{consultancy_summary_start + 2}")
+    mark_range_dark_red(ws_consultancy, "D8:D9")
+    mark_range_dark_red(ws_consultancy, "D12:D24")
+
+    # Final override: Pintu TOTAL label should stay white on dark fill
+    ws_door.cell(door_total_row, 1).font = Font(bold=True, color=white)
     wb.save(output)
     output.seek(0)
 
