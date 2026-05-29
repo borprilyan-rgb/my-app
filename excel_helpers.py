@@ -2322,13 +2322,7 @@ def create_area_excel_form_bytes(
     ws_arch.sheet_view.showGridLines = False
 
     arch_base = architectural_base_values if isinstance(architectural_base_values, dict) else {}
-    arch_gfa = _excel_safe_float(arch_base.get("gfa", 0.0))
     arch_facade = _excel_safe_float(arch_base.get("facade", 0.0))
-    arch_rooms = _excel_safe_float(arch_base.get("rooms", 0.0))
-    arch_glass_door = _excel_safe_float(arch_base.get("glass_door", 0.0))
-    arch_wooden_door = _excel_safe_float(arch_base.get("wooden_door", 0.0))
-    arch_steel_door = _excel_safe_float(arch_base.get("steel_door", 0.0))
-    arch_lobby = _excel_safe_float(arch_base.get("lobby", 0.0))
 
     ws_arch.merge_cells("A1:I1")
     ws_arch["A1"] = "ARCHITECTURAL DETAIL BREAKDOWN"
@@ -2346,8 +2340,8 @@ def create_area_excel_form_bytes(
         "Description",
         "Unit",
         "Factor / %",
-        "Overlap",
-        "Waste",
+        "Overlap (%)",
+        "Waste (%)",
         "Quantity",
         "Unit Price (Rp)",
         "Amount (Rp)",
@@ -2356,6 +2350,50 @@ def create_area_excel_form_bytes(
         ws_arch.cell(3, c).value = h
 
     style_range(ws_arch, "A3:I3", dark, font_color=white, bold=True)
+
+    ws_arch["K3"] = "Source"
+    ws_arch["L3"] = "Value"
+    ws_arch["M3"] = "Note"
+    arch_source_rows = [
+        ("GFA", "='Area Input'!N13", "Workbook source"),
+        ("Rooms", "='Area Input'!D13", "Workbook source"),
+        ("Koridor/Lobby", "='Area Input'!I13", "Workbook source"),
+        ("Wooden Door Qty", "=Pintu!E12", "Workbook source"),
+        ("Steel Door Qty", "=Pintu!F12", "Workbook source"),
+        ("Glass Door Qty", "=Pintu!G12", "Workbook source"),
+        ("Facade", "=L23", "Total Facade Area from Facade Input section"),
+    ]
+    for idx, (label, value, note) in enumerate(arch_source_rows, start=4):
+        ws_arch.cell(idx, 11).value = label
+        ws_arch.cell(idx, 12).value = value
+        ws_arch.cell(idx, 13).value = note
+
+    style_range(ws_arch, "K3:M3", dark, font_color=white, bold=True)
+    style_range(ws_arch, "K4:M10", formula_fill, bold=True)
+
+    ws_arch["K12"] = "Facade Input"
+    ws_arch["L12"] = "Value"
+    ws_arch["M12"] = "Formula / Note"
+    facade_input_rows = [
+        ("Total Floor Height", _excel_safe_float(arch_base.get("total_floor_height", 0.0)), "Editable"),
+        ("Keliling Facade", _excel_safe_float(arch_base.get("keliling_facade", 0.0)), "Editable"),
+        ("Total Typical Units", _excel_safe_float(arch_base.get("total_typical_units", 0.0)), "Editable"),
+        ("Panjang Railing", _excel_safe_float(arch_base.get("panjang_railing", 0.0)), "Editable"),
+        ("Tinggi Railing", _excel_safe_float(arch_base.get("tinggi_railing", 0.0)), "Editable"),
+        ("Tolerance %", _excel_safe_float(arch_base.get("facade_tolerance_pct", 0.0)), "Editable"),
+        ("Facade Wall Area", "=L13*L14", "Total Floor Height x Keliling Facade"),
+        ("Facade Railing Area", "=L15*L16*L17", "Total Typical Units x Panjang Railing x Tinggi Railing"),
+        ("Facade Subtotal", "=L19+L20", "Facade Wall Area + Facade Railing Area"),
+        ("Facade Tolerance Area", "=L21*(L18/100)", "Facade Subtotal x Tolerance %"),
+        ("Total Facade Area", "=L21+L22", "Facade Subtotal + Facade Tolerance Area"),
+    ]
+    for idx, (label, value, note) in enumerate(facade_input_rows, start=13):
+        ws_arch.cell(idx, 11).value = label
+        ws_arch.cell(idx, 12).value = value
+        ws_arch.cell(idx, 13).value = note
+
+    style_range(ws_arch, "K12:M12", dark, font_color=white, bold=True)
+    style_range(ws_arch, "K13:M23", formula_fill, bold=True)
 
     arch_rows = architectural_detail_rows if isinstance(architectural_detail_rows, list) and architectural_detail_rows else _default_architectural_detail_rows()
     arch_defaults = _default_architectural_detail_rows()
@@ -2375,31 +2413,31 @@ def create_area_excel_form_bytes(
         ws_arch.cell(r, 8).value = _excel_safe_float(row.get("unit_price", 0.0))
 
         if code == "1":
-            ws_arch.cell(r, 7).value = arch_gfa
+            ws_arch.cell(r, 7).value = "=L4"
         elif code in ["2.1", "2.2", "2.3"]:
-            ws_arch.cell(r, 7).value = f"={arch_facade}*(D{r}/100)"
+            ws_arch.cell(r, 7).value = f"=$L$10*(D{r}/100)"
         elif code == "3":
-            ws_arch.cell(r, 7).value = arch_glass_door
+            ws_arch.cell(r, 7).value = "=L9"
         elif code == "4":
-            ws_arch.cell(r, 7).value = f"={arch_rooms}*D{r}"
+            ws_arch.cell(r, 7).value = f"=$L$5*D{r}"
         elif code == "5":
-            ws_arch.cell(r, 7).value = arch_wooden_door
+            ws_arch.cell(r, 7).value = "=L7"
         elif code == "6":
-            ws_arch.cell(r, 7).value = arch_steel_door
+            ws_arch.cell(r, 7).value = "=L8"
         elif code in ["7", "8", "10", "11", "12", "13.1", "13.2", "13.3", "13.4", "17", "18"]:
             ws_arch.cell(r, 7).value = _excel_safe_float(row.get("quantity", 0.0))
         elif code == "9":
-            ws_arch.cell(r, 7).value = arch_lobby
+            ws_arch.cell(r, 7).value = "=L6"
         elif code == "13.5":
-            ws_arch.cell(r, 7).value = f"={arch_rooms}*D{r}"
+            ws_arch.cell(r, 7).value = _excel_safe_float(row.get("quantity", 0.0))
         elif code == "14":
-            ws_arch.cell(r, 7).value = arch_rooms
+            ws_arch.cell(r, 7).value = "=L5"
         elif code == "15.1":
-            ws_arch.cell(r, 7).value = arch_wooden_door
+            ws_arch.cell(r, 7).value = "=L7"
         elif code == "15.2":
-            ws_arch.cell(r, 7).value = arch_steel_door
+            ws_arch.cell(r, 7).value = "=L8"
         elif code in ["16.1", "16.2", "16.3"]:
-            ws_arch.cell(r, 7).value = f"={arch_gfa}*(D{r}/100)*E{r}*F{r}"
+            ws_arch.cell(r, 7).value = f"=$L$4*(D{r}/100)*(E{r}/100)*(F{r}/100)"
         else:
             ws_arch.cell(r, 7).value = _excel_safe_float(row.get("quantity", 0.0))
 
@@ -2411,7 +2449,7 @@ def create_area_excel_form_bytes(
 
     arch_summary_start = arch_total_row + 2
     ws_arch.cell(arch_summary_start, 1).value = "GFA"
-    ws_arch.cell(arch_summary_start, 2).value = arch_gfa
+    ws_arch.cell(arch_summary_start, 2).value = "='Area Input'!N13"
     ws_arch.cell(arch_summary_start + 1, 1).value = "Architectural Detail Total"
     ws_arch.cell(arch_summary_start + 1, 2).value = f"=I{arch_total_row}"
     ws_arch.cell(arch_summary_start + 2, 1).value = "Derived Architectural Rate"
@@ -2423,12 +2461,13 @@ def create_area_excel_form_bytes(
     style_range(ws_arch, f"G{arch_start_row}:G{arch_total_row}", formula_fill)
     style_range(ws_arch, f"I{arch_start_row}:I{arch_total_row}", formula_fill)
 
-    lock_range(ws_arch, f"A1:I{arch_summary_start + 2}")
+    lock_range(ws_arch, f"A1:M{arch_summary_start + 2}")
     unlock_range(ws_arch, f"D{arch_start_row}:F{arch_total_row - 1}")
     unlock_range(ws_arch, f"H{arch_start_row}:H{arch_total_row - 1}")
+    unlock_range(ws_arch, "L13:L18")
     for r in range(arch_start_row, arch_total_row):
         code = str(ws_arch.cell(r, 1).value)
-        if code in ["7", "8", "10", "11", "12", "13.1", "13.2", "13.3", "13.4", "17", "18"]:
+        if code in ["7", "8", "10", "11", "12", "13.1", "13.2", "13.3", "13.4", "13.5", "17", "18"]:
             ws_arch.cell(r, 7).protection = Protection(locked=False)
 
     for col, width in {
@@ -2441,6 +2480,9 @@ def create_area_excel_form_bytes(
         "G": 14,
         "H": 18,
         "I": 18,
+        "K": 22,
+        "L": 18,
+        "M": 46,
     }.items():
         ws_arch.column_dimensions[col].width = width
 
