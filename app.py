@@ -24,6 +24,7 @@ from excel_helpers import (
     read_external_sheet,
     read_ffe_sheet,
     read_foundation_sheet,
+    read_mep_sheet,
     read_pintu_sheet,
     read_residential_area_sheet,
     read_structural_sheet,
@@ -411,6 +412,7 @@ UI_CACHE_PREFIXES = (
     "earthwork_detail_",
     "ffe_detail_",
     "foundation_detail_",
+    "mep_detail_",
     "structural_detail_",
     "area_editor_",
     "edit_smart_cc_",
@@ -2889,6 +2891,71 @@ def calculate_ffe_detail(rows, rooms):
 
     return cleaned_rows, detail_total, derived_unit_price
 
+def get_default_mep_detail_rows():
+    return [
+        {"code": "1", "description": "STP & WTP system", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Plumbing Installation", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Fire Fighting & Protection Installation", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Electrical Installation", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Genset Installation", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "MVAC Installation", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "Lifts / Escalator / Travelators", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Electronic Installation", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "9", "description": "System Data", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "10", "description": "Gas Installation", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "11", "description": "Special Lighting", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "12", "description": "SBO : Pompa Pemadam", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13", "description": "SBO : Chillers, AHU, FCU", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "14", "description": "SBO : Lighting Fixtures", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "15", "description": "SBO : Genset", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16", "description": "Heat Pump", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "17", "description": "Cooling Towers", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "18", "description": "SBO : Water Heater", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "19", "description": "Swimming Pool", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "20", "description": "Deep Well", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "21", "description": "Check Point", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "22", "description": "SBO : AC Unit", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "23", "description": "SBO : AC VRV / Split", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "24", "description": "SBO : Unit Fan", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "25", "description": "Other - Pek. M.E.P.", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+def clean_mep_detail_rows(rows):
+    if isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    if not isinstance(rows, list) or len(rows) == 0:
+        rows = get_default_mep_detail_rows()
+
+    cleaned_rows = []
+    default_rows = get_default_mep_detail_rows()
+
+    for idx, default_row in enumerate(default_rows):
+        row = rows[idx] if idx < len(rows) else {}
+        row = row if isinstance(row, dict) else {}
+        quantity = _safe_float(row.get("quantity", 0.0))
+        unit_price = _safe_float(row.get("unit_price", 0.0))
+        amount = quantity * unit_price
+
+        cleaned_rows.append({
+            "code": default_row["code"],
+            "description": default_row["description"],
+            "unit": default_row["unit"],
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return cleaned_rows
+
+def calculate_mep_detail(rows, gba):
+    cleaned_rows = clean_mep_detail_rows(rows)
+    detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
+    gba = _safe_float(gba)
+    derived_unit_price = detail_total / gba if gba > 0 else 0.0
+
+    return cleaned_rows, detail_total, derived_unit_price
+
 def get_default_architectural_detail_rows():
     return [
         {"code": "1", "description": "Basic Finishes Work", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -3177,6 +3244,33 @@ def get_ffe_price_difference_status(curr_proj, rooms):
         "total_difference": total_difference,
     }
 
+def get_mep_price_difference_status(curr_proj, gba):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    derived_rate = _safe_float(data.get("mep_derived_unit_price", 0.0))
+    current_rate = _safe_float(data.get("u_mep", 0.0))
+    detail_total = _safe_float(data.get("mep_detail_total", 0.0))
+    gba = _safe_float(gba)
+
+    current_total = gba * current_rate
+    rate_difference = derived_rate - current_rate
+    total_difference = detail_total - current_total
+
+    has_difference = (
+        detail_total > 0
+        and derived_rate > 0
+        and abs(rate_difference) > 1
+    )
+
+    return {
+        "has_difference": has_difference,
+        "derived_rate": derived_rate,
+        "current_rate": current_rate,
+        "rate_difference": rate_difference,
+        "detail_total": detail_total,
+        "current_total": current_total,
+        "total_difference": total_difference,
+    }
+
 def get_architectural_price_difference_status(curr_proj, gfa):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     derived_rate = _safe_float(data.get("architectural_derived_unit_price", 0.0))
@@ -3282,6 +3376,15 @@ def build_detail_rate_review_rows(curr_proj, gba, gfa=None, rooms=None):
             "current_rate": _safe_float(data.get("u_ffe", 0.0)),
             "derived_rate": _safe_float(data.get("ffe_derived_unit_price", 0.0)),
             "detail_total": _safe_float(data.get("ffe_detail_total", 0.0)),
+        },
+        {
+            "Section": "MEP",
+            "Cost Key": "u_mep",
+            "Basis": "GBA",
+            "basis_value": gba,
+            "current_rate": _safe_float(data.get("u_mep", 0.0)),
+            "derived_rate": _safe_float(data.get("mep_derived_unit_price", 0.0)),
+            "detail_total": _safe_float(data.get("mep_detail_total", 0.0)),
         },
     ]
 
@@ -4801,6 +4904,7 @@ def show_area_calculator():
             "Structural",
             "Architectural",
             "FF&E",
+            "MEP",
             "Details",
     ]
 
@@ -4877,6 +4981,10 @@ def show_area_calculator():
                     "ffe_detail_rows",
                     get_default_ffe_detail_rows(),
                 ),
+                mep_detail_rows=curr_proj["data"].get(
+                    "mep_detail_rows",
+                    get_default_mep_detail_rows(),
+                ),
                 foundation_detail_rows=curr_proj["data"].get(
                     "foundation_detail_rows",
                     get_default_foundation_detail_rows(),
@@ -4894,6 +5002,7 @@ def show_area_calculator():
                 structural_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 architectural_base_values=get_architectural_detail_base_values(curr_proj["data"], edited_df),
                 ffe_rooms=_safe_float(curr_proj["data"].get("m_rooms", 0.0)) or _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0)),
+                mep_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
             )
 
             def safe_filename_part(value, fallback="Unnamed"):
@@ -5001,6 +5110,12 @@ def show_area_calculator():
                         imported_ffe_rows = None
                         try:
                             imported_ffe_rows = read_ffe_sheet(excel_bytes)
+                        except ExcelImportError as e:
+                            st.warning(str(e))
+
+                        imported_mep_rows = None
+                        try:
+                            imported_mep_rows = read_mep_sheet(excel_bytes)
                         except ExcelImportError as e:
                             st.warning(str(e))
 
@@ -5135,6 +5250,21 @@ def show_area_calculator():
                             curr_proj["data"]["ffe_detail_total"] = imported_ffe_total
                             curr_proj["data"]["ffe_derived_unit_price"] = imported_ffe_derived_unit_price
 
+                        if imported_mep_rows is not None:
+                            mep_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                            if mep_import_gba <= 0:
+                                mep_import_gba = safe_sum(imported_area_df, "GBA")
+
+                            (
+                                imported_mep_rows,
+                                imported_mep_total,
+                                imported_mep_derived_unit_price,
+                            ) = calculate_mep_detail(imported_mep_rows, mep_import_gba)
+
+                            curr_proj["data"]["mep_detail_rows"] = imported_mep_rows
+                            curr_proj["data"]["mep_detail_total"] = imported_mep_total
+                            curr_proj["data"]["mep_derived_unit_price"] = imported_mep_derived_unit_price
+
                         if imported_structural_rows is not None:
                             structural_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
                             if structural_import_gba <= 0:
@@ -5160,6 +5290,7 @@ def show_area_calculator():
                             f"earthwork_detail_editor_{curr_id}",
                             f"ffe_detail_editor_{curr_id}",
                             f"foundation_detail_editor_{curr_id}",
+                            f"mep_detail_editor_{curr_id}",
                             f"structural_detail_editor_{curr_id}",
                         ]:
                             if stale_key in st.session_state:
@@ -6683,7 +6814,123 @@ def show_area_calculator():
                 st.rerun()
 
     # ==================================================
-    # TAB 11 - DETAILS
+    # TAB 11 - MEP
+    # ==================================================
+    elif area_page == "MEP":
+        st.subheader("Area Analysis (MEP)")
+        st.caption("MEP Detail calculates a suggested MEP Rate only. Cost Analysis is updated only from the explicit Apply button.")
+
+        mep_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+        if mep_gba <= 0:
+            mep_gba = safe_sum(edited_df, "GBA")
+
+        saved_mep_detail_rows = curr_proj["data"].get(
+            "mep_detail_rows",
+            get_default_mep_detail_rows(),
+        )
+        mep_detail_rows, mep_detail_total, mep_derived_unit_price = calculate_mep_detail(
+            saved_mep_detail_rows,
+            mep_gba,
+        )
+
+        current_mep_rate = _safe_float(
+            curr_proj["data"].get(
+                "u_mep",
+                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("mep", 0.0),
+            )
+        )
+
+        st.metric("Current Project GBA", f"{mep_gba:,.0f} m2")
+        reminder_df = pd.DataFrame([{
+            "Reminder": "Current Project GBA",
+            "GBA": mep_gba,
+            "Import Rule": "Reminder only - not imported as a detail row",
+        }])
+        st.dataframe(reminder_df, hide_index=True, width="stretch")
+
+        edited_mep_detail = st.data_editor(
+            pd.DataFrame(mep_detail_rows),
+            key=f"mep_detail_editor_{curr_id}",
+            hide_index=True,
+            width="stretch",
+            num_rows="fixed",
+            disabled=["code", "description", "unit", "amount"],
+            column_config={
+                "code": st.column_config.TextColumn("No"),
+                "description": st.column_config.TextColumn("Description", width="large"),
+                "unit": st.column_config.TextColumn("Unit"),
+                "quantity": st.column_config.NumberColumn("Qty", min_value=0.0, step=1.0, format="%.2f"),
+                "unit_price": st.column_config.NumberColumn("Rate", min_value=0.0, step=100000.0, format="Rp %.0f"),
+                "amount": st.column_config.NumberColumn("Amount", format="Rp %.0f"),
+            },
+        )
+
+        mep_detail_rows, mep_detail_total, mep_derived_unit_price = calculate_mep_detail(
+            edited_mep_detail,
+            mep_gba,
+        )
+
+        current_mep_total = mep_gba * current_mep_rate
+        mep_rate_difference = mep_derived_unit_price - current_mep_rate
+        mep_total_difference = mep_detail_total - current_mep_total
+
+        if mep_gba <= 0:
+            st.warning("MEP Detail needs GBA greater than 0 to derive an MEP Rate.")
+
+        st.info(
+            "MEP Detail Review\n\n"
+            f"GBA: {mep_gba:,.0f} m2\n\n"
+            f"MEP Detail Total: Rp {mep_detail_total:,.0f}\n\n"
+            f"Derived MEP Rate: Rp {mep_derived_unit_price:,.0f}/m2\n\n"
+            f"Current MEP Rate from Cost Analysis: Rp {current_mep_rate:,.0f}/m2\n\n"
+            f"Difference: Rp {mep_rate_difference:,.0f}/m2 "
+            f"(Rp {mep_total_difference:,.0f} total)"
+        )
+
+        mep_c1, mep_c2, mep_c3 = st.columns(3)
+        mep_c1.metric("GBA", f"{mep_gba:,.0f} m2")
+        mep_c2.metric("MEP Detail Total", f"Rp {mep_detail_total:,.0f}")
+        mep_c3.metric("Derived MEP Rate", f"Rp {mep_derived_unit_price:,.0f}/m2")
+
+        mep_c4, mep_c5, mep_c6 = st.columns(3)
+        mep_c4.metric("Current MEP Rate", f"Rp {current_mep_rate:,.0f}/m2")
+        mep_c5.metric("Current MEP Total", f"Rp {current_mep_total:,.0f}")
+        mep_c6.metric("Difference", f"Rp {mep_rate_difference:,.0f}/m2")
+
+        curr_proj["data"]["mep_detail_total"] = mep_detail_total
+        curr_proj["data"]["mep_derived_unit_price"] = mep_derived_unit_price
+        mep_diff_status = get_mep_price_difference_status(curr_proj, mep_gba)
+
+        if mep_diff_status["has_difference"]:
+            st.warning(
+                "MEP detail has changed. "
+                f"Derived MEP Rate is Rp {mep_diff_status['derived_rate']:,.0f}/m2, "
+                f"while Cost Analysis currently uses Rp {mep_diff_status['current_rate']:,.0f}/m2. "
+                "Cost Analysis has not been updated automatically."
+            )
+
+        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
+
+        with save_c1:
+            save_mep_detail_clicked = st.button(
+                "Save MEP Detail",
+                key=f"mep_detail_save_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        if save_mep_detail_clicked:
+            curr_proj["data"]["mep_detail_rows"] = mep_detail_rows
+            curr_proj["data"]["mep_detail_total"] = mep_detail_total
+            curr_proj["data"]["mep_derived_unit_price"] = mep_derived_unit_price
+
+            save_ok = save_after_user_action("Save MEP Detail")
+
+            if save_ok:
+                st.rerun()
+
+    # ==================================================
+    # TAB 12 - DETAILS
     # ==================================================
     elif area_page == "Details":
         st.subheader("Details")
@@ -7546,6 +7793,54 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                         else:
                             st.error(
                                 "FF&E detail rate was applied locally, but cloud save failed. Do not log out yet."
+                            )
+
+            mep_review_row = next(
+                (row for row in detail_rate_review_rows if row.get("Section") == "MEP"),
+                {},
+            )
+            mep_apply_available = (
+                mep_review_row.get("Status") == "Different"
+                and _safe_float(mep_review_row.get("Detail Total", 0.0)) > 0
+                and _safe_float(mep_review_row.get("Detail-Derived Rate", 0.0)) > 0
+            )
+
+            if mep_review_row:
+                st.info(
+                    "MEP Detail-Derived Rate Review\n\n"
+                    f"Current MEP Rate: Rp {_safe_float(mep_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Derived MEP Rate: Rp {_safe_float(mep_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Difference: Rp {_safe_float(mep_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
+                    f"Status: {mep_review_row.get('Status', '')}"
+                )
+
+            if mep_apply_available:
+                st.warning(
+                    "MEP detail-derived rate differs from the current Cost Analysis MEP Rate. "
+                    "Cost Analysis has not been updated automatically."
+                )
+                if st.button(
+                    "Apply MEP Detail Rate",
+                    key=f"apply_mep_detail_rate_{curr_id}",
+                    type="primary",
+                ):
+                    derived_rate = _safe_float(curr_proj["data"].get("mep_derived_unit_price", 0.0))
+                    detail_total = _safe_float(curr_proj["data"].get("mep_detail_total", 0.0))
+
+                    if derived_rate <= 0 or detail_total <= 0:
+                        st.error("MEP detail rate cannot be applied because the detail total or derived rate is zero.")
+                    else:
+                        curr_proj["data"]["u_mep"] = derived_rate
+                        st.session_state[f"u_mep_{curr_type_key}"] = derived_rate
+
+                        save_ok = save_after_user_action("Apply MEP Detail Rate")
+
+                        if save_ok:
+                            st.success("MEP detail rate applied to Cost Analysis.")
+                            st.rerun()
+                        else:
+                            st.error(
+                                "MEP detail rate was applied locally, but cloud save failed. Do not log out yet."
                             )
 
             structural_review_row = next(
