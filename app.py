@@ -254,6 +254,126 @@ def set_port_assumptions_df(df):
     cfg = get_report_config()
     cfg["port_assumptions"] = df.to_dict("records")
 
+def generate_fad_pdf(port_meta, raw_data, assumptions_df):
+    from matplotlib.backends.backend_pdf import PdfPages
+    import matplotlib.pyplot as plt
+
+    output = BytesIO()
+
+    def meta_value(key, default=""):
+        return str(port_meta.get(key, default) or default)
+
+    def fmt_area(value):
+        return f"{_safe_float(value):,.2f}"
+
+    def fmt_int(value):
+        if value is None or value == "":
+            return ""
+        return f"{_safe_float(value):,.0f}"
+
+    table_headers = [
+        "SN",
+        "AREA",
+        "GBA",
+        "GFA",
+        "SGFA",
+        "QTY",
+        "UNIT",
+        "BUDGET ESTIMATE\nRP",
+        "RP/M2\nGBA",
+        "RP/M2\nGFA",
+        "RP/M2\nSGFA",
+    ]
+
+    table_rows = []
+    for row in raw_data:
+        table_rows.append([
+            str(row.get("SN", "")),
+            str(row.get("AREA", "")),
+            fmt_area(row.get("GBA", 0.0)),
+            fmt_area(row.get("GFA", 0.0)),
+            fmt_area(row.get("SGFA", 0.0)),
+            fmt_int(row.get("QTY", "")),
+            str(row.get("UNIT", "")),
+            fmt_int(row.get("BUDGET", 0.0)),
+            fmt_int(row.get("R_GBA", 0.0)),
+            fmt_int(row.get("R_GFA", 0.0)),
+            fmt_int(row.get("R_SGFA", 0.0)),
+        ])
+
+    with PdfPages(output) as pdf:
+        fig = plt.figure(figsize=(11.69, 8.27))
+        ax = fig.add_subplot(111)
+        ax.axis("off")
+
+        title = meta_value("title", "PROJECT PORTFOLIO")
+        ref = meta_value("ref", "")
+        version = meta_value("version", "")
+        updated = meta_value("updated", "")
+
+        fig.text(0.03, 0.965, title, fontsize=12, weight="bold", ha="left", va="top")
+        fig.text(0.03, 0.935, ref, fontsize=7, ha="left", va="top")
+        fig.text(0.73, 0.965, f"Version: {version}", fontsize=7, ha="left", va="top")
+        fig.text(0.73, 0.94, f"Updated: {updated}", fontsize=7, ha="left", va="top")
+        fig.text(0.03, 0.895, "Feasibility Analysis Data (FAD)", fontsize=10, weight="bold", ha="left")
+
+        col_widths = [0.035, 0.19, 0.075, 0.075, 0.075, 0.055, 0.065, 0.135, 0.095, 0.095, 0.095]
+        table = ax.table(
+            cellText=table_rows,
+            colLabels=table_headers,
+            cellLoc="right",
+            colLoc="center",
+            colWidths=col_widths,
+            bbox=[0.02, 0.32, 0.96, 0.54],
+        )
+        table.auto_set_font_size(False)
+        table.set_fontsize(6.2)
+        table.scale(1, 1.15)
+
+        total_row_index = len(table_rows)
+        for (r, c), cell in table.get_celld().items():
+            cell.set_edgecolor("#6B7280")
+            cell.set_linewidth(0.35)
+            if r == 0:
+                cell.set_facecolor("#D9EAF7")
+                cell.set_text_props(weight="bold", ha="center", color="#111827")
+            if r == total_row_index:
+                cell.set_facecolor("#F2F2F2")
+                cell.set_text_props(weight="bold")
+            if c in [0, 5, 6]:
+                cell.set_text_props(ha="center")
+            if c == 1:
+                cell.set_text_props(ha="left")
+
+        assumption_rows = []
+        if isinstance(assumptions_df, pd.DataFrame):
+            for _, row in assumptions_df.iterrows():
+                desc = row.get("Assumption Description", "")
+                if pd.notna(desc) and str(desc).strip():
+                    assumption_rows.append([str(row.get("No.", "")), str(desc)])
+
+        if assumption_rows:
+            fig.text(0.03, 0.275, "I. ASSUMPTIONS", fontsize=8, weight="bold", ha="left")
+            assumption_table = ax.table(
+                cellText=assumption_rows,
+                colLabels=None,
+                cellLoc="left",
+                colWidths=[0.04, 0.92],
+                bbox=[0.02, 0.04, 0.96, 0.22],
+            )
+            assumption_table.auto_set_font_size(False)
+            assumption_table.set_fontsize(6.2)
+            for (r, c), cell in assumption_table.get_celld().items():
+                cell.set_edgecolor("#9CA3AF")
+                cell.set_linewidth(0.3)
+                if c == 0:
+                    cell.set_text_props(ha="center")
+
+        pdf.savefig(fig, bbox_inches="tight")
+        plt.close(fig)
+
+    return output.getvalue()
+
 def build_app_payload():
     """
     Single source of truth for saving.
@@ -10434,6 +10554,21 @@ Adjust the fields on the left and the preview will update automatically.
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 width="stretch",
                 type="primary"
+            )
+
+        with col_btn2:
+            pdf_output = generate_fad_pdf(
+                port_meta,
+                raw_data,
+                get_port_assumptions_df(),
+            )
+
+            st.download_button(
+                label="Download PDF",
+                data=pdf_output,
+                file_name="ASG_Portfolio_Summary.pdf",
+                mime="application/pdf",
+                width="stretch",
             )
                 
         header_html = f"""
