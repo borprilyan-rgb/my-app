@@ -21,6 +21,7 @@ from excel_helpers import (
     read_area_input_sheet,
     read_earthworks_sheet,
     read_external_sheet,
+    read_foundation_sheet,
     read_pintu_sheet,
     read_residential_area_sheet,
     read_structural_sheet,
@@ -405,6 +406,7 @@ UI_CACHE_PREFIXES = (
     "save_smart_custom_to_cloud_",
     "save_cost_analysis_",
     "earthwork_detail_",
+    "foundation_detail_",
     "structural_detail_",
     "area_editor_",
     "edit_smart_cc_",
@@ -2792,6 +2794,48 @@ def calculate_earthwork_detail(rows, gba):
 
     return cleaned_rows, detail_total, derived_unit_price
 
+def get_default_foundation_detail_rows():
+    return [
+        {"code": "1", "description": "Supply Tiang Pancang", "unit": "m'", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Install Tiang Pancang", "unit": "m'", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+def clean_foundation_detail_rows(rows):
+    if isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    if not isinstance(rows, list) or len(rows) == 0:
+        rows = get_default_foundation_detail_rows()
+
+    cleaned_rows = []
+    default_rows = get_default_foundation_detail_rows()
+
+    for idx, default_row in enumerate(default_rows):
+        row = rows[idx] if idx < len(rows) else {}
+        row = row if isinstance(row, dict) else {}
+        quantity = _safe_float(row.get("quantity", 0.0))
+        unit_price = _safe_float(row.get("unit_price", 0.0))
+        amount = quantity * unit_price
+
+        cleaned_rows.append({
+            "code": default_row["code"],
+            "description": default_row["description"],
+            "unit": default_row["unit"],
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return cleaned_rows
+
+def calculate_foundation_detail(rows, gba):
+    cleaned_rows = clean_foundation_detail_rows(rows)
+    detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
+    gba = _safe_float(gba)
+    derived_unit_price = detail_total / gba if gba > 0 else 0.0
+
+    return cleaned_rows, detail_total, derived_unit_price
+
 def get_default_structural_detail_rows():
     return [
         {"code": "1", "description": "Sub/Superstructure", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -2887,6 +2931,33 @@ def get_earthwork_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
+def get_foundation_price_difference_status(curr_proj, gba):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    derived_rate = _safe_float(data.get("foundation_derived_unit_price", 0.0))
+    current_rate = _safe_float(data.get("u_found", 0.0))
+    detail_total = _safe_float(data.get("foundation_detail_total", 0.0))
+    gba = _safe_float(gba)
+
+    current_total = gba * current_rate
+    rate_difference = derived_rate - current_rate
+    total_difference = detail_total - current_total
+
+    has_difference = (
+        detail_total > 0
+        and derived_rate > 0
+        and abs(rate_difference) > 1
+    )
+
+    return {
+        "has_difference": has_difference,
+        "derived_rate": derived_rate,
+        "current_rate": current_rate,
+        "rate_difference": rate_difference,
+        "detail_total": detail_total,
+        "current_total": current_total,
+        "total_difference": total_difference,
+    }
+
 def get_structural_price_difference_status(curr_proj, gba):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     derived_rate = _safe_float(data.get("structural_derived_unit_price", 0.0))
@@ -2925,6 +2996,13 @@ def build_detail_rate_review_rows(curr_proj, gba):
             "current_rate": _safe_float(data.get("u_earth", 0.0)),
             "derived_rate": _safe_float(data.get("earthwork_derived_unit_price", 0.0)),
             "detail_total": _safe_float(data.get("earthwork_detail_total", 0.0)),
+        },
+        {
+            "Section": "Foundation",
+            "Cost Key": "u_found",
+            "current_rate": _safe_float(data.get("u_found", 0.0)),
+            "derived_rate": _safe_float(data.get("foundation_derived_unit_price", 0.0)),
+            "detail_total": _safe_float(data.get("foundation_detail_total", 0.0)),
         },
         {
             "Section": "Structural",
@@ -4446,6 +4524,7 @@ def show_area_calculator():
             "Eksternal",
             "Residential Area",
             "Earthworks",
+            "Foundation",
             "Structural",
             "Details",
     ]
@@ -4519,11 +4598,16 @@ def show_area_calculator():
                     "earthwork_detail_rows",
                     get_default_earthwork_detail_rows(),
                 ),
+                foundation_detail_rows=curr_proj["data"].get(
+                    "foundation_detail_rows",
+                    get_default_foundation_detail_rows(),
+                ),
                 structural_detail_rows=curr_proj["data"].get(
                     "structural_detail_rows",
                     get_default_structural_detail_rows(),
                 ),
                 earthwork_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
+                foundation_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 structural_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
             )
 
@@ -4617,6 +4701,12 @@ def show_area_calculator():
                         except ExcelImportError as e:
                             st.warning(str(e))
 
+                        imported_foundation_rows = None
+                        try:
+                            imported_foundation_rows = read_foundation_sheet(excel_bytes)
+                        except ExcelImportError as e:
+                            st.warning(str(e))
+
                         imported_structural_rows = None
                         try:
                             imported_structural_rows = read_structural_sheet(excel_bytes)
@@ -4702,6 +4792,21 @@ def show_area_calculator():
                             else:
                                 st.session_state.pop("earthwork_import_warning", None)
 
+                        if imported_foundation_rows is not None:
+                            foundation_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                            if foundation_import_gba <= 0:
+                                foundation_import_gba = safe_sum(imported_area_df, "GBA")
+
+                            (
+                                imported_foundation_rows,
+                                imported_foundation_total,
+                                imported_foundation_derived_unit_price,
+                            ) = calculate_foundation_detail(imported_foundation_rows, foundation_import_gba)
+
+                            curr_proj["data"]["foundation_detail_rows"] = imported_foundation_rows
+                            curr_proj["data"]["foundation_detail_total"] = imported_foundation_total
+                            curr_proj["data"]["foundation_derived_unit_price"] = imported_foundation_derived_unit_price
+
                         if imported_structural_rows is not None:
                             structural_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
                             if structural_import_gba <= 0:
@@ -4724,6 +4829,7 @@ def show_area_calculator():
                             f"other_external_editor_{curr_id}",
                             f"res_fac_editor_{curr_id}",
                             f"earthwork_detail_editor_{curr_id}",
+                            f"foundation_detail_editor_{curr_id}",
                             f"structural_detail_editor_{curr_id}",
                         ]:
                             if stale_key in st.session_state:
@@ -5791,7 +5897,115 @@ def show_area_calculator():
                 st.rerun()
 
     # ==================================================
-    # TAB 7 - STRUCTURAL
+    # TAB 7 - FOUNDATION
+    # ==================================================
+    elif area_page == "Foundation":
+        st.subheader("Area Analysis (Foundation)")
+        st.caption("Foundation Detail calculates a suggested Foundation Rate only. Cost Analysis is updated only from the explicit Apply button.")
+
+        foundation_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+        if foundation_gba <= 0:
+            foundation_gba = safe_sum(edited_df, "GBA")
+
+        saved_foundation_detail_rows = curr_proj["data"].get(
+            "foundation_detail_rows",
+            get_default_foundation_detail_rows(),
+        )
+        foundation_detail_rows, foundation_detail_total, foundation_derived_unit_price = calculate_foundation_detail(
+            saved_foundation_detail_rows,
+            foundation_gba,
+        )
+
+        current_foundation_rate = _safe_float(
+            curr_proj["data"].get(
+                "u_found",
+                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("struc_found", 0.0),
+            )
+        )
+
+        edited_foundation_detail = st.data_editor(
+            pd.DataFrame(foundation_detail_rows),
+            key=f"foundation_detail_editor_{curr_id}",
+            hide_index=True,
+            width="stretch",
+            num_rows="fixed",
+            disabled=["code", "description", "unit", "amount"],
+            column_config={
+                "code": st.column_config.TextColumn("No"),
+                "description": st.column_config.TextColumn("Description", width="large"),
+                "unit": st.column_config.TextColumn("Unit"),
+                "quantity": st.column_config.NumberColumn("Qty", min_value=0.0, step=1.0, format="%.2f"),
+                "unit_price": st.column_config.NumberColumn("Rate", min_value=0.0, step=100000.0, format="Rp %.0f"),
+                "amount": st.column_config.NumberColumn("Amount", format="Rp %.0f"),
+            },
+        )
+
+        foundation_detail_rows, foundation_detail_total, foundation_derived_unit_price = calculate_foundation_detail(
+            edited_foundation_detail,
+            foundation_gba,
+        )
+
+        current_foundation_total = foundation_gba * current_foundation_rate
+        foundation_rate_difference = foundation_derived_unit_price - current_foundation_rate
+        foundation_total_difference = foundation_detail_total - current_foundation_total
+
+        if foundation_gba <= 0:
+            st.warning("Foundation Detail needs GBA greater than 0 to derive a Foundation Rate.")
+
+        st.info(
+            "Foundation Detail Review\n\n"
+            f"GBA: {foundation_gba:,.0f} m2\n\n"
+            f"Foundation Detail Total: Rp {foundation_detail_total:,.0f}\n\n"
+            f"Derived Foundation Rate: Rp {foundation_derived_unit_price:,.0f}/m2\n\n"
+            f"Current Foundation Rate from Cost Analysis: Rp {current_foundation_rate:,.0f}/m2\n\n"
+            f"Difference: Rp {foundation_rate_difference:,.0f}/m2 "
+            f"(Rp {foundation_total_difference:,.0f} total)"
+        )
+
+        fd_c1, fd_c2, fd_c3 = st.columns(3)
+        fd_c1.metric("GBA", f"{foundation_gba:,.0f} m2")
+        fd_c2.metric("Foundation Detail Total", f"Rp {foundation_detail_total:,.0f}")
+        fd_c3.metric("Derived Foundation Rate", f"Rp {foundation_derived_unit_price:,.0f}/m2")
+
+        fd_c4, fd_c5, fd_c6 = st.columns(3)
+        fd_c4.metric("Current Foundation Rate", f"Rp {current_foundation_rate:,.0f}/m2")
+        fd_c5.metric("Current Foundation Total", f"Rp {current_foundation_total:,.0f}")
+        fd_c6.metric("Difference", f"Rp {foundation_rate_difference:,.0f}/m2")
+
+        curr_proj["data"]["foundation_detail_total"] = foundation_detail_total
+        curr_proj["data"]["foundation_derived_unit_price"] = foundation_derived_unit_price
+        foundation_diff_status = get_foundation_price_difference_status(curr_proj, foundation_gba)
+
+        if foundation_diff_status["has_difference"]:
+            st.warning(
+                "Foundation detail has changed. "
+                f"Derived Foundation Rate is Rp {foundation_diff_status['derived_rate']:,.0f}/m2, "
+                f"while Cost Analysis currently uses Rp {foundation_diff_status['current_rate']:,.0f}/m2. "
+                "Cost Analysis has not been updated automatically."
+            )
+
+        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
+
+        with save_c1:
+            save_foundation_detail_clicked = st.button(
+                "Save Foundation Detail",
+                key=f"foundation_detail_save_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        if save_foundation_detail_clicked:
+            curr_proj["data"]["foundation_detail_rows"] = foundation_detail_rows
+            curr_proj["data"]["foundation_detail_total"] = foundation_detail_total
+            curr_proj["data"]["foundation_derived_unit_price"] = foundation_derived_unit_price
+
+            save_ok = save_after_user_action("Save Foundation Detail")
+
+            if save_ok:
+                st.rerun()
+
+    # ==================================================
+    # TAB 8 - STRUCTURAL
     # ==================================================
     elif area_page == "Structural":
         st.subheader("Area Analysis (Structural)")
@@ -6624,6 +6838,54 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                         else:
                             st.error(
                                 "Earthworks detail rate was applied locally, but cloud save failed. Do not log out yet."
+                            )
+
+            foundation_review_row = next(
+                (row for row in detail_rate_review_rows if row.get("Section") == "Foundation"),
+                {},
+            )
+            foundation_apply_available = (
+                foundation_review_row.get("Status") == "Different"
+                and _safe_float(foundation_review_row.get("Detail Total", 0.0)) > 0
+                and _safe_float(foundation_review_row.get("Detail-Derived Rate", 0.0)) > 0
+            )
+
+            if foundation_review_row:
+                st.info(
+                    "Foundation Detail-Derived Rate Review\n\n"
+                    f"Current Foundation Rate: Rp {_safe_float(foundation_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Derived Foundation Rate: Rp {_safe_float(foundation_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Difference: Rp {_safe_float(foundation_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
+                    f"Status: {foundation_review_row.get('Status', '')}"
+                )
+
+            if foundation_apply_available:
+                st.warning(
+                    "Foundation detail-derived rate differs from the current Cost Analysis Foundation Rate. "
+                    "Cost Analysis has not been updated automatically."
+                )
+                if st.button(
+                    "Apply Foundation Detail Rate",
+                    key=f"apply_foundation_detail_rate_{curr_id}",
+                    type="primary",
+                ):
+                    derived_rate = _safe_float(curr_proj["data"].get("foundation_derived_unit_price", 0.0))
+                    detail_total = _safe_float(curr_proj["data"].get("foundation_detail_total", 0.0))
+
+                    if derived_rate <= 0 or detail_total <= 0:
+                        st.error("Foundation detail rate cannot be applied because the detail total or derived rate is zero.")
+                    else:
+                        curr_proj["data"]["u_found"] = derived_rate
+                        st.session_state[f"u_found_{curr_type_key}"] = derived_rate
+
+                        save_ok = save_after_user_action("Apply Foundation Detail Rate")
+
+                        if save_ok:
+                            st.success("Foundation detail rate applied to Cost Analysis.")
+                            st.rerun()
+                        else:
+                            st.error(
+                                "Foundation detail rate was applied locally, but cloud save failed. Do not log out yet."
                             )
 
             structural_review_row = next(

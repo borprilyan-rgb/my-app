@@ -588,6 +588,116 @@ def read_earthworks_sheet(excel_bytes):
     return rows
 
 
+def _default_foundation_detail_rows():
+    return [
+        {"code": "1", "description": "Supply Tiang Pancang", "unit": "m'", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Install Tiang Pancang", "unit": "m'", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+
+def read_foundation_sheet(excel_bytes):
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="Foundation",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError:
+        return None
+    except Exception:
+        return None
+
+    header_row_idx = None
+
+    for i in range(min(12, len(raw))):
+        row_norm = [_excel_norm_col(v) for v in raw.iloc[i].tolist()]
+        required_hits = sum(
+            1 for key in ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)"]
+            if _excel_norm_col(key) in row_norm
+        )
+
+        if required_hits >= 4:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ExcelImportError(
+            'The "Foundation" sheet header could not be read. Foundation import was skipped.'
+        )
+
+    df = raw.iloc[header_row_idx + 1:].copy()
+    df.columns = raw.iloc[header_row_idx].tolist()
+    df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    code_col = _excel_find_col(df, ["Code", "Item Code"])
+    desc_col = _excel_find_col(df, ["Description", "Item"])
+    unit_col = _excel_find_col(df, ["Unit"])
+    qty_col = _excel_find_col(df, ["Quantity", "Qty"])
+    unit_price_col = _excel_find_col(df, ["Unit Price (Rp)", "Unit Price", "Rate", "Harga"])
+
+    missing = []
+    if not code_col:
+        missing.append("Code")
+    if not desc_col:
+        missing.append("Description")
+    if not unit_col:
+        missing.append("Unit")
+    if not qty_col:
+        missing.append("Quantity")
+    if not unit_price_col:
+        missing.append("Unit Price (Rp)")
+
+    if missing:
+        raise ExcelImportError(
+            'The "Foundation" sheet is missing required columns: '
+            f'{", ".join(missing)}. Foundation import was skipped.'
+        )
+
+    by_code = {}
+    summary_labels = {
+        "TOTAL",
+        "GRAND TOTAL",
+        "GBA",
+        "FOUNDATION DETAIL TOTAL",
+        "DERIVED FOUNDATION RATE",
+        "CURRENT FOUNDATION RATE",
+        "DIFFERENCE",
+    }
+
+    for _, row in df.iterrows():
+        code = str(row.get(code_col, "")).strip()
+        description = str(row.get(desc_col, "")).strip()
+
+        if code in ["", "-", "nan", "None"] and description in ["", "-", "nan", "None"]:
+            continue
+
+        if code.upper() in summary_labels or description.upper() in summary_labels:
+            continue
+
+        by_code[code] = {
+            "code": code,
+            "description": description,
+            "unit": str(row.get(unit_col, "")).strip(),
+            "quantity": _excel_safe_float(row.get(qty_col, 0.0)),
+            "unit_price": _excel_safe_float(row.get(unit_price_col, 0.0)),
+            "amount": 0.0,
+        }
+
+    rows = []
+    for default_row in _default_foundation_detail_rows():
+        imported = by_code.get(default_row["code"], {})
+        row = {**default_row, **imported}
+        row["code"] = default_row["code"]
+        row["description"] = default_row["description"]
+        row["unit"] = default_row["unit"]
+        row["amount"] = _excel_safe_float(row.get("quantity", 0.0)) * _excel_safe_float(row.get("unit_price", 0.0))
+        rows.append(row)
+
+    return rows
+
+
 def _default_structural_detail_rows():
     return [
         {"code": "1", "description": "Sub/Superstructure", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -716,8 +826,10 @@ def create_area_excel_form_bytes(
     include_roof_machine=True,
     include_roof=True,
     earthwork_detail_rows=None,
+    foundation_detail_rows=None,
     structural_detail_rows=None,
     earthwork_gba=0.0,
+    foundation_gba=0.0,
     structural_gba=0.0,
 ):
     output = io.BytesIO()
@@ -1351,6 +1463,90 @@ def create_area_excel_form_bytes(
     ws_earth.protection.password = "area"
 
     # ==================================================
+    # FOUNDATION SHEET
+    # ==================================================
+    ws_found = wb.create_sheet("Foundation")
+    ws_found.sheet_view.showGridLines = False
+
+    ws_found.merge_cells("A1:F1")
+    ws_found["A1"] = "FOUNDATION DETAIL BREAKDOWN"
+    ws_found["A1"].font = Font(bold=True, color=white, size=14)
+    ws_found["A1"].fill = PatternFill("solid", fgColor=dark)
+    ws_found["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws_found.merge_cells("A2:F2")
+    ws_found["A2"] = "Detail-derived rate only. Cost Analysis changes only after Apply Foundation Detail Rate in the app."
+    ws_found["A2"].font = Font(italic=True, color=dark, size=10)
+    ws_found["A2"].alignment = Alignment(horizontal="left", vertical="center")
+
+    foundation_headers = ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)", "Amount (Rp)"]
+    for c, h in enumerate(foundation_headers, start=1):
+        ws_found.cell(3, c).value = h
+
+    style_range(ws_found, "A3:F3", dark, font_color=white, bold=True)
+
+    foundation_rows = foundation_detail_rows if isinstance(foundation_detail_rows, list) and foundation_detail_rows else _default_foundation_detail_rows()
+    foundation_defaults = _default_foundation_detail_rows()
+
+    for idx, default_row in enumerate(foundation_defaults):
+        r = 4 + idx
+        row = foundation_rows[idx] if idx < len(foundation_rows) and isinstance(foundation_rows[idx], dict) else {}
+        quantity = _excel_safe_float(row.get("quantity", 0.0))
+        unit_price = _excel_safe_float(row.get("unit_price", 0.0))
+
+        ws_found.cell(r, 1).value = default_row["code"]
+        ws_found.cell(r, 2).value = default_row["description"]
+        ws_found.cell(r, 3).value = default_row["unit"]
+        ws_found.cell(r, 4).value = quantity
+        ws_found.cell(r, 5).value = unit_price
+        ws_found.cell(r, 6).value = f"=D{r}*E{r}"
+
+    foundation_total_row = 4 + len(foundation_defaults)
+    ws_found.cell(foundation_total_row, 1).value = "TOTAL"
+    ws_found.cell(foundation_total_row, 6).value = f"=SUM(F4:F{foundation_total_row - 1})"
+
+    foundation_summary_start = foundation_total_row + 2
+    ws_found.cell(foundation_summary_start, 1).value = "GBA"
+    ws_found.cell(foundation_summary_start, 2).value = _excel_safe_float(foundation_gba)
+    ws_found.cell(foundation_summary_start + 1, 1).value = "Foundation Detail Total"
+    ws_found.cell(foundation_summary_start + 1, 2).value = f"=F{foundation_total_row}"
+    ws_found.cell(foundation_summary_start + 2, 1).value = "Derived Foundation Rate"
+    ws_found.cell(foundation_summary_start + 2, 2).value = f"=IF(B{foundation_summary_start}>0,B{foundation_summary_start + 1}/B{foundation_summary_start},0)"
+
+    style_range(ws_found, f"A4:F{foundation_total_row}", None)
+    style_range(ws_found, f"A{foundation_total_row}:F{foundation_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_found, f"A{foundation_summary_start}:B{foundation_summary_start + 2}", formula_fill, bold=True)
+    style_range(ws_found, f"F4:F{foundation_total_row}", formula_fill)
+
+    lock_range(ws_found, f"A1:F{foundation_summary_start + 2}")
+    unlock_range(ws_found, f"D4:E{foundation_total_row - 1}")
+
+    for col, width in {
+        "A": 12,
+        "B": 28,
+        "C": 12,
+        "D": 14,
+        "E": 18,
+        "F": 18,
+    }.items():
+        ws_found.column_dimensions[col].width = width
+
+    for row in ws_found.iter_rows(min_row=4, max_row=foundation_summary_start + 2, min_col=4, max_col=6):
+        for cell in row:
+            cell.number_format = '#,##0.00'
+
+    for cell in [
+        ws_found.cell(foundation_summary_start, 2),
+        ws_found.cell(foundation_summary_start + 1, 2),
+        ws_found.cell(foundation_summary_start + 2, 2),
+    ]:
+        cell.number_format = '#,##0.00'
+
+    ws_found.freeze_panes = "A4"
+    ws_found.protection.sheet = True
+    ws_found.protection.password = "area"
+
+    # ==================================================
     # STRUCTURAL SHEET
     # ==================================================
     ws_struct = wb.create_sheet("Structural")
@@ -1472,6 +1668,7 @@ def create_area_excel_form_bytes(
         ["Eksternal", "External works input", "No, Item, Unit, Qty, Rate"],
         ["Residential Area", "Residential facility input", "No, Item, Unit, Qty, Rate"],
         ["Earthworks", "Earthworks detail preview input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
+        ["Foundation", "Foundation detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["Structural", "Structural detail-derived rate input", "Ratio, Waste Factor for Rebar, Quantity for Prestress Works and Steelworks, Unit Price (Rp)"],
     ]
 
