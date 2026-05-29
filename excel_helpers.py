@@ -1467,6 +1467,55 @@ def read_architectural_sheet(excel_bytes):
     return rows
 
 
+def read_architectural_facade_inputs(excel_bytes):
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="Architectural",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError:
+        return {}
+    except Exception:
+        return {}
+
+    label_to_key = {
+        "KELILING FACADE": "area_keliling_facade",
+        "PANJANG RAILING": "area_panjang_railing",
+        "TINGGI RAILING": "area_tinggi_railing",
+        "TOLERANCE %": "area_facade_tolerance_pct",
+    }
+    found = {}
+    in_facade_section = False
+
+    for _, row in raw.iterrows():
+        values = row.tolist()
+        normalized = [_excel_norm_col(v) for v in values]
+
+        if "facade input" in normalized:
+            in_facade_section = True
+            continue
+
+        if not in_facade_section:
+            continue
+
+        label = str(values[10]).strip() if len(values) > 10 else ""
+        label_norm = label.upper()
+
+        if label_norm in ["", "NAN", "NONE"]:
+            continue
+
+        if label_norm in label_to_key:
+            value = values[11] if len(values) > 11 else 0.0
+            found[label_to_key[label_norm]] = _excel_safe_float(value)
+
+        if label_norm == "TOTAL FACADE AREA":
+            break
+
+    return found
+
+
 def create_area_excel_form_bytes(
     project_name="",
     upper_floors=5,

@@ -19,6 +19,7 @@ from excel_helpers import (
     ExcelImportError,
     create_area_excel_form_bytes,
     read_area_input_sheet,
+    read_architectural_facade_inputs,
     read_architectural_sheet,
     read_consultancy_sheet,
     read_earthworks_sheet,
@@ -5333,6 +5334,8 @@ def show_area_calculator():
                         except ExcelImportError as e:
                             st.warning(str(e))
 
+                        imported_architectural_facade_inputs = read_architectural_facade_inputs(excel_bytes)
+
                         imported_consultancy_rows = None
                         try:
                             imported_consultancy_rows = read_consultancy_sheet(excel_bytes)
@@ -5407,6 +5410,52 @@ def show_area_calculator():
 
                         for k, v in imported_landscape_data.items():
                             curr_proj["data"][k] = v
+
+                        if imported_architectural_facade_inputs:
+                            for k, v in imported_architectural_facade_inputs.items():
+                                curr_proj["data"][k] = v
+
+                            imported_total_floor_height = safe_sum(imported_area_df, F2F_COL)
+                            imported_total_typical_units = (
+                                int(pd.to_numeric(imported_area_df[TYPICAL_UNIT_COL], errors="coerce").fillna(0).sum())
+                                if TYPICAL_UNIT_COL in imported_area_df.columns
+                                else 0
+                            )
+                            imported_keliling_facade = _safe_float(
+                                imported_architectural_facade_inputs.get("area_keliling_facade", 0.0)
+                            )
+                            imported_panjang_railing = _safe_float(
+                                imported_architectural_facade_inputs.get("area_panjang_railing", 0.0)
+                            )
+                            imported_tinggi_railing = _safe_float(
+                                imported_architectural_facade_inputs.get("area_tinggi_railing", 0.0)
+                            )
+                            imported_facade_tolerance_pct = _safe_float(
+                                imported_architectural_facade_inputs.get("area_facade_tolerance_pct", 0.0)
+                            )
+                            imported_facade_wall_area = imported_total_floor_height * imported_keliling_facade
+                            imported_facade_railing_area = (
+                                imported_total_typical_units
+                                * imported_panjang_railing
+                                * imported_tinggi_railing
+                            )
+                            imported_facade_subtotal = imported_facade_wall_area + imported_facade_railing_area
+                            imported_facade_tolerance_area = (
+                                imported_facade_subtotal
+                                * imported_facade_tolerance_pct
+                                / 100
+                            )
+                            imported_total_facade_area = (
+                                imported_facade_subtotal
+                                + imported_facade_tolerance_area
+                            )
+
+                            curr_proj["data"]["area_railing_length_per_room_calc"] = imported_panjang_railing
+                            curr_proj["data"]["area_facade_wall_calc"] = imported_facade_wall_area
+                            curr_proj["data"]["area_facade_railing_calc"] = imported_facade_railing_area
+                            curr_proj["data"]["area_facade_subtotal_calc"] = imported_facade_subtotal
+                            curr_proj["data"]["area_facade_tolerance_area_calc"] = imported_facade_tolerance_area
+                            curr_proj["data"]["area_facade_calc"] = imported_total_facade_area
 
                         if imported_res_fac_records:
                             res_fac_key = f"res_fac_table_{curr_id}"
@@ -5569,6 +5618,10 @@ def show_area_calculator():
                             f"mep_detail_editor_{curr_id}",
                             f"structural_detail_editor_{curr_id}",
                             f"utility_detail_editor_{curr_id}",
+                            f"area_keliling_facade_{curr_id}",
+                            f"area_panjang_railing_{curr_id}",
+                            f"area_tinggi_railing_{curr_id}",
+                            f"area_facade_tolerance_pct_{curr_id}",
                         ]:
                             if stale_key in st.session_state:
                                 del st.session_state[stale_key]
