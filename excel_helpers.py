@@ -2520,18 +2520,6 @@ def create_area_excel_form_bytes(
     style_range(ws_arch, f"G{arch_start_row}:G{arch_total_row}", formula_fill)
     style_range(ws_arch, f"I{arch_start_row}:I{arch_total_row}", formula_fill)
 
-    ws_arch["K25"] = "Legend"
-    ws_arch["L25"] = "Display"
-    ws_arch["M25"] = "Meaning"
-    ws_arch["K26"] = "Editable input cells"
-    ws_arch["L26"] = "Normal text"
-    ws_arch["M26"] = "User can edit these cells."
-    ws_arch["K27"] = "Non-editable/source/calculated cells"
-    ws_arch["L27"] = "Dark red text"
-    ws_arch["M27"] = "Formula, source, calculated, total, or not applicable."
-    style_range(ws_arch, "K25:M25", dark, font_color=white, bold=True)
-    style_range(ws_arch, "K26:M27", formula_fill)
-
     arch_dark_red = "800000"
     for row in range(4, 11):
         _set_font_color(ws_arch.cell(row, 12), arch_dark_red)
