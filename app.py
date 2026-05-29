@@ -5884,6 +5884,50 @@ def show_area_calculator():
             curr_proj["data"]["up_in"] = int(st.session_state[up_key])
             curr_proj["data"]["m_land"] = _safe_float(st.session_state[land_key])
 
+        def store_gba_setup_table_outputs(records):
+            clean_records = clean_area_records(records)
+            calc_records_df = calculate_area_dataframe(clean_records)
+
+            set_data("area_table", copy.deepcopy(clean_records))
+            curr_proj["data"]["base_in"] = int(st.session_state[base_key])
+            curr_proj["data"]["up_in"] = int(st.session_state[up_key])
+            curr_proj["data"]["m_land"] = _safe_float(st.session_state[land_key])
+
+            saved_total_floor_height = safe_sum(calc_records_df, F2F_COL)
+            saved_total_typical_units = (
+                int(pd.to_numeric(calc_records_df[TYPICAL_UNIT_COL], errors="coerce").fillna(0).sum())
+                if TYPICAL_UNIT_COL in calc_records_df.columns
+                else 0
+            )
+            saved_lobby_interior = safe_sum(calc_records_df, "Koridor/Lobby")
+
+            saved_keliling_facade = _safe_float(curr_proj["data"].get("area_keliling_facade", 0.0))
+            saved_panjang_railing = _safe_float(curr_proj["data"].get("area_panjang_railing", 0.0))
+            saved_tinggi_railing = _safe_float(curr_proj["data"].get("area_tinggi_railing", 0.0))
+            saved_facade_tolerance_pct = _safe_float(curr_proj["data"].get("area_facade_tolerance_pct", 15.0))
+
+            saved_facade_wall_area = saved_total_floor_height * saved_keliling_facade
+            saved_facade_railing_area = saved_total_typical_units * saved_panjang_railing * saved_tinggi_railing
+            saved_facade_subtotal = saved_facade_wall_area + saved_facade_railing_area
+            saved_facade_tolerance_area = saved_facade_subtotal * saved_facade_tolerance_pct / 100
+            saved_total_facade_area = saved_facade_subtotal + saved_facade_tolerance_area
+
+            curr_proj["data"]["m_gba"] = safe_sum(calc_records_df, "GBA")
+            curr_proj["data"]["m_gfa"] = safe_sum(calc_records_df, "GFA")
+            curr_proj["data"]["m_sgfa"] = safe_sum(calc_records_df, "SGFA")
+            curr_proj["data"]["m_nfa"] = safe_sum(calc_records_df, "NFA")
+            curr_proj["data"]["area_lobby_interior_calc"] = saved_lobby_interior
+            curr_proj["data"]["area_rooms_calc"] = saved_total_typical_units
+            curr_proj["data"]["area_typical_units_total_calc"] = saved_total_typical_units
+            curr_proj["data"]["area_railing_length_per_room_calc"] = saved_panjang_railing
+            curr_proj["data"]["area_facade_wall_calc"] = saved_facade_wall_area
+            curr_proj["data"]["area_facade_railing_calc"] = saved_facade_railing_area
+            curr_proj["data"]["area_facade_subtotal_calc"] = saved_facade_subtotal
+            curr_proj["data"]["area_facade_tolerance_area_calc"] = saved_facade_tolerance_area
+            curr_proj["data"]["area_facade_calc"] = saved_total_facade_area
+
+            return clean_records
+
         c_gen, c_reset = st.columns(2)
 
         with c_gen:
@@ -5907,9 +5951,9 @@ def show_area_calculator():
                 st.session_state[base_key],
             )
 
-            st.session_state[area_draft_key] = clean_area_records(new_data)
-            st.session_state[area_committed_key] = clean_area_records(new_data)
-            set_data("area_table", copy.deepcopy(st.session_state[area_committed_key]))
+            clean_generated_records = store_gba_setup_table_outputs(new_data)
+            st.session_state[area_draft_key] = copy.deepcopy(clean_generated_records)
+            st.session_state[area_committed_key] = copy.deepcopy(clean_generated_records)
 
             clear_area_editor_state()
 
@@ -6082,9 +6126,9 @@ def show_area_calculator():
             )
             cleaned_records = clean_area_records(cleaned_records)
 
+            cleaned_records = store_gba_setup_table_outputs(cleaned_records)
             st.session_state[area_draft_key] = copy.deepcopy(cleaned_records)
             st.session_state[area_committed_key] = copy.deepcopy(cleaned_records)
-            set_data("area_table", copy.deepcopy(cleaned_records))
 
             clear_area_editor_state()
 
@@ -7334,13 +7378,23 @@ def show_area_calculator():
 
         with save_c1:
             save_architectural_detail_clicked = st.button(
-                "Save Architectural Detail",
+                "Save Facade + Architectural Detail",
                 key=f"architectural_detail_save_{curr_id}",
                 type="primary",
                 width="stretch",
             )
 
         if save_architectural_detail_clicked:
+            curr_proj["data"]["area_keliling_facade"] = keliling_facade
+            curr_proj["data"]["area_panjang_railing"] = panjang_railing
+            curr_proj["data"]["area_tinggi_railing"] = tinggi_railing
+            curr_proj["data"]["area_facade_tolerance_pct"] = facade_tolerance_pct
+            curr_proj["data"]["area_railing_length_per_room_calc"] = panjang_railing
+            curr_proj["data"]["area_facade_wall_calc"] = facade_wall_area
+            curr_proj["data"]["area_facade_railing_calc"] = facade_railing_area
+            curr_proj["data"]["area_facade_subtotal_calc"] = facade_subtotal
+            curr_proj["data"]["area_facade_tolerance_area_calc"] = facade_tolerance_area
+            curr_proj["data"]["area_facade_calc"] = total_facade_area
             curr_proj["data"]["architectural_detail_rows"] = architectural_detail_rows
             curr_proj["data"]["architectural_detail_total"] = architectural_detail_total
             curr_proj["data"]["architectural_derived_unit_price"] = architectural_derived_unit_price
