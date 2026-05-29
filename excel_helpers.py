@@ -2375,12 +2375,12 @@ def create_area_excel_form_bytes(
     ws_arch["L12"] = "Value"
     ws_arch["M12"] = "Formula / Note"
     facade_input_rows = [
-        ("Total Floor Height", _excel_safe_float(arch_base.get("total_floor_height", 0.0)), "Editable"),
-        ("Keliling Facade", _excel_safe_float(arch_base.get("keliling_facade", 0.0)), "Editable"),
-        ("Total Typical Units", _excel_safe_float(arch_base.get("total_typical_units", 0.0)), "Editable"),
-        ("Panjang Railing", _excel_safe_float(arch_base.get("panjang_railing", 0.0)), "Editable"),
-        ("Tinggi Railing", _excel_safe_float(arch_base.get("tinggi_railing", 0.0)), "Editable"),
-        ("Tolerance %", _excel_safe_float(arch_base.get("facade_tolerance_pct", 0.0)), "Editable"),
+        ("Total Floor Height", "='Area Input'!C13", "total floor height"),
+        ("Keliling Facade", _excel_safe_float(arch_base.get("keliling_facade", 0.0)), "editable input"),
+        ("Total Typical Units", "='Area Input'!D13", "total typical units"),
+        ("Panjang Railing", _excel_safe_float(arch_base.get("panjang_railing", 0.0)), "editable input"),
+        ("Tinggi Railing", _excel_safe_float(arch_base.get("tinggi_railing", 0.0)), "editable input"),
+        ("Tolerance %", _excel_safe_float(arch_base.get("facade_tolerance_pct", 0.0)), "editable input"),
         ("Facade Wall Area", "=L13*L14", "Total Floor Height x Keliling Facade"),
         ("Facade Railing Area", "=L15*L16*L17", "Total Typical Units x Panjang Railing x Tinggi Railing"),
         ("Facade Subtotal", "=L19+L20", "Facade Wall Area + Facade Railing Area"),
