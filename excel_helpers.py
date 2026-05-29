@@ -819,15 +819,158 @@ def read_structural_sheet(excel_bytes):
     return rows
 
 
+def _default_architectural_detail_rows():
+    return [
+        {"code": "1", "description": "Basic Finishes Work", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2.1", "description": "Aluminium Facade / Window Wall", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2.2", "description": "Kisi2 Facade / Double Skin", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2.3", "description": "Precast Facade", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Pintu Kaca Dalam Ruangan", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Railing Balkon", "unit": "m'", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Pintu Kayu", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "Pintu Besi", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "Shower Screen", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Marble / Door Jamb Lift", "unit": "m'", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "9", "description": "Interior - Main Lobby & Typical Lobby", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "10", "description": "Signage / Fixtures", "unit": "ls", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "11", "description": "Gondola", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "12", "description": "Roof - Skylight", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.1", "description": "Sanitary Fittings - T. Wanita", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.2", "description": "Sanitary Fittings - T. Pria", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.3", "description": "Sanitary Fittings - T. Disable", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.4", "description": "Sanitary Fittings - Musholla", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.5", "description": "Sanitary Fittings - Toilet Unit", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "14", "description": "Kitchen Equipment", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "15.1", "description": "Ironmongeries - Pintu Kayu", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "15.2", "description": "Ironmongeries - Pintu Besi", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16.1", "description": "Keramik & HT", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16.2", "description": "Marmer", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16.3", "description": "Vinyl", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "17", "description": "Carpet", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "18", "description": "Kaca", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+
+def read_architectural_sheet(excel_bytes):
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="Architectural",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError:
+        return None
+    except Exception:
+        return None
+
+    header_row_idx = None
+
+    for i in range(min(12, len(raw))):
+        row_norm = [_excel_norm_col(v) for v in raw.iloc[i].tolist()]
+        required_hits = sum(
+            1 for key in ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)"]
+            if _excel_norm_col(key) in row_norm
+        )
+
+        if required_hits >= 4:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ExcelImportError(
+            'The "Architectural" sheet header could not be read. Architectural import was skipped.'
+        )
+
+    df = raw.iloc[header_row_idx + 1:].copy()
+    df.columns = raw.iloc[header_row_idx].tolist()
+    df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    code_col = _excel_find_col(df, ["Code", "Item Code"])
+    desc_col = _excel_find_col(df, ["Description", "Item"])
+    unit_col = _excel_find_col(df, ["Unit"])
+    factor_col = _excel_find_col(df, ["Factor / %", "Factor", "Ratio", "Percentage", "%"])
+    overlap_col = _excel_find_col(df, ["Overlap"])
+    waste_col = _excel_find_col(df, ["Waste"])
+    qty_col = _excel_find_col(df, ["Quantity", "Qty"])
+    unit_price_col = _excel_find_col(df, ["Unit Price (Rp)", "Unit Price", "Rate", "Harga"])
+
+    missing = []
+    if not code_col:
+        missing.append("Code")
+    if not desc_col:
+        missing.append("Description")
+    if not unit_col:
+        missing.append("Unit")
+    if not qty_col:
+        missing.append("Quantity")
+    if not unit_price_col:
+        missing.append("Unit Price (Rp)")
+
+    if missing:
+        raise ExcelImportError(
+            'The "Architectural" sheet is missing required columns: '
+            f'{", ".join(missing)}. Architectural import was skipped.'
+        )
+
+    by_code = {}
+    summary_labels = {
+        "TOTAL",
+        "GRAND TOTAL",
+        "GFA",
+        "ARCHITECTURAL DETAIL TOTAL",
+        "DERIVED ARCHITECTURAL RATE",
+        "CURRENT ARCHITECTURAL RATE",
+        "DIFFERENCE",
+    }
+
+    for _, row in df.iterrows():
+        code = str(row.get(code_col, "")).strip()
+        description = str(row.get(desc_col, "")).strip()
+
+        if code in ["", "-", "nan", "None"] and description in ["", "-", "nan", "None"]:
+            continue
+
+        if code.upper() in summary_labels or description.upper() in summary_labels:
+            continue
+
+        by_code[code] = {
+            "code": code,
+            "description": description,
+            "unit": str(row.get(unit_col, "")).strip(),
+            "factor": _excel_safe_float(row.get(factor_col, 0.0)) if factor_col else 0.0,
+            "overlap": _excel_safe_float(row.get(overlap_col, 0.0)) if overlap_col else 0.0,
+            "waste": _excel_safe_float(row.get(waste_col, 0.0)) if waste_col else 0.0,
+            "quantity": _excel_safe_float(row.get(qty_col, 0.0)),
+            "unit_price": _excel_safe_float(row.get(unit_price_col, 0.0)),
+            "amount": 0.0,
+        }
+
+    rows = []
+    for default_row in _default_architectural_detail_rows():
+        imported = by_code.get(default_row["code"], {})
+        row = {**default_row, **imported}
+        row["code"] = default_row["code"]
+        row["description"] = default_row["description"]
+        row["unit"] = default_row["unit"]
+        row["amount"] = _excel_safe_float(row.get("quantity", 0.0)) * _excel_safe_float(row.get("unit_price", 0.0))
+        rows.append(row)
+
+    return rows
+
+
 def create_area_excel_form_bytes(
     project_name="",
     upper_floors=5,
     basements=1,
     include_roof_machine=True,
     include_roof=True,
+    architectural_detail_rows=None,
     earthwork_detail_rows=None,
     foundation_detail_rows=None,
     structural_detail_rows=None,
+    architectural_base_values=None,
     earthwork_gba=0.0,
     foundation_gba=0.0,
     structural_gba=0.0,
@@ -1658,6 +1801,150 @@ def create_area_excel_form_bytes(
     ws_struct.protection.password = "area"
 
     # ==================================================
+    # ARCHITECTURAL SHEET
+    # ==================================================
+    ws_arch = wb.create_sheet("Architectural")
+    ws_arch.sheet_view.showGridLines = False
+
+    arch_base = architectural_base_values if isinstance(architectural_base_values, dict) else {}
+    arch_gfa = _excel_safe_float(arch_base.get("gfa", 0.0))
+    arch_facade = _excel_safe_float(arch_base.get("facade", 0.0))
+    arch_rooms = _excel_safe_float(arch_base.get("rooms", 0.0))
+    arch_glass_door = _excel_safe_float(arch_base.get("glass_door", 0.0))
+    arch_wooden_door = _excel_safe_float(arch_base.get("wooden_door", 0.0))
+    arch_steel_door = _excel_safe_float(arch_base.get("steel_door", 0.0))
+    arch_lobby = _excel_safe_float(arch_base.get("lobby", 0.0))
+
+    ws_arch.merge_cells("A1:I1")
+    ws_arch["A1"] = "ARCHITECTURAL DETAIL BREAKDOWN"
+    ws_arch["A1"].font = Font(bold=True, color=white, size=14)
+    ws_arch["A1"].fill = PatternFill("solid", fgColor=dark)
+    ws_arch["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws_arch.merge_cells("A2:I2")
+    ws_arch["A2"] = "Detail-derived rate only. Cost Analysis changes only after Apply Architectural Detail Rate in the app."
+    ws_arch["A2"].font = Font(italic=True, color=dark, size=10)
+    ws_arch["A2"].alignment = Alignment(horizontal="left", vertical="center")
+
+    arch_headers = [
+        "Code",
+        "Description",
+        "Unit",
+        "Factor / %",
+        "Overlap",
+        "Waste",
+        "Quantity",
+        "Unit Price (Rp)",
+        "Amount (Rp)",
+    ]
+    for c, h in enumerate(arch_headers, start=1):
+        ws_arch.cell(3, c).value = h
+
+    style_range(ws_arch, "A3:I3", dark, font_color=white, bold=True)
+
+    arch_rows = architectural_detail_rows if isinstance(architectural_detail_rows, list) and architectural_detail_rows else _default_architectural_detail_rows()
+    arch_defaults = _default_architectural_detail_rows()
+    arch_start_row = 4
+
+    for idx, default_row in enumerate(arch_defaults):
+        r = arch_start_row + idx
+        row = arch_rows[idx] if idx < len(arch_rows) and isinstance(arch_rows[idx], dict) else {}
+        code = default_row["code"]
+
+        ws_arch.cell(r, 1).value = code
+        ws_arch.cell(r, 2).value = default_row["description"]
+        ws_arch.cell(r, 3).value = default_row["unit"]
+        ws_arch.cell(r, 4).value = _excel_safe_float(row.get("factor", 0.0))
+        ws_arch.cell(r, 5).value = _excel_safe_float(row.get("overlap", 0.0))
+        ws_arch.cell(r, 6).value = _excel_safe_float(row.get("waste", 0.0))
+        ws_arch.cell(r, 8).value = _excel_safe_float(row.get("unit_price", 0.0))
+
+        if code == "1":
+            ws_arch.cell(r, 7).value = arch_gfa
+        elif code in ["2.1", "2.2", "2.3"]:
+            ws_arch.cell(r, 7).value = f"={arch_facade}*(D{r}/100)"
+        elif code == "3":
+            ws_arch.cell(r, 7).value = arch_glass_door
+        elif code == "4":
+            ws_arch.cell(r, 7).value = f"={arch_rooms}*D{r}"
+        elif code == "5":
+            ws_arch.cell(r, 7).value = arch_wooden_door
+        elif code == "6":
+            ws_arch.cell(r, 7).value = arch_steel_door
+        elif code in ["7", "8", "10", "11", "12", "13.1", "13.2", "13.3", "13.4", "17", "18"]:
+            ws_arch.cell(r, 7).value = _excel_safe_float(row.get("quantity", 0.0))
+        elif code == "9":
+            ws_arch.cell(r, 7).value = arch_lobby
+        elif code == "13.5":
+            ws_arch.cell(r, 7).value = f"={arch_rooms}*D{r}"
+        elif code == "14":
+            ws_arch.cell(r, 7).value = arch_rooms
+        elif code == "15.1":
+            ws_arch.cell(r, 7).value = arch_wooden_door
+        elif code == "15.2":
+            ws_arch.cell(r, 7).value = arch_steel_door
+        elif code in ["16.1", "16.2", "16.3"]:
+            ws_arch.cell(r, 7).value = f"={arch_gfa}*(D{r}/100)*E{r}*F{r}"
+        else:
+            ws_arch.cell(r, 7).value = _excel_safe_float(row.get("quantity", 0.0))
+
+        ws_arch.cell(r, 9).value = f"=G{r}*H{r}"
+
+    arch_total_row = arch_start_row + len(arch_defaults)
+    ws_arch.cell(arch_total_row, 1).value = "TOTAL"
+    ws_arch.cell(arch_total_row, 9).value = f"=SUM(I{arch_start_row}:I{arch_total_row - 1})"
+
+    arch_summary_start = arch_total_row + 2
+    ws_arch.cell(arch_summary_start, 1).value = "GFA"
+    ws_arch.cell(arch_summary_start, 2).value = arch_gfa
+    ws_arch.cell(arch_summary_start + 1, 1).value = "Architectural Detail Total"
+    ws_arch.cell(arch_summary_start + 1, 2).value = f"=I{arch_total_row}"
+    ws_arch.cell(arch_summary_start + 2, 1).value = "Derived Architectural Rate"
+    ws_arch.cell(arch_summary_start + 2, 2).value = f"=IF(B{arch_summary_start}>0,B{arch_summary_start + 1}/B{arch_summary_start},0)"
+
+    style_range(ws_arch, f"A{arch_start_row}:I{arch_total_row}", None)
+    style_range(ws_arch, f"A{arch_total_row}:I{arch_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_arch, f"A{arch_summary_start}:B{arch_summary_start + 2}", formula_fill, bold=True)
+    style_range(ws_arch, f"G{arch_start_row}:G{arch_total_row}", formula_fill)
+    style_range(ws_arch, f"I{arch_start_row}:I{arch_total_row}", formula_fill)
+
+    lock_range(ws_arch, f"A1:I{arch_summary_start + 2}")
+    unlock_range(ws_arch, f"D{arch_start_row}:F{arch_total_row - 1}")
+    unlock_range(ws_arch, f"H{arch_start_row}:H{arch_total_row - 1}")
+    for r in range(arch_start_row, arch_total_row):
+        code = str(ws_arch.cell(r, 1).value)
+        if code in ["7", "8", "10", "11", "12", "13.1", "13.2", "13.3", "13.4", "17", "18"]:
+            ws_arch.cell(r, 7).protection = Protection(locked=False)
+
+    for col, width in {
+        "A": 12,
+        "B": 36,
+        "C": 12,
+        "D": 14,
+        "E": 14,
+        "F": 14,
+        "G": 14,
+        "H": 18,
+        "I": 18,
+    }.items():
+        ws_arch.column_dimensions[col].width = width
+
+    for row in ws_arch.iter_rows(min_row=arch_start_row, max_row=arch_summary_start + 2, min_col=4, max_col=9):
+        for cell in row:
+            cell.number_format = '#,##0.00'
+
+    for cell in [
+        ws_arch.cell(arch_summary_start, 2),
+        ws_arch.cell(arch_summary_start + 1, 2),
+        ws_arch.cell(arch_summary_start + 2, 2),
+    ]:
+        cell.number_format = '#,##0.00'
+
+    ws_arch.freeze_panes = "A4"
+    ws_arch.protection.sheet = True
+    ws_arch.protection.password = "area"
+
+    # ==================================================
     # IMPORT GUIDE
     # ==================================================
     ws_guide = wb.create_sheet("Import Guide")
@@ -1670,6 +1957,7 @@ def create_area_excel_form_bytes(
         ["Earthworks", "Earthworks detail preview input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["Foundation", "Foundation detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["Structural", "Structural detail-derived rate input", "Ratio, Waste Factor for Rebar, Quantity for Prestress Works and Steelworks, Unit Price (Rp)"],
+        ["Architectural", "Architectural detail-derived rate input", "Factor / %, Overlap, Waste, manual Quantity rows, Unit Price (Rp)"],
     ]
 
     for r, row in enumerate(guide_rows, start=1):

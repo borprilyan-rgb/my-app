@@ -19,6 +19,7 @@ from excel_helpers import (
     ExcelImportError,
     create_area_excel_form_bytes,
     read_area_input_sheet,
+    read_architectural_sheet,
     read_earthworks_sheet,
     read_external_sheet,
     read_foundation_sheet,
@@ -405,6 +406,7 @@ UI_CACHE_PREFIXES = (
     "use_area_analysis_",
     "save_smart_custom_to_cloud_",
     "save_cost_analysis_",
+    "architectural_detail_",
     "earthwork_detail_",
     "foundation_detail_",
     "structural_detail_",
@@ -2836,6 +2838,145 @@ def calculate_foundation_detail(rows, gba):
 
     return cleaned_rows, detail_total, derived_unit_price
 
+def get_default_architectural_detail_rows():
+    return [
+        {"code": "1", "description": "Basic Finishes Work", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2.1", "description": "Aluminium Facade / Window Wall", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2.2", "description": "Kisi2 Facade / Double Skin", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2.3", "description": "Precast Facade", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Pintu Kaca Dalam Ruangan", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Railing Balkon", "unit": "m'", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Pintu Kayu", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "6", "description": "Pintu Besi", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "7", "description": "Shower Screen", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "8", "description": "Marble / Door Jamb Lift", "unit": "m'", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "9", "description": "Interior - Main Lobby & Typical Lobby", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "10", "description": "Signage / Fixtures", "unit": "ls", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "11", "description": "Gondola", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "12", "description": "Roof - Skylight", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.1", "description": "Sanitary Fittings - T. Wanita", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.2", "description": "Sanitary Fittings - T. Pria", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.3", "description": "Sanitary Fittings - T. Disable", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.4", "description": "Sanitary Fittings - Musholla", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "13.5", "description": "Sanitary Fittings - Toilet Unit", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "14", "description": "Kitchen Equipment", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "15.1", "description": "Ironmongeries - Pintu Kayu", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "15.2", "description": "Ironmongeries - Pintu Besi", "unit": "unit", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16.1", "description": "Keramik & HT", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16.2", "description": "Marmer", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "16.3", "description": "Vinyl", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "17", "description": "Carpet", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "18", "description": "Kaca", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+def get_architectural_detail_base_values(data, area_df=None):
+    data = data if isinstance(data, dict) else {}
+
+    def data_value(*keys):
+        for key in keys:
+            value = _safe_float(data.get(key, 0.0))
+            if value > 0:
+                return value
+        return 0.0
+
+    gfa = data_value("m_gfa")
+    if gfa <= 0 and area_df is not None and "GFA" in getattr(area_df, "columns", []):
+        gfa = _safe_float(area_df["GFA"].sum())
+
+    return {
+        "gfa": gfa,
+        "facade": data_value("m_facade", "area_facade_calc"),
+        "rooms": data_value("m_rooms", "area_rooms_calc", "area_typical_units_total_calc"),
+        "glass_door": data_value("m_door_g", "area_door_glass_calc"),
+        "wooden_door": data_value("m_door_w", "area_door_wood_calc"),
+        "steel_door": data_value("m_door_s", "area_door_steel_calc"),
+        "lobby": data_value("m_lobby", "area_lobby_interior_calc"),
+    }
+
+def clean_architectural_detail_rows(rows, base_values):
+    if isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    if not isinstance(rows, list) or len(rows) == 0:
+        rows = get_default_architectural_detail_rows()
+
+    base_values = base_values if isinstance(base_values, dict) else {}
+    default_rows = get_default_architectural_detail_rows()
+    cleaned_rows = []
+
+    gfa = _safe_float(base_values.get("gfa", 0.0))
+    facade = _safe_float(base_values.get("facade", 0.0))
+    rooms = _safe_float(base_values.get("rooms", 0.0))
+    glass_door = _safe_float(base_values.get("glass_door", 0.0))
+    wooden_door = _safe_float(base_values.get("wooden_door", 0.0))
+    steel_door = _safe_float(base_values.get("steel_door", 0.0))
+    lobby = _safe_float(base_values.get("lobby", 0.0))
+
+    for idx, default_row in enumerate(default_rows):
+        row = rows[idx] if idx < len(rows) else {}
+        row = row if isinstance(row, dict) else {}
+
+        code = default_row["code"]
+        factor = _safe_float(row.get("factor", 0.0))
+        overlap = _safe_float(row.get("overlap", 0.0))
+        waste = _safe_float(row.get("waste", 0.0))
+        manual_quantity = _safe_float(row.get("quantity", 0.0))
+        unit_price = _safe_float(row.get("unit_price", 0.0))
+
+        if code == "1":
+            quantity = gfa
+        elif code in ["2.1", "2.2", "2.3"]:
+            quantity = facade * (factor / 100.0)
+        elif code == "3":
+            quantity = glass_door
+        elif code == "4":
+            quantity = rooms * factor
+        elif code == "5":
+            quantity = wooden_door
+        elif code == "6":
+            quantity = steel_door
+        elif code in ["7", "8", "10", "11", "12", "13.1", "13.2", "13.3", "13.4", "17", "18"]:
+            quantity = manual_quantity
+        elif code == "9":
+            quantity = lobby
+        elif code == "13.5":
+            quantity = rooms * factor
+        elif code == "14":
+            quantity = rooms
+        elif code == "15.1":
+            quantity = wooden_door
+        elif code == "15.2":
+            quantity = steel_door
+        elif code in ["16.1", "16.2", "16.3"]:
+            quantity = gfa * (factor / 100.0) * overlap * waste
+        else:
+            quantity = manual_quantity
+
+        amount = quantity * unit_price
+
+        cleaned_rows.append({
+            "code": code,
+            "description": default_row["description"],
+            "unit": default_row["unit"],
+            "factor": factor,
+            "overlap": overlap,
+            "waste": waste,
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return cleaned_rows
+
+def calculate_architectural_detail(rows, base_values):
+    base_values = base_values if isinstance(base_values, dict) else {}
+    cleaned_rows = clean_architectural_detail_rows(rows, base_values)
+    detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
+    gfa = _safe_float(base_values.get("gfa", 0.0))
+    derived_unit_price = detail_total / gfa if gfa > 0 else 0.0
+
+    return cleaned_rows, detail_total, derived_unit_price
+
 def get_default_structural_detail_rows():
     return [
         {"code": "1", "description": "Sub/Superstructure", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -2958,6 +3099,33 @@ def get_foundation_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
+def get_architectural_price_difference_status(curr_proj, gfa):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    derived_rate = _safe_float(data.get("architectural_derived_unit_price", 0.0))
+    current_rate = _safe_float(data.get("u_arch", 0.0))
+    detail_total = _safe_float(data.get("architectural_detail_total", 0.0))
+    gfa = _safe_float(gfa)
+
+    current_total = gfa * current_rate
+    rate_difference = derived_rate - current_rate
+    total_difference = detail_total - current_total
+
+    has_difference = (
+        detail_total > 0
+        and derived_rate > 0
+        and abs(rate_difference) > 1
+    )
+
+    return {
+        "has_difference": has_difference,
+        "derived_rate": derived_rate,
+        "current_rate": current_rate,
+        "rate_difference": rate_difference,
+        "detail_total": detail_total,
+        "current_total": current_total,
+        "total_difference": total_difference,
+    }
+
 def get_structural_price_difference_status(curr_proj, gba):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     derived_rate = _safe_float(data.get("structural_derived_unit_price", 0.0))
@@ -2985,14 +3153,17 @@ def get_structural_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
-def build_detail_rate_review_rows(curr_proj, gba):
+def build_detail_rate_review_rows(curr_proj, gba, gfa=None):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     gba = _safe_float(gba)
+    gfa = _safe_float(gfa if gfa is not None else gba)
 
     review_specs = [
         {
             "Section": "Earthworks",
             "Cost Key": "u_earth",
+            "Basis": "GBA",
+            "basis_value": gba,
             "current_rate": _safe_float(data.get("u_earth", 0.0)),
             "derived_rate": _safe_float(data.get("earthwork_derived_unit_price", 0.0)),
             "detail_total": _safe_float(data.get("earthwork_detail_total", 0.0)),
@@ -3000,6 +3171,8 @@ def build_detail_rate_review_rows(curr_proj, gba):
         {
             "Section": "Foundation",
             "Cost Key": "u_found",
+            "Basis": "GBA",
+            "basis_value": gba,
             "current_rate": _safe_float(data.get("u_found", 0.0)),
             "derived_rate": _safe_float(data.get("foundation_derived_unit_price", 0.0)),
             "detail_total": _safe_float(data.get("foundation_detail_total", 0.0)),
@@ -3007,10 +3180,21 @@ def build_detail_rate_review_rows(curr_proj, gba):
         {
             "Section": "Structural",
             "Cost Key": "u_struc",
+            "Basis": "GBA",
+            "basis_value": gba,
             "current_rate": _safe_float(data.get("u_struc", 0.0)),
             "derived_rate": _safe_float(data.get("structural_derived_unit_price", 0.0)),
             "detail_total": _safe_float(data.get("structural_detail_total", 0.0)),
-        }
+        },
+        {
+            "Section": "Architectural",
+            "Cost Key": "u_arch",
+            "Basis": "GFA",
+            "basis_value": gfa,
+            "current_rate": _safe_float(data.get("u_arch", 0.0)),
+            "derived_rate": _safe_float(data.get("architectural_derived_unit_price", 0.0)),
+            "detail_total": _safe_float(data.get("architectural_detail_total", 0.0)),
+        },
     ]
 
     rows = []
@@ -3018,7 +3202,8 @@ def build_detail_rate_review_rows(curr_proj, gba):
         current_rate = spec["current_rate"]
         derived_rate = spec["derived_rate"]
         detail_total = spec["detail_total"]
-        current_total = gba * current_rate
+        basis_value = _safe_float(spec.get("basis_value", gba))
+        current_total = basis_value * current_rate
         rate_difference = derived_rate - current_rate
         total_difference = detail_total - current_total
 
@@ -3032,7 +3217,7 @@ def build_detail_rate_review_rows(curr_proj, gba):
         rows.append({
             "Section": spec["Section"],
             "Cost Key": spec["Cost Key"],
-            "Basis": "GBA",
+            "Basis": spec["Basis"],
             "Current Cost Rate": current_rate,
             "Detail-Derived Rate": derived_rate,
             "Difference / Unit": rate_difference,
@@ -4526,6 +4711,7 @@ def show_area_calculator():
             "Earthworks",
             "Foundation",
             "Structural",
+            "Architectural",
             "Details",
     ]
 
@@ -4606,9 +4792,14 @@ def show_area_calculator():
                     "structural_detail_rows",
                     get_default_structural_detail_rows(),
                 ),
+                architectural_detail_rows=curr_proj["data"].get(
+                    "architectural_detail_rows",
+                    get_default_architectural_detail_rows(),
+                ),
                 earthwork_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 foundation_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 structural_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
+                architectural_base_values=get_architectural_detail_base_values(curr_proj["data"], edited_df),
             )
 
             def safe_filename_part(value, fallback="Unnamed"):
@@ -4698,6 +4889,12 @@ def show_area_calculator():
                         imported_earthwork_rows = None
                         try:
                             imported_earthwork_rows = read_earthworks_sheet(excel_bytes)
+                        except ExcelImportError as e:
+                            st.warning(str(e))
+
+                        imported_architectural_rows = None
+                        try:
+                            imported_architectural_rows = read_architectural_sheet(excel_bytes)
                         except ExcelImportError as e:
                             st.warning(str(e))
 
@@ -4792,6 +4989,22 @@ def show_area_calculator():
                             else:
                                 st.session_state.pop("earthwork_import_warning", None)
 
+                        if imported_architectural_rows is not None:
+                            architectural_base_values = get_architectural_detail_base_values(
+                                curr_proj["data"],
+                                imported_area_df,
+                            )
+
+                            (
+                                imported_architectural_rows,
+                                imported_architectural_total,
+                                imported_architectural_derived_unit_price,
+                            ) = calculate_architectural_detail(imported_architectural_rows, architectural_base_values)
+
+                            curr_proj["data"]["architectural_detail_rows"] = imported_architectural_rows
+                            curr_proj["data"]["architectural_detail_total"] = imported_architectural_total
+                            curr_proj["data"]["architectural_derived_unit_price"] = imported_architectural_derived_unit_price
+
                         if imported_foundation_rows is not None:
                             foundation_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
                             if foundation_import_gba <= 0:
@@ -4828,6 +5041,7 @@ def show_area_calculator():
                             door_editor_key,
                             f"other_external_editor_{curr_id}",
                             f"res_fac_editor_{curr_id}",
+                            f"architectural_detail_editor_{curr_id}",
                             f"earthwork_detail_editor_{curr_id}",
                             f"foundation_detail_editor_{curr_id}",
                             f"structural_detail_editor_{curr_id}",
@@ -6119,7 +6333,123 @@ def show_area_calculator():
                 st.rerun()
 
     # ==================================================
-    # TAB 8 - DETAILS
+    # TAB 9 - ARCHITECTURAL
+    # ==================================================
+    elif area_page == "Architectural":
+        st.subheader("Area Analysis (Architectural)")
+        st.caption("Architectural Detail calculates a suggested Architectural Rate only. Cost Analysis is updated only from the explicit Apply button.")
+
+        architectural_base_values = get_architectural_detail_base_values(curr_proj["data"], edited_df)
+        architectural_gfa = _safe_float(architectural_base_values.get("gfa", 0.0))
+
+        saved_architectural_detail_rows = curr_proj["data"].get(
+            "architectural_detail_rows",
+            get_default_architectural_detail_rows(),
+        )
+        architectural_detail_rows, architectural_detail_total, architectural_derived_unit_price = calculate_architectural_detail(
+            saved_architectural_detail_rows,
+            architectural_base_values,
+        )
+
+        current_architectural_rate = _safe_float(
+            curr_proj["data"].get(
+                "u_arch",
+                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("arch_base", 0.0),
+            )
+        )
+
+        base_c1, base_c2, base_c3, base_c4 = st.columns(4)
+        base_c1.metric("GFA", f"{architectural_gfa:,.0f} m2")
+        base_c2.metric("Facade", f"{_safe_float(architectural_base_values.get('facade', 0.0)):,.0f} m2")
+        base_c3.metric("Rooms", f"{_safe_float(architectural_base_values.get('rooms', 0.0)):,.0f}")
+        base_c4.metric("Lobby Interior", f"{_safe_float(architectural_base_values.get('lobby', 0.0)):,.0f} m2")
+
+        edited_architectural_detail = st.data_editor(
+            pd.DataFrame(architectural_detail_rows),
+            key=f"architectural_detail_editor_{curr_id}",
+            hide_index=True,
+            width="stretch",
+            num_rows="fixed",
+            disabled=["code", "description", "unit", "amount"],
+            column_config={
+                "code": st.column_config.TextColumn("No"),
+                "description": st.column_config.TextColumn("Description", width="large"),
+                "unit": st.column_config.TextColumn("Unit"),
+                "factor": st.column_config.NumberColumn("Factor / %", min_value=0.0, step=1.0, format="%.4f"),
+                "overlap": st.column_config.NumberColumn("Overlap", min_value=0.0, step=0.1, format="%.4f"),
+                "waste": st.column_config.NumberColumn("Waste", min_value=0.0, step=0.1, format="%.4f"),
+                "quantity": st.column_config.NumberColumn("Qty", min_value=0.0, step=1.0, format="%.2f"),
+                "unit_price": st.column_config.NumberColumn("Rate", min_value=0.0, step=100000.0, format="Rp %.0f"),
+                "amount": st.column_config.NumberColumn("Amount", format="Rp %.0f"),
+            },
+        )
+
+        architectural_detail_rows, architectural_detail_total, architectural_derived_unit_price = calculate_architectural_detail(
+            edited_architectural_detail,
+            architectural_base_values,
+        )
+
+        current_architectural_total = architectural_gfa * current_architectural_rate
+        architectural_rate_difference = architectural_derived_unit_price - current_architectural_rate
+        architectural_total_difference = architectural_detail_total - current_architectural_total
+
+        if architectural_gfa <= 0:
+            st.warning("Architectural Detail needs GFA greater than 0 to derive an Architectural Rate.")
+
+        st.info(
+            "Architectural Detail Review\n\n"
+            f"GFA: {architectural_gfa:,.0f} m2\n\n"
+            f"Architectural Detail Total: Rp {architectural_detail_total:,.0f}\n\n"
+            f"Derived Architectural Rate: Rp {architectural_derived_unit_price:,.0f}/m2\n\n"
+            f"Current Architectural Rate from Cost Analysis: Rp {current_architectural_rate:,.0f}/m2\n\n"
+            f"Difference: Rp {architectural_rate_difference:,.0f}/m2 "
+            f"(Rp {architectural_total_difference:,.0f} total)"
+        )
+
+        ar_c1, ar_c2, ar_c3 = st.columns(3)
+        ar_c1.metric("GFA", f"{architectural_gfa:,.0f} m2")
+        ar_c2.metric("Architectural Detail Total", f"Rp {architectural_detail_total:,.0f}")
+        ar_c3.metric("Derived Architectural Rate", f"Rp {architectural_derived_unit_price:,.0f}/m2")
+
+        ar_c4, ar_c5, ar_c6 = st.columns(3)
+        ar_c4.metric("Current Architectural Rate", f"Rp {current_architectural_rate:,.0f}/m2")
+        ar_c5.metric("Current Architectural Total", f"Rp {current_architectural_total:,.0f}")
+        ar_c6.metric("Difference", f"Rp {architectural_rate_difference:,.0f}/m2")
+
+        curr_proj["data"]["architectural_detail_total"] = architectural_detail_total
+        curr_proj["data"]["architectural_derived_unit_price"] = architectural_derived_unit_price
+        architectural_diff_status = get_architectural_price_difference_status(curr_proj, architectural_gfa)
+
+        if architectural_diff_status["has_difference"]:
+            st.warning(
+                "Architectural detail has changed. "
+                f"Derived Architectural Rate is Rp {architectural_diff_status['derived_rate']:,.0f}/m2, "
+                f"while Cost Analysis currently uses Rp {architectural_diff_status['current_rate']:,.0f}/m2. "
+                "Cost Analysis has not been updated automatically."
+            )
+
+        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
+
+        with save_c1:
+            save_architectural_detail_clicked = st.button(
+                "Save Architectural Detail",
+                key=f"architectural_detail_save_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        if save_architectural_detail_clicked:
+            curr_proj["data"]["architectural_detail_rows"] = architectural_detail_rows
+            curr_proj["data"]["architectural_detail_total"] = architectural_detail_total
+            curr_proj["data"]["architectural_derived_unit_price"] = architectural_derived_unit_price
+
+            save_ok = save_after_user_action("Save Architectural Detail")
+
+            if save_ok:
+                st.rerun()
+
+    # ==================================================
+    # TAB 10 - DETAILS
     # ==================================================
     elif area_page == "Details":
         st.subheader("Details")
@@ -6764,7 +7094,7 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
     # --- TAB 3: UNIT RATES ---
     with tab4:
         with st.expander("Detail-Derived Rate Review", expanded=True):
-            detail_rate_review_rows = build_detail_rate_review_rows(curr_proj, gba)
+            detail_rate_review_rows = build_detail_rate_review_rows(curr_proj, gba, gfa)
             detail_rate_review_df = pd.DataFrame(detail_rate_review_rows)
 
             st.caption("Review only. Detail-derived rates are not applied to Cost Analysis automatically.")
@@ -6886,6 +7216,54 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                         else:
                             st.error(
                                 "Foundation detail rate was applied locally, but cloud save failed. Do not log out yet."
+                            )
+
+            architectural_review_row = next(
+                (row for row in detail_rate_review_rows if row.get("Section") == "Architectural"),
+                {},
+            )
+            architectural_apply_available = (
+                architectural_review_row.get("Status") == "Different"
+                and _safe_float(architectural_review_row.get("Detail Total", 0.0)) > 0
+                and _safe_float(architectural_review_row.get("Detail-Derived Rate", 0.0)) > 0
+            )
+
+            if architectural_review_row:
+                st.info(
+                    "Architectural Detail-Derived Rate Review\n\n"
+                    f"Current Architectural Rate: Rp {_safe_float(architectural_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Derived Architectural Rate: Rp {_safe_float(architectural_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Difference: Rp {_safe_float(architectural_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
+                    f"Status: {architectural_review_row.get('Status', '')}"
+                )
+
+            if architectural_apply_available:
+                st.warning(
+                    "Architectural detail-derived rate differs from the current Cost Analysis Architectural Rate. "
+                    "Cost Analysis has not been updated automatically."
+                )
+                if st.button(
+                    "Apply Architectural Detail Rate",
+                    key=f"apply_architectural_detail_rate_{curr_id}",
+                    type="primary",
+                ):
+                    derived_rate = _safe_float(curr_proj["data"].get("architectural_derived_unit_price", 0.0))
+                    detail_total = _safe_float(curr_proj["data"].get("architectural_detail_total", 0.0))
+
+                    if derived_rate <= 0 or detail_total <= 0:
+                        st.error("Architectural detail rate cannot be applied because the detail total or derived rate is zero.")
+                    else:
+                        curr_proj["data"]["u_arch"] = derived_rate
+                        st.session_state[f"u_arch_{curr_type_key}"] = derived_rate
+
+                        save_ok = save_after_user_action("Apply Architectural Detail Rate")
+
+                        if save_ok:
+                            st.success("Architectural detail rate applied to Cost Analysis.")
+                            st.rerun()
+                        else:
+                            st.error(
+                                "Architectural detail rate was applied locally, but cloud save failed. Do not log out yet."
                             )
 
             structural_review_row = next(
