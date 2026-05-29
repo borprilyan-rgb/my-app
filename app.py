@@ -28,6 +28,7 @@ from excel_helpers import (
     read_pintu_sheet,
     read_residential_area_sheet,
     read_structural_sheet,
+    read_utility_sheet,
 )
 from report_excel_helpers import (
     build_portfolio_meta_from_inputs,
@@ -414,6 +415,7 @@ UI_CACHE_PREFIXES = (
     "foundation_detail_",
     "mep_detail_",
     "structural_detail_",
+    "utility_detail_",
     "area_editor_",
     "edit_smart_cc_",
     "external_table_",
@@ -2956,6 +2958,51 @@ def calculate_mep_detail(rows, gba):
 
     return cleaned_rows, detail_total, derived_unit_price
 
+def get_default_utility_detail_rows():
+    return [
+        {"code": "1", "description": "Listrik", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Air Bersih", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Telkom", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Gas", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Air Limbah", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+def clean_utility_detail_rows(rows):
+    if isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    if not isinstance(rows, list) or len(rows) == 0:
+        rows = get_default_utility_detail_rows()
+
+    cleaned_rows = []
+    default_rows = get_default_utility_detail_rows()
+
+    for idx, default_row in enumerate(default_rows):
+        row = rows[idx] if idx < len(rows) else {}
+        row = row if isinstance(row, dict) else {}
+        quantity = _safe_float(row.get("quantity", 0.0))
+        unit_price = _safe_float(row.get("unit_price", 0.0))
+        amount = quantity * unit_price
+
+        cleaned_rows.append({
+            "code": default_row["code"],
+            "description": default_row["description"],
+            "unit": default_row["unit"],
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+
+    return cleaned_rows
+
+def calculate_utility_detail(rows, gba):
+    cleaned_rows = clean_utility_detail_rows(rows)
+    detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
+    gba = _safe_float(gba)
+    derived_unit_price = detail_total / gba if gba > 0 else 0.0
+
+    return cleaned_rows, detail_total, derived_unit_price
+
 def get_default_architectural_detail_rows():
     return [
         {"code": "1", "description": "Basic Finishes Work", "unit": "m2", "factor": 0.0, "overlap": 0.0, "waste": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -3271,6 +3318,33 @@ def get_mep_price_difference_status(curr_proj, gba):
         "total_difference": total_difference,
     }
 
+def get_utility_price_difference_status(curr_proj, gba):
+    data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+    derived_rate = _safe_float(data.get("utility_derived_unit_price", 0.0))
+    current_rate = _safe_float(data.get("u_util", 0.0))
+    detail_total = _safe_float(data.get("utility_detail_total", 0.0))
+    gba = _safe_float(gba)
+
+    current_total = gba * current_rate
+    rate_difference = derived_rate - current_rate
+    total_difference = detail_total - current_total
+
+    has_difference = (
+        detail_total > 0
+        and derived_rate > 0
+        and abs(rate_difference) > 1
+    )
+
+    return {
+        "has_difference": has_difference,
+        "derived_rate": derived_rate,
+        "current_rate": current_rate,
+        "rate_difference": rate_difference,
+        "detail_total": detail_total,
+        "current_total": current_total,
+        "total_difference": total_difference,
+    }
+
 def get_architectural_price_difference_status(curr_proj, gfa):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     derived_rate = _safe_float(data.get("architectural_derived_unit_price", 0.0))
@@ -3385,6 +3459,15 @@ def build_detail_rate_review_rows(curr_proj, gba, gfa=None, rooms=None):
             "current_rate": _safe_float(data.get("u_mep", 0.0)),
             "derived_rate": _safe_float(data.get("mep_derived_unit_price", 0.0)),
             "detail_total": _safe_float(data.get("mep_detail_total", 0.0)),
+        },
+        {
+            "Section": "Utility",
+            "Cost Key": "u_util",
+            "Basis": "GBA",
+            "basis_value": gba,
+            "current_rate": _safe_float(data.get("u_util", 0.0)),
+            "derived_rate": _safe_float(data.get("utility_derived_unit_price", 0.0)),
+            "detail_total": _safe_float(data.get("utility_detail_total", 0.0)),
         },
     ]
 
@@ -4905,6 +4988,7 @@ def show_area_calculator():
             "Architectural",
             "FF&E",
             "MEP",
+            "Utility",
             "Details",
     ]
 
@@ -4985,6 +5069,10 @@ def show_area_calculator():
                     "mep_detail_rows",
                     get_default_mep_detail_rows(),
                 ),
+                utility_detail_rows=curr_proj["data"].get(
+                    "utility_detail_rows",
+                    get_default_utility_detail_rows(),
+                ),
                 foundation_detail_rows=curr_proj["data"].get(
                     "foundation_detail_rows",
                     get_default_foundation_detail_rows(),
@@ -5003,6 +5091,7 @@ def show_area_calculator():
                 architectural_base_values=get_architectural_detail_base_values(curr_proj["data"], edited_df),
                 ffe_rooms=_safe_float(curr_proj["data"].get("m_rooms", 0.0)) or _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0)),
                 mep_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
+                utility_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
             )
 
             def safe_filename_part(value, fallback="Unnamed"):
@@ -5116,6 +5205,12 @@ def show_area_calculator():
                         imported_mep_rows = None
                         try:
                             imported_mep_rows = read_mep_sheet(excel_bytes)
+                        except ExcelImportError as e:
+                            st.warning(str(e))
+
+                        imported_utility_rows = None
+                        try:
+                            imported_utility_rows = read_utility_sheet(excel_bytes)
                         except ExcelImportError as e:
                             st.warning(str(e))
 
@@ -5265,6 +5360,21 @@ def show_area_calculator():
                             curr_proj["data"]["mep_detail_total"] = imported_mep_total
                             curr_proj["data"]["mep_derived_unit_price"] = imported_mep_derived_unit_price
 
+                        if imported_utility_rows is not None:
+                            utility_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                            if utility_import_gba <= 0:
+                                utility_import_gba = safe_sum(imported_area_df, "GBA")
+
+                            (
+                                imported_utility_rows,
+                                imported_utility_total,
+                                imported_utility_derived_unit_price,
+                            ) = calculate_utility_detail(imported_utility_rows, utility_import_gba)
+
+                            curr_proj["data"]["utility_detail_rows"] = imported_utility_rows
+                            curr_proj["data"]["utility_detail_total"] = imported_utility_total
+                            curr_proj["data"]["utility_derived_unit_price"] = imported_utility_derived_unit_price
+
                         if imported_structural_rows is not None:
                             structural_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
                             if structural_import_gba <= 0:
@@ -5292,6 +5402,7 @@ def show_area_calculator():
                             f"foundation_detail_editor_{curr_id}",
                             f"mep_detail_editor_{curr_id}",
                             f"structural_detail_editor_{curr_id}",
+                            f"utility_detail_editor_{curr_id}",
                         ]:
                             if stale_key in st.session_state:
                                 del st.session_state[stale_key]
@@ -6930,7 +7041,123 @@ def show_area_calculator():
                 st.rerun()
 
     # ==================================================
-    # TAB 12 - DETAILS
+    # TAB 12 - UTILITY
+    # ==================================================
+    elif area_page == "Utility":
+        st.subheader("Area Analysis (Utility)")
+        st.caption("Utility Detail calculates a suggested Utility Rate only. Cost Analysis is updated only from the explicit Apply button.")
+
+        utility_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+        if utility_gba <= 0:
+            utility_gba = safe_sum(edited_df, "GBA")
+
+        saved_utility_detail_rows = curr_proj["data"].get(
+            "utility_detail_rows",
+            get_default_utility_detail_rows(),
+        )
+        utility_detail_rows, utility_detail_total, utility_derived_unit_price = calculate_utility_detail(
+            saved_utility_detail_rows,
+            utility_gba,
+        )
+
+        current_utility_rate = _safe_float(
+            curr_proj["data"].get(
+                "u_util",
+                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("utility", 0.0),
+            )
+        )
+
+        st.metric("Current Project GBA", f"{utility_gba:,.0f} m2")
+        reminder_df = pd.DataFrame([{
+            "Reminder": "Current Project GBA",
+            "GBA": utility_gba,
+            "Import Rule": "Reminder only - not imported as a detail row",
+        }])
+        st.dataframe(reminder_df, hide_index=True, width="stretch")
+
+        edited_utility_detail = st.data_editor(
+            pd.DataFrame(utility_detail_rows),
+            key=f"utility_detail_editor_{curr_id}",
+            hide_index=True,
+            width="stretch",
+            num_rows="fixed",
+            disabled=["code", "description", "unit", "amount"],
+            column_config={
+                "code": st.column_config.TextColumn("No"),
+                "description": st.column_config.TextColumn("Description", width="large"),
+                "unit": st.column_config.TextColumn("Unit"),
+                "quantity": st.column_config.NumberColumn("Qty", min_value=0.0, step=1.0, format="%.2f"),
+                "unit_price": st.column_config.NumberColumn("Rate", min_value=0.0, step=100000.0, format="Rp %.0f"),
+                "amount": st.column_config.NumberColumn("Amount", format="Rp %.0f"),
+            },
+        )
+
+        utility_detail_rows, utility_detail_total, utility_derived_unit_price = calculate_utility_detail(
+            edited_utility_detail,
+            utility_gba,
+        )
+
+        current_utility_total = utility_gba * current_utility_rate
+        utility_rate_difference = utility_derived_unit_price - current_utility_rate
+        utility_total_difference = utility_detail_total - current_utility_total
+
+        if utility_gba <= 0:
+            st.warning("Utility Detail needs GBA greater than 0 to derive a Utility Rate.")
+
+        st.info(
+            "Utility Detail Review\n\n"
+            f"GBA: {utility_gba:,.0f} m2\n\n"
+            f"Utility Detail Total: Rp {utility_detail_total:,.0f}\n\n"
+            f"Derived Utility Rate: Rp {utility_derived_unit_price:,.0f}/m2\n\n"
+            f"Current Utility Rate from Cost Analysis: Rp {current_utility_rate:,.0f}/m2\n\n"
+            f"Difference: Rp {utility_rate_difference:,.0f}/m2 "
+            f"(Rp {utility_total_difference:,.0f} total)"
+        )
+
+        utility_c1, utility_c2, utility_c3 = st.columns(3)
+        utility_c1.metric("GBA", f"{utility_gba:,.0f} m2")
+        utility_c2.metric("Utility Detail Total", f"Rp {utility_detail_total:,.0f}")
+        utility_c3.metric("Derived Utility Rate", f"Rp {utility_derived_unit_price:,.0f}/m2")
+
+        utility_c4, utility_c5, utility_c6 = st.columns(3)
+        utility_c4.metric("Current Utility Rate", f"Rp {current_utility_rate:,.0f}/m2")
+        utility_c5.metric("Current Utility Total", f"Rp {current_utility_total:,.0f}")
+        utility_c6.metric("Difference", f"Rp {utility_rate_difference:,.0f}/m2")
+
+        curr_proj["data"]["utility_detail_total"] = utility_detail_total
+        curr_proj["data"]["utility_derived_unit_price"] = utility_derived_unit_price
+        utility_diff_status = get_utility_price_difference_status(curr_proj, utility_gba)
+
+        if utility_diff_status["has_difference"]:
+            st.warning(
+                "Utility detail has changed. "
+                f"Derived Utility Rate is Rp {utility_diff_status['derived_rate']:,.0f}/m2, "
+                f"while Cost Analysis currently uses Rp {utility_diff_status['current_rate']:,.0f}/m2. "
+                "Cost Analysis has not been updated automatically."
+            )
+
+        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
+
+        with save_c1:
+            save_utility_detail_clicked = st.button(
+                "Save Utility Detail",
+                key=f"utility_detail_save_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        if save_utility_detail_clicked:
+            curr_proj["data"]["utility_detail_rows"] = utility_detail_rows
+            curr_proj["data"]["utility_detail_total"] = utility_detail_total
+            curr_proj["data"]["utility_derived_unit_price"] = utility_derived_unit_price
+
+            save_ok = save_after_user_action("Save Utility Detail")
+
+            if save_ok:
+                st.rerun()
+
+    # ==================================================
+    # TAB 13 - DETAILS
     # ==================================================
     elif area_page == "Details":
         st.subheader("Details")
@@ -7841,6 +8068,54 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                         else:
                             st.error(
                                 "MEP detail rate was applied locally, but cloud save failed. Do not log out yet."
+                            )
+
+            utility_review_row = next(
+                (row for row in detail_rate_review_rows if row.get("Section") == "Utility"),
+                {},
+            )
+            utility_apply_available = (
+                utility_review_row.get("Status") == "Different"
+                and _safe_float(utility_review_row.get("Detail Total", 0.0)) > 0
+                and _safe_float(utility_review_row.get("Detail-Derived Rate", 0.0)) > 0
+            )
+
+            if utility_review_row:
+                st.info(
+                    "Utility Detail-Derived Rate Review\n\n"
+                    f"Current Utility Rate: Rp {_safe_float(utility_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Derived Utility Rate: Rp {_safe_float(utility_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
+                    f"Difference: Rp {_safe_float(utility_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
+                    f"Status: {utility_review_row.get('Status', '')}"
+                )
+
+            if utility_apply_available:
+                st.warning(
+                    "Utility detail-derived rate differs from the current Cost Analysis Utility Rate. "
+                    "Cost Analysis has not been updated automatically."
+                )
+                if st.button(
+                    "Apply Utility Detail Rate",
+                    key=f"apply_utility_detail_rate_{curr_id}",
+                    type="primary",
+                ):
+                    derived_rate = _safe_float(curr_proj["data"].get("utility_derived_unit_price", 0.0))
+                    detail_total = _safe_float(curr_proj["data"].get("utility_detail_total", 0.0))
+
+                    if derived_rate <= 0 or detail_total <= 0:
+                        st.error("Utility detail rate cannot be applied because the detail total or derived rate is zero.")
+                    else:
+                        curr_proj["data"]["u_util"] = derived_rate
+                        st.session_state[f"u_util_{curr_type_key}"] = derived_rate
+
+                        save_ok = save_after_user_action("Apply Utility Detail Rate")
+
+                        if save_ok:
+                            st.success("Utility detail rate applied to Cost Analysis.")
+                            st.rerun()
+                        else:
+                            st.error(
+                                "Utility detail rate was applied locally, but cloud save failed. Do not log out yet."
                             )
 
             structural_review_row = next(

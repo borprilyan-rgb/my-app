@@ -952,6 +952,121 @@ def read_mep_sheet(excel_bytes):
     return rows
 
 
+def _default_utility_detail_rows():
+    return [
+        {"code": "1", "description": "Listrik", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "2", "description": "Air Bersih", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "3", "description": "Telkom", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "4", "description": "Gas", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+        {"code": "5", "description": "Air Limbah", "unit": "unit", "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
+    ]
+
+
+def read_utility_sheet(excel_bytes):
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="Utility",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError:
+        return None
+    except Exception:
+        return None
+
+    header_row_idx = None
+
+    for i in range(min(12, len(raw))):
+        row_norm = [_excel_norm_col(v) for v in raw.iloc[i].tolist()]
+        required_hits = sum(
+            1 for key in ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)"]
+            if _excel_norm_col(key) in row_norm
+        )
+
+        if required_hits >= 4:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ExcelImportError(
+            'The "Utility" sheet header could not be read. Utility import was skipped.'
+        )
+
+    df = raw.iloc[header_row_idx + 1:].copy()
+    df.columns = raw.iloc[header_row_idx].tolist()
+    df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    code_col = _excel_find_col(df, ["Code", "Item Code"])
+    desc_col = _excel_find_col(df, ["Description", "Item"])
+    unit_col = _excel_find_col(df, ["Unit"])
+    qty_col = _excel_find_col(df, ["Quantity", "Qty"])
+    unit_price_col = _excel_find_col(df, ["Unit Price (Rp)", "Unit Price", "Rate", "Harga"])
+
+    missing = []
+    if not code_col:
+        missing.append("Code")
+    if not desc_col:
+        missing.append("Description")
+    if not unit_col:
+        missing.append("Unit")
+    if not qty_col:
+        missing.append("Quantity")
+    if not unit_price_col:
+        missing.append("Unit Price (Rp)")
+
+    if missing:
+        raise ExcelImportError(
+            'The "Utility" sheet is missing required columns: '
+            f'{", ".join(missing)}. Utility import was skipped.'
+        )
+
+    by_code = {}
+    summary_labels = {
+        "TOTAL",
+        "GRAND TOTAL",
+        "GBA",
+        "CURRENT PROJECT GBA",
+        "REMINDER",
+        "UTILITY DETAIL TOTAL",
+        "DERIVED UTILITY RATE",
+        "CURRENT UTILITY RATE",
+        "DIFFERENCE",
+    }
+
+    for _, row in df.iterrows():
+        code = str(row.get(code_col, "")).strip()
+        description = str(row.get(desc_col, "")).strip()
+
+        if code in ["", "-", "nan", "None"] and description in ["", "-", "nan", "None"]:
+            continue
+
+        if code.upper() in summary_labels or description.upper() in summary_labels:
+            continue
+
+        by_code[code] = {
+            "code": code,
+            "description": description,
+            "unit": str(row.get(unit_col, "")).strip(),
+            "quantity": _excel_safe_float(row.get(qty_col, 0.0)),
+            "unit_price": _excel_safe_float(row.get(unit_price_col, 0.0)),
+            "amount": 0.0,
+        }
+
+    rows = []
+    for default_row in _default_utility_detail_rows():
+        imported = by_code.get(default_row["code"], {})
+        row = {**default_row, **imported}
+        row["code"] = default_row["code"]
+        row["description"] = default_row["description"]
+        row["unit"] = default_row["unit"]
+        row["amount"] = _excel_safe_float(row.get("quantity", 0.0)) * _excel_safe_float(row.get("unit_price", 0.0))
+        rows.append(row)
+
+    return rows
+
+
 def _default_structural_detail_rows():
     return [
         {"code": "1", "description": "Sub/Superstructure", "unit": "m3", "ratio": 0.0, "waste_factor": 0.0, "quantity": 0.0, "unit_price": 0.0, "amount": 0.0},
@@ -1226,12 +1341,14 @@ def create_area_excel_form_bytes(
     foundation_detail_rows=None,
     mep_detail_rows=None,
     structural_detail_rows=None,
+    utility_detail_rows=None,
     architectural_base_values=None,
     ffe_rooms=0.0,
     earthwork_gba=0.0,
     foundation_gba=0.0,
     mep_gba=0.0,
     structural_gba=0.0,
+    utility_gba=0.0,
 ):
     output = io.BytesIO()
 
@@ -2369,6 +2486,89 @@ def create_area_excel_form_bytes(
     ws_mep.protection.password = "area"
 
     # ==================================================
+    # UTILITY SHEET
+    # ==================================================
+    ws_utility = wb.create_sheet("Utility")
+    ws_utility.sheet_view.showGridLines = False
+
+    ws_utility.merge_cells("A1:F1")
+    ws_utility["A1"] = "UTILITY DETAIL BREAKDOWN"
+    ws_utility["A1"].font = Font(bold=True, color=white, size=14)
+    ws_utility["A1"].fill = PatternFill("solid", fgColor=dark)
+    ws_utility["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws_utility.merge_cells("A2:F2")
+    ws_utility["A2"] = "Detail-derived rate only. Cost Analysis changes only after Apply Utility Detail Rate in the app."
+    ws_utility["A2"].font = Font(italic=True, color=dark, size=10)
+    ws_utility["A2"].alignment = Alignment(horizontal="left", vertical="center")
+
+    ws_utility["A3"] = "Current Project GBA"
+    ws_utility["B3"] = "='Area Input'!M13"
+    ws_utility["C3"] = "Reminder only - not imported as a detail row"
+    style_range(ws_utility, "A3:C3", formula_fill, bold=True)
+
+    utility_headers = ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)", "Amount (Rp)"]
+    for c, h in enumerate(utility_headers, start=1):
+        ws_utility.cell(5, c).value = h
+
+    style_range(ws_utility, "A5:F5", dark, font_color=white, bold=True)
+
+    utility_rows = utility_detail_rows if isinstance(utility_detail_rows, list) and utility_detail_rows else _default_utility_detail_rows()
+    utility_defaults = _default_utility_detail_rows()
+    utility_start_row = 6
+
+    for idx, default_row in enumerate(utility_defaults):
+        r = utility_start_row + idx
+        row = utility_rows[idx] if idx < len(utility_rows) and isinstance(utility_rows[idx], dict) else {}
+        quantity = _excel_safe_float(row.get("quantity", 0.0))
+        unit_price = _excel_safe_float(row.get("unit_price", 0.0))
+
+        ws_utility.cell(r, 1).value = default_row["code"]
+        ws_utility.cell(r, 2).value = default_row["description"]
+        ws_utility.cell(r, 3).value = default_row["unit"]
+        ws_utility.cell(r, 4).value = quantity
+        ws_utility.cell(r, 5).value = unit_price
+        ws_utility.cell(r, 6).value = f"=D{r}*E{r}"
+
+    utility_total_row = utility_start_row + len(utility_defaults)
+    ws_utility.cell(utility_total_row, 1).value = "TOTAL"
+    ws_utility.cell(utility_total_row, 6).value = f"=SUM(F{utility_start_row}:F{utility_total_row - 1})"
+
+    utility_summary_start = utility_total_row + 2
+    ws_utility.cell(utility_summary_start, 1).value = "GBA"
+    ws_utility.cell(utility_summary_start, 2).value = _excel_safe_float(utility_gba)
+    ws_utility.cell(utility_summary_start + 1, 1).value = "Utility Detail Total"
+    ws_utility.cell(utility_summary_start + 1, 2).value = f"=F{utility_total_row}"
+    ws_utility.cell(utility_summary_start + 2, 1).value = "Derived Utility Rate"
+    ws_utility.cell(utility_summary_start + 2, 2).value = f"=IF(B{utility_summary_start}>0,B{utility_summary_start + 1}/B{utility_summary_start},0)"
+
+    style_range(ws_utility, f"A{utility_start_row}:F{utility_total_row}", None)
+    style_range(ws_utility, f"A{utility_total_row}:F{utility_total_row}", dark, font_color=white, bold=True)
+    style_range(ws_utility, f"A{utility_summary_start}:B{utility_summary_start + 2}", formula_fill, bold=True)
+    style_range(ws_utility, f"F{utility_start_row}:F{utility_total_row}", formula_fill)
+
+    lock_range(ws_utility, f"A1:F{utility_summary_start + 2}")
+    unlock_range(ws_utility, f"D{utility_start_row}:E{utility_total_row - 1}")
+
+    for col, width in {
+        "A": 12,
+        "B": 42,
+        "C": 12,
+        "D": 14,
+        "E": 18,
+        "F": 18,
+    }.items():
+        ws_utility.column_dimensions[col].width = width
+
+    for row in ws_utility.iter_rows(min_row=3, max_row=utility_summary_start + 2, min_col=2, max_col=6):
+        for cell in row:
+            cell.number_format = '#,##0.00'
+
+    ws_utility.freeze_panes = "A6"
+    ws_utility.protection.sheet = True
+    ws_utility.protection.password = "area"
+
+    # ==================================================
     # IMPORT GUIDE
     # ==================================================
     ws_guide = wb.create_sheet("Import Guide")
@@ -2384,6 +2584,7 @@ def create_area_excel_form_bytes(
         ["Architectural", "Architectural detail-derived rate input", "Factor / %, Overlap, Waste, manual Quantity rows, Unit Price (Rp)"],
         ["FF&E", "FF&E detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["MEP", "MEP detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
+        ["Utility", "Utility detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
     ]
 
     for r, row in enumerate(guide_rows, start=1):
