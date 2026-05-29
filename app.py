@@ -5023,110 +5023,23 @@ def show_area_calculator():
     # ==================================================
     tower_name = curr_proj.get("name", "Unnamed Component")
     curr_proj["data"]["tname"] = tower_name
-
-    with st.container(border=True):
-        c_name, c_h, c_b, c_u = st.columns(4)
-
-        c_name.text_input(
-            "Project Name",
-            value=tower_name,
-            key=f"wid_tname_{curr_id}",
-            disabled=True,
-            help="This follows the active component name from the sidebar.",
-        )
-
-        base_key = f"wid_base_{curr_id}"
-        up_key = f"wid_up_{curr_id}"
-        land_key = f"wid_m_land_{curr_id}"
-
-        c_h.number_input(
-            "Basements / LG",
-            min_value=0,
-            value=int(get_area_val("base_in", 1)),
-            step=1,
-            key=base_key,
-            help="1 = LG, 2 = B1, 3 = B2, etc",
-        )
-
-        c_b.number_input(
-            "Floors",
-            min_value=1,
-            value=int(get_area_val("up_in", 5)),
-            step=1,
-            key=up_key,
-        )
-
-        c_u.number_input(
-            "Luas Tanah (m2)",
-            min_value=0.0,
-            value=_safe_float(get_area_val("m_land", 0.0)),
-            step=100.0,
-            key=land_key,
-        )
-
-        curr_proj["data"]["base_in"] = int(st.session_state[base_key])
-        curr_proj["data"]["up_in"] = int(st.session_state[up_key])
-        curr_proj["data"]["m_land"] = _safe_float(st.session_state[land_key])
+    base_key = f"wid_base_{curr_id}"
+    up_key = f"wid_up_{curr_id}"
+    land_key = f"wid_m_land_{curr_id}"
 
     # ==================================================
-    # FACADE INPUTS - NORMAL WIDGETS USE SESSION KEYS
+    # FACADE INPUTS - STORED VALUES USED BY PAGE CALCULATIONS
     # ==================================================
-    with st.container(border=True):
-        st.markdown("##### Facade Area Inputs")
+    keliling_key = f"area_keliling_facade_{curr_id}"
+    railing_len_key = f"area_panjang_railing_{curr_id}"
+    railing_h_key = f"area_tinggi_railing_{curr_id}"
+    tol_key = f"area_facade_tolerance_pct_{curr_id}"
 
-        f1, f2, f3, f4 = st.columns(4)
-
-        keliling_key = f"area_keliling_facade_{curr_id}"
-        railing_len_key = f"area_panjang_railing_{curr_id}"
-        railing_h_key = f"area_tinggi_railing_{curr_id}"
-        tol_key = f"area_facade_tolerance_pct_{curr_id}"
-
-        f1.number_input(
-            "Keliling Facade (m)",
-            min_value=0.0,
-            value=_safe_float(get_area_val("area_keliling_facade", 0.0)),
-            step=1.0,
-            key=keliling_key,
-            help="Building facade perimeter / keliling bangunan.",
-        )
-
-        f2.number_input(
-            "Panjang Railing(m)",
-            min_value=0.0,
-            value=_safe_float(get_area_val("area_panjang_railing", 0.0)),
-            step=0.1,
-            key=railing_len_key,
-            help="Average railing length per typical unit.",
-        )
-
-        f3.number_input(
-            "Tinggi Railing(m)",
-            min_value=0.0,
-            value=_safe_float(get_area_val("area_tinggi_railing", 0.0)),
-            step=0.1,
-            key=railing_h_key,
-            help="Average railing height.",
-        )
-
-        f4.number_input(
-            "Tolerance (%)",
-            min_value=0.0,
-            value=_safe_float(get_area_val("area_facade_tolerance_pct", 15.0)),
-            step=1.0,
-            key=tol_key,
-            help="Tekukan dan Overlap",
-        )
-
-        keliling_facade = _safe_float(st.session_state[keliling_key])
-        panjang_railing = _safe_float(st.session_state[railing_len_key])
-        tinggi_railing = _safe_float(st.session_state[railing_h_key])
-        facade_tolerance_pct = _safe_float(st.session_state[tol_key])
-
-        curr_proj["data"]["area_keliling_facade"] = keliling_facade
-        curr_proj["data"]["area_panjang_railing"] = panjang_railing
-        curr_proj["data"]["area_tinggi_railing"] = tinggi_railing
-        curr_proj["data"]["area_facade_tolerance_pct"] = facade_tolerance_pct
-        curr_proj["data"]["area_railing_length_per_room_calc"] = panjang_railing
+    keliling_facade = _safe_float(get_area_val("area_keliling_facade", 0.0))
+    panjang_railing = _safe_float(get_area_val("area_panjang_railing", 0.0))
+    tinggi_railing = _safe_float(get_area_val("area_tinggi_railing", 0.0))
+    facade_tolerance_pct = _safe_float(get_area_val("area_facade_tolerance_pct", 15.0))
+    curr_proj["data"]["area_railing_length_per_room_calc"] = panjang_railing
 
     # ==================================================
     # GLOBAL CALCULATIONS FROM COMMITTED TABLE ONLY
@@ -5273,36 +5186,10 @@ def show_area_calculator():
         st.markdown("##### Excel Form")
 
         with st.container():
-            fcol1, fcol2, fcol3, fcol4 = st.columns(4)
-
-            include_roof_machine = fcol1.checkbox(
-                "Include Roof Machine",
-                value=True,
-                key=f"excel_form_roof_machine_{curr_id}",
-            )
-
-            include_roof = fcol2.checkbox(
-                "Include Roof",
-                value=True,
-                key=f"excel_form_roof_{curr_id}",
-            )
-
-            excel_upper_floors = fcol3.number_input(
-                "Floors",
-                min_value=1,
-                value=int(st.session_state[up_key]),
-                step=1,
-                key=f"excel_form_floors_{curr_id}",
-            )
-
-            excel_basements = fcol4.number_input(
-                "Basements / LG",
-                min_value=0,
-                value=int(st.session_state[base_key]),
-                step=1,
-                key=f"excel_form_basements_{curr_id}",
-                help="1 = LG, 2 = LG + B1, 3 = LG + B1 + B2",
-            )
+            include_roof_machine = True
+            include_roof = True
+            excel_upper_floors = int(get_area_val("up_in", 5))
+            excel_basements = int(get_area_val("base_in", 1))
 
             excel_form_bytes = create_area_excel_form_bytes(
                 project_name=tower_name,
@@ -5799,6 +5686,46 @@ def show_area_calculator():
         st.caption(
             "Edit here first. Calculations and cost sync will not update until you click Save Change."
         )
+
+        with st.container(border=True):
+            c_name, c_h, c_b, c_u = st.columns(4)
+
+            c_name.text_input(
+                "Project Name",
+                value=tower_name,
+                key=f"wid_tname_{curr_id}",
+                disabled=True,
+                help="This follows the active component name from the sidebar.",
+            )
+
+            c_h.number_input(
+                "Basements / LG",
+                min_value=0,
+                value=int(get_area_val("base_in", 1)),
+                step=1,
+                key=base_key,
+                help="1 = LG, 2 = B1, 3 = B2, etc",
+            )
+
+            c_b.number_input(
+                "Floors",
+                min_value=1,
+                value=int(get_area_val("up_in", 5)),
+                step=1,
+                key=up_key,
+            )
+
+            c_u.number_input(
+                "Luas Tanah (m2)",
+                min_value=0.0,
+                value=_safe_float(get_area_val("m_land", 0.0)),
+                step=100.0,
+                key=land_key,
+            )
+
+            curr_proj["data"]["base_in"] = int(st.session_state[base_key])
+            curr_proj["data"]["up_in"] = int(st.session_state[up_key])
+            curr_proj["data"]["m_land"] = _safe_float(st.session_state[land_key])
 
         c_gen, c_reset = st.columns(2)
 
@@ -7037,6 +6964,69 @@ def show_area_calculator():
     elif area_page == "Architectural":
         st.subheader("Area Analysis (Architectural)")
         st.caption("Architectural Detail calculates a suggested Architectural Rate only. Cost Analysis is updated only from the explicit Apply button.")
+
+        with st.container(border=True):
+            st.markdown("##### Facade Area Inputs")
+
+            f1, f2, f3, f4 = st.columns(4)
+
+            f1.number_input(
+                "Keliling Facade (m)",
+                min_value=0.0,
+                value=_safe_float(get_area_val("area_keliling_facade", 0.0)),
+                step=1.0,
+                key=keliling_key,
+                help="Building facade perimeter / keliling bangunan.",
+            )
+
+            f2.number_input(
+                "Panjang Railing(m)",
+                min_value=0.0,
+                value=_safe_float(get_area_val("area_panjang_railing", 0.0)),
+                step=0.1,
+                key=railing_len_key,
+                help="Average railing length per typical unit.",
+            )
+
+            f3.number_input(
+                "Tinggi Railing(m)",
+                min_value=0.0,
+                value=_safe_float(get_area_val("area_tinggi_railing", 0.0)),
+                step=0.1,
+                key=railing_h_key,
+                help="Average railing height.",
+            )
+
+            f4.number_input(
+                "Tolerance (%)",
+                min_value=0.0,
+                value=_safe_float(get_area_val("area_facade_tolerance_pct", 15.0)),
+                step=1.0,
+                key=tol_key,
+                help="Tekukan dan Overlap",
+            )
+
+            keliling_facade = _safe_float(st.session_state[keliling_key])
+            panjang_railing = _safe_float(st.session_state[railing_len_key])
+            tinggi_railing = _safe_float(st.session_state[railing_h_key])
+            facade_tolerance_pct = _safe_float(st.session_state[tol_key])
+
+            facade_wall_area = total_floor_height * keliling_facade
+            facade_railing_area = total_typical_units * panjang_railing * tinggi_railing
+            facade_subtotal = facade_wall_area + facade_railing_area
+            facade_tolerance_area = facade_subtotal * facade_tolerance_pct / 100
+            total_facade_area = facade_subtotal + facade_tolerance_area
+
+            curr_proj["data"]["area_keliling_facade"] = keliling_facade
+            curr_proj["data"]["area_panjang_railing"] = panjang_railing
+            curr_proj["data"]["area_tinggi_railing"] = tinggi_railing
+            curr_proj["data"]["area_facade_tolerance_pct"] = facade_tolerance_pct
+            curr_proj["data"]["area_railing_length_per_room_calc"] = panjang_railing
+            curr_proj["data"]["area_facade_wall_calc"] = facade_wall_area
+            curr_proj["data"]["area_facade_railing_calc"] = facade_railing_area
+            curr_proj["data"]["area_facade_subtotal_calc"] = facade_subtotal
+            curr_proj["data"]["area_facade_tolerance_area_calc"] = facade_tolerance_area
+            curr_proj["data"]["area_facade_calc"] = total_facade_area
 
         architectural_base_values = get_architectural_detail_base_values(curr_proj["data"], edited_df)
         architectural_gfa = _safe_float(architectural_base_values.get("gfa", 0.0))
