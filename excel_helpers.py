@@ -446,13 +446,24 @@ def read_external_sheet(excel_bytes):
 
     return other_records, landscape_data
 
+def _read_facility_misc_raw(excel_bytes):
+    for sheet_name in ["Facility Misc", "Residential Area", "Residential"]:
+        try:
+            return _read_excel_sheet_with_header(
+                excel_bytes,
+                sheet_name,
+                header_candidates=["No", "Item", "Unit", "Qty", "Rate"],
+            )
+        except Exception:
+            continue
+    return None
+
+
 def read_residential_area_sheet(excel_bytes):
     try:
-        df = _read_excel_sheet_with_header(
-            excel_bytes,
-            "Residential Area",
-            header_candidates=["No", "Item", "Unit", "Qty", "Rate"],
-        )
+        df = _read_facility_misc_raw(excel_bytes)
+        if df is None:
+            return []
     except Exception:
         return []
 
@@ -463,11 +474,21 @@ def read_residential_area_sheet(excel_bytes):
     rate_col = _excel_find_col(df, ["Rate", "Harga"])
 
     records = []
+    skip_items = {
+        "fasilitas publik",
+        "public facilities",
+        "fasilitas proyek",
+        "project facilities",
+        "total facility / misc works",
+        "miscellaneous works subtotal",
+        "total",
+    }
 
     for _, row in df.iterrows():
         item = str(row.get(item_col, "")).strip() if item_col else ""
+        item_norm = item.lower()
 
-        if item in ["", "-", "nan", "None"]:
+        if item in ["", "-", "nan", "None"] or item_norm in skip_items:
             continue
 
         records.append(
@@ -481,6 +502,37 @@ def read_residential_area_sheet(excel_bytes):
         )
 
     return records
+
+
+def read_facility_misc_inputs(excel_bytes):
+    df = _read_facility_misc_raw(excel_bytes)
+    if df is None:
+        return {}
+
+    item_col = _excel_find_col(df, ["Item"])
+    qty_col = _excel_find_col(df, ["Qty", "Quantity"])
+    rate_col = _excel_find_col(df, ["Rate", "Harga"])
+
+    if not item_col:
+        return {}
+
+    found = {}
+
+    for _, row in df.iterrows():
+        item = str(row.get(item_col, "")).strip().lower()
+        qty = _excel_safe_float(row.get(qty_col, 0.0)) if qty_col else 0.0
+        rate = _excel_safe_float(row.get(rate_col, 0.0)) if rate_col else 0.0
+
+        if item in ["fasilitas publik", "public facilities"]:
+            found["m_fac_pub"] = qty
+            found["fac_pub_rate"] = rate
+            found["area_fac_pub_amount_calc"] = qty * rate
+        elif item in ["fasilitas proyek", "project facilities"]:
+            found["m_fac_proj"] = qty
+            found["fac_proj_rate"] = rate
+            found["area_fac_proj_amount_calc"] = qty * rate
+
+    return found
 
 
 def _default_earthwork_detail_rows():
@@ -1536,6 +1588,8 @@ def create_area_excel_form_bytes(
     mep_detail_rows=None,
     structural_detail_rows=None,
     utility_detail_rows=None,
+    residential_facility_rows=None,
+    facility_misc_values=None,
     architectural_base_values=None,
     consultancy_base_values=None,
     ffe_rooms=0.0,
@@ -2035,13 +2089,13 @@ def create_area_excel_form_bytes(
     ws_ext.protection.password = "area"
 
     # ==================================================
-    # RESIDENTIAL AREA SHEET
+    # FACILITY / MISC SHEET
     # ==================================================
-    ws_res = wb.create_sheet("Residential Area")
+    ws_res = wb.create_sheet("Facility Misc")
     ws_res.sheet_view.showGridLines = False
 
     ws_res.merge_cells("A1:F1")
-    ws_res["A1"] = "RESIDENTIAL FACILITY INPUT FORM"
+    ws_res["A1"] = "FACILITY / MISC INPUT FORM"
     ws_res["A1"].font = Font(bold=True, color=white, size=14)
     ws_res["A1"].fill = PatternFill("solid", fgColor=dark)
     ws_res["A1"].alignment = Alignment(horizontal="center", vertical="center")
@@ -2050,11 +2104,31 @@ def create_area_excel_form_bytes(
     for c, h in enumerate(res_headers, start=1):
         ws_res.cell(3, c).value = h
 
-    res_rows = [
-        ["1", "Swimming Pool", "m2", 0, 0],
-        ["2", "Club House / Fitness Centre", "ls", 0, 0],
-        ["3", "Pool Deck", "m2", 0, 0],
+    facility_misc_values = facility_misc_values if isinstance(facility_misc_values, dict) else {}
+    resident_rows = residential_facility_rows if isinstance(residential_facility_rows, list) and residential_facility_rows else [
+        {"No": "1", "Item": "Swimming Pool", "Unit": "m2", "Qty": 0, "Rate": 0},
+        {"No": "2", "Item": "Club House / Fitness Centre", "Unit": "ls", "Qty": 0, "Rate": 0},
+        {"No": "3", "Item": "Pool Deck", "Unit": "m2", "Qty": 0, "Rate": 0},
     ]
+    res_rows = [
+        ["PUB", "Fasilitas Publik", "m2", _excel_safe_float(facility_misc_values.get("m_fac_pub", 0.0)), _excel_safe_float(facility_misc_values.get("fac_pub_rate", facility_misc_values.get("u_fac_p", 0.0)))],
+    ]
+    for row in resident_rows:
+        row = row if isinstance(row, dict) else {}
+        res_rows.append([
+            row.get("No", ""),
+            row.get("Item", ""),
+            row.get("Unit", "ls"),
+            _excel_safe_float(row.get("Qty", 0.0)),
+            _excel_safe_float(row.get("Rate", 0.0)),
+        ])
+    res_rows.append([
+        "PROJ",
+        "Fasilitas Proyek",
+        "unit",
+        _excel_safe_float(facility_misc_values.get("m_fac_proj", 0.0)),
+        _excel_safe_float(facility_misc_values.get("fac_proj_rate", facility_misc_values.get("u_fac_pr", 0.0))),
+    ])
 
     for r, row in enumerate(res_rows, start=4):
         for c, val in enumerate(row, start=1):
@@ -2063,6 +2137,7 @@ def create_area_excel_form_bytes(
 
     res_total_row = 4 + len(res_rows)
     ws_res.cell(res_total_row, 1).value = "TOTAL"
+    ws_res.cell(res_total_row, 2).value = "Total Facility / Misc Works"
     ws_res.cell(res_total_row, 6).value = f"=SUM(F4:F{res_total_row - 1})"
 
     style_range(ws_res, "A3:F3", dark, font_color=white, bold=True)
@@ -2957,7 +3032,7 @@ def create_area_excel_form_bytes(
         ["Area Input", "Main floor area input", "Editable source columns: FL, Space Type, Height, Typical Unit, Parkir, Roof/Deck, MEP Outdoor, Stair/MEP/Etc, Koridor/Lobby, Unit Area, Office"],
         ["Pintu", "Door quantity input", "Floor, Space Type, Height, and Typical Unit are linked from Area Input. Edit only Pintu Kayu, Pintu Besi, Pintu Kaca."],
         ["Eksternal", "External works input", "No, Item, Unit, Qty, Rate"],
-        ["Residential Area", "Residential facility input", "No, Item, Unit, Qty, Rate"],
+        ["Facility Misc", "Facility / miscellaneous works input", "Fasilitas Publik qty/rate, Fasilitas Penghuni detail rows, Fasilitas Proyek qty/rate"],
         ["Earthworks", "Earthworks detail preview input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["Foundation", "Foundation detail-derived rate input", "Code, Description, Unit, Quantity, Unit Price (Rp)"],
         ["Structural", "Structural detail-derived rate input", "Ratio, Waste Factor for Rebar, Quantity for Prestress Works and Steelworks, Unit Price (Rp)"],

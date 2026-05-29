@@ -28,6 +28,7 @@ from excel_helpers import (
     read_foundation_sheet,
     read_mep_sheet,
     read_pintu_sheet,
+    read_facility_misc_inputs,
     read_residential_area_sheet,
     read_structural_sheet,
     read_utility_sheet,
@@ -5077,7 +5078,7 @@ def show_area_calculator():
             "GBA Input",
             "Pintu",
             "Eksternal",
-            "Residential",
+            "Facility / Misc",
             "Earthworks",
             "Structural",
             "Foundation",
@@ -5162,6 +5163,11 @@ def show_area_calculator():
                     "architectural_detail_rows",
                     get_default_architectural_detail_rows(),
                 ),
+                residential_facility_rows=curr_proj["data"].get(
+                    "area_res_fac_table_data",
+                    [],
+                ),
+                facility_misc_values=curr_proj["data"],
                 earthwork_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 foundation_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
                 structural_gba=_safe_float(curr_proj["data"].get("m_gba", 0.0)) or safe_sum(edited_df, "GBA"),
@@ -5258,7 +5264,8 @@ def show_area_calculator():
                                 excel_bytes
                             )
 
-                            imported_res_fac_records = read_residential_area_sheet(excel_bytes)
+                        imported_res_fac_records = read_residential_area_sheet(excel_bytes)
+                        imported_facility_misc_inputs = read_facility_misc_inputs(excel_bytes)
 
                             imported_earthwork_rows = None
                             try:
@@ -5395,12 +5402,35 @@ def show_area_calculator():
                                 curr_proj["data"]["area_facade_tolerance_area_calc"] = imported_facade_tolerance_area
                                 curr_proj["data"]["area_facade_calc"] = imported_total_facade_area
 
-                            if imported_res_fac_records:
-                                res_fac_key = f"res_fac_table_{curr_id}"
-                                st.session_state[res_fac_key] = copy.deepcopy(imported_res_fac_records)
-                                curr_proj["data"]["area_res_fac_table_data"] = copy.deepcopy(
-                                    imported_res_fac_records
-                                )
+                        if imported_res_fac_records:
+                            res_fac_key = f"res_fac_table_{curr_id}"
+                            st.session_state[res_fac_key] = copy.deepcopy(imported_res_fac_records)
+                            curr_proj["data"]["area_res_fac_table_data"] = copy.deepcopy(
+                                imported_res_fac_records
+                            )
+                            imported_res_fac_amount = sum(
+                                _safe_float(row.get("Qty", 0.0)) * _safe_float(row.get("Rate", 0.0))
+                                for row in imported_res_fac_records
+                                if isinstance(row, dict)
+                            )
+                            curr_proj["data"]["area_res_fac_amount_calc"] = imported_res_fac_amount
+
+                        if imported_facility_misc_inputs:
+                            for k, v in imported_facility_misc_inputs.items():
+                                curr_proj["data"][k] = v
+                            curr_proj["data"]["area_fac_pub_amount_calc"] = (
+                                _safe_float(curr_proj["data"].get("m_fac_pub", 0.0))
+                                * _safe_float(curr_proj["data"].get("fac_pub_rate", 0.0))
+                            )
+                            curr_proj["data"]["area_fac_proj_amount_calc"] = (
+                                _safe_float(curr_proj["data"].get("m_fac_proj", 0.0))
+                                * _safe_float(curr_proj["data"].get("fac_proj_rate", 0.0))
+                            )
+                            curr_proj["data"]["group_misc"] = (
+                                _safe_float(curr_proj["data"].get("area_fac_pub_amount_calc", 0.0))
+                                + _safe_float(curr_proj["data"].get("area_res_fac_amount_calc", 0.0))
+                                + _safe_float(curr_proj["data"].get("area_fac_proj_amount_calc", 0.0))
+                            )
 
                             if imported_earthwork_rows is not None:
                                 earthwork_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
@@ -5652,7 +5682,9 @@ def show_area_calculator():
             [
                 {"Item": "Facade", "Value": _safe_float(curr_proj["data"].get("area_facade_calc", 0.0)), "Unit": "m2"},
                 {"Item": "Landscape", "Value": summary_landscape, "Unit": "m2"},
-                {"Item": "Residential Facility", "Value": summary_residential_facility, "Unit": "m2"},
+                {"Item": "Fasilitas Penghuni", "Value": summary_residential_facility, "Unit": "m2"},
+                {"Item": "Fasilitas Publik", "Value": _safe_float(curr_proj["data"].get("m_fac_pub", 0.0)), "Unit": "m2"},
+                {"Item": "Fasilitas Proyek", "Value": _safe_float(curr_proj["data"].get("m_fac_proj", 0.0)), "Unit": "unit"},
                 {"Item": "Railing", "Value": _safe_float(curr_proj["data"].get("area_railing_length_per_room_calc", curr_proj["data"].get("area_panjang_railing", 0.0))), "Unit": "m'/room"},
                 {"Item": "Wooden Door", "Value": _safe_float(curr_proj["data"].get("area_door_wood_calc", 0.0)), "Unit": "unit"},
                 {"Item": "Steel Door", "Value": _safe_float(curr_proj["data"].get("area_door_steel_calc", 0.0)), "Unit": "unit"},
@@ -6538,13 +6570,36 @@ def show_area_calculator():
                 st.error("Cloud save failed. Do not log out yet.")
 
     # ==================================================
-    # TAB 5 - RESIDENTIAL FACILITY
+    # TAB 5 - FACILITY / MISC
     # ==================================================
-    elif area_page == "Residential":
-        st.subheader("Area Analysis (Residential Facility Works)")
+    elif area_page == "Facility / Misc":
+        st.subheader("Area Analysis (Facility / Misc)")
 
         res_fac_key = f"res_fac_table_{curr_id}"
         res_fac_editor_key = f"res_fac_editor_{curr_id}"
+
+        st.markdown("##### Fasilitas Publik")
+        pub_c1, pub_c2, pub_c3 = st.columns(3)
+        area_pub_qty_key = f"area_m_fac_pub_{curr_id}"
+        area_pub_rate_key = f"area_fac_pub_rate_{curr_id}"
+        pub_fac_m2_area = pub_c1.number_input(
+            "Fasilitas Publik (m2)",
+            min_value=0.0,
+            value=_safe_float(curr_proj["data"].get("m_fac_pub", 0.0)),
+            step=10.0,
+            key=area_pub_qty_key,
+        )
+        fac_pub_rate_area = pub_c2.number_input(
+            "Fasilitas Publik Rate (Rp/m2)",
+            min_value=0.0,
+            value=_safe_float(curr_proj["data"].get("fac_pub_rate", curr_proj["data"].get("u_fac_p", 0.0))),
+            step=100000.0,
+            key=area_pub_rate_key,
+        )
+        t_pub_fac_area = pub_fac_m2_area * fac_pub_rate_area
+        pub_c3.metric("Fasilitas Publik Total", f"Rp {t_pub_fac_area:,.0f}")
+
+        st.markdown("##### Fasilitas Penghuni")
 
         default_res_fac_records = [
             {"No": "1", "Item": "Swimming Pool", "Unit": "m2", "Qty": 0.0, "Rate": 0.0},
@@ -6608,9 +6663,33 @@ def show_area_calculator():
         st.session_state[res_fac_key] = saved_res_fac_records
 
         st.metric(
-            "Residential Facility Total Sync Source",
+            "Fasilitas Penghuni Total Sync Source",
             f"Rp {total_res_fac_amount:,.0f}",
         )
+
+        st.markdown("##### Fasilitas Proyek")
+        proj_c1, proj_c2, proj_c3 = st.columns(3)
+        area_proj_qty_key = f"area_m_fac_proj_{curr_id}"
+        area_proj_rate_key = f"area_fac_proj_rate_{curr_id}"
+        proj_fac_u_area = proj_c1.number_input(
+            "Fasilitas Proyek (unit)",
+            min_value=0.0,
+            value=_safe_float(curr_proj["data"].get("m_fac_proj", 0.0)),
+            step=1.0,
+            key=area_proj_qty_key,
+        )
+        fac_proj_rate_area = proj_c2.number_input(
+            "Fasilitas Proyek Rate (Rp/unit)",
+            min_value=0.0,
+            value=_safe_float(curr_proj["data"].get("fac_proj_rate", curr_proj["data"].get("u_fac_pr", 0.0))),
+            step=100000.0,
+            key=area_proj_rate_key,
+        )
+        t_proj_fac_area = proj_fac_u_area * fac_proj_rate_area
+        proj_c3.metric("Fasilitas Proyek Total", f"Rp {t_proj_fac_area:,.0f}")
+
+        group_misc_area = t_pub_fac_area + total_res_fac_amount + t_proj_fac_area
+        st.metric("Total Facility / Misc Works", f"Rp {group_misc_area:,.0f}")
 
         save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
 
@@ -6625,6 +6704,15 @@ def show_area_calculator():
         if save_res_fac_clicked:
             curr_proj["data"]["area_res_fac_table_data"] = saved_res_fac_records
             curr_proj["data"]["area_res_fac_amount_calc"] = total_res_fac_amount
+            curr_proj["data"]["m_fac_pub"] = pub_fac_m2_area
+            curr_proj["data"]["fac_pub_rate"] = fac_pub_rate_area
+            curr_proj["data"]["m_fac_proj"] = proj_fac_u_area
+            curr_proj["data"]["fac_proj_rate"] = fac_proj_rate_area
+            curr_proj["data"]["t_pub_fac"] = t_pub_fac_area
+            curr_proj["data"]["t_proj_fac"] = t_proj_fac_area
+            curr_proj["data"]["area_fac_pub_amount_calc"] = t_pub_fac_area
+            curr_proj["data"]["area_fac_proj_amount_calc"] = t_proj_fac_area
+            curr_proj["data"]["group_misc"] = group_misc_area
 
             save_ok = save_data_force()
 
@@ -7964,6 +8052,12 @@ def show_cost_estimator(): #cost calculator page
         else:
             suggested_res_fac_area = 0.0
 
+        suggested_fac_pub_qty = _safe_float(curr_proj.get("data", {}).get("m_fac_pub", 0.0))
+        suggested_fac_pub_rate = _safe_float(curr_proj.get("data", {}).get("fac_pub_rate", 0.0))
+        suggested_fac_proj_qty = _safe_float(curr_proj.get("data", {}).get("m_fac_proj", 0.0))
+        suggested_fac_proj_rate = _safe_float(curr_proj.get("data", {}).get("fac_proj_rate", 0.0))
+        suggested_group_misc = _safe_float(curr_proj.get("data", {}).get("group_misc", 0.0))
+
         if isinstance(area_table_data, list) and len(area_table_data) > 0:
             area_sync_df = pd.DataFrame(area_table_data)
             if "Koridor/Lobby" in area_sync_df.columns:
@@ -7999,11 +8093,21 @@ def show_cost_estimator(): #cost calculator page
                 "items": [
                     {"label": "Facade", "data_key": "m_facade", "widget_key": "m_facade", "value": suggested_facade, "unit": "m2"},
                     {"label": "Landscape", "data_key": "m_land_m2", "widget_key": "m_land_m2", "value": suggested_landscape_area, "unit": "m2"},
-                    {"label": "Residential Facility", "data_key": "m_fac_res", "widget_key": "m_fac_res", "value": suggested_res_fac_area, "unit": "m2"},
                     {"label": "Railing", "data_key": "r_rail_qty", "widget_key": "r_rail_qty", "value": suggested_railing_qty, "unit": "m'/room"},
                     {"label": "Wooden Door", "data_key": "m_door_w", "widget_key": "m_door_w", "value": suggested_door_wood, "unit": "unit"},
                     {"label": "Steel Door", "data_key": "m_door_s", "widget_key": "m_door_s", "value": suggested_door_steel, "unit": "unit"},
                     {"label": "Glass Door", "data_key": "m_door_g", "widget_key": "m_door_g", "value": suggested_door_glass, "unit": "unit"},
+                ],
+            },
+            {
+                "title": "Facility / Misc",
+                "items": [
+                    {"label": "Fasilitas Penghuni Area", "data_key": "m_fac_res", "widget_key": "m_fac_res", "value": suggested_res_fac_area, "unit": "m2"},
+                    {"label": "Fasilitas Publik Area", "data_key": "m_fac_pub", "widget_key": "m_fac_pub", "value": suggested_fac_pub_qty, "unit": "m2"},
+                    {"label": "Fasilitas Publik Rate", "data_key": "u_fac_p", "widget_key": "u_fac_p", "session_key": f"u_fac_p_{curr_type_key}", "value": suggested_fac_pub_rate, "unit": "Rp/m2"},
+                    {"label": "Fasilitas Proyek Unit", "data_key": "m_fac_proj", "widget_key": "m_fac_proj", "value": suggested_fac_proj_qty, "unit": "unit"},
+                    {"label": "Fasilitas Proyek Rate", "data_key": "u_fac_pr", "widget_key": "u_fac_pr", "session_key": f"u_fac_pr_{curr_type_key}", "value": suggested_fac_proj_rate, "unit": "Rp/unit"},
+                    {"label": "Miscellaneous Works subtotal", "data_key": None, "widget_key": None, "value": suggested_group_misc, "unit": "Rp", "preview_only": True},
                 ],
             },
             {
@@ -8050,6 +8154,8 @@ def show_cost_estimator(): #cost calculator page
         def perform_area_analysis_sync():
             for group in sync_groups:
                 for item in group["items"]:
+                    if item.get("preview_only"):
+                        continue
                     sync_area_value(
                         item["data_key"],
                         item["widget_key"],
@@ -8309,7 +8415,7 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                     key=f"m_land_m2_{curr_id}",
                     help="If synced from Area Analysis, this equals External Works dataframe total divided by the current External Works rate."
                 )
-                st.subheader("Miscellaneous")
+                st.subheader("FF&E Others")
                 m_status = st.radio("Ada Gym/Linen?", ["Tidak", "Ada"],
                                     index=1 if get_val("misc_switch", 0) == 1 else 0,
                                     key=f"misc_sw_{curr_id}", horizontal=True)
@@ -8890,6 +8996,12 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
             fac_proj_rate = c2.number_input("Project Facilities (Rp)", value=get_val("u_fac_pr", pt_data["fac_proj"]), key=f"u_fac_pr_{curr_type_key}")
             c1.caption(f"""Hitungan: {res_fac_m2:,.0f} m2 x Rp {fac_res_rate:,.0f}  \n  Total Resident Facilities: Rp {res_fac_m2 * fac_res_rate:,.0f}  \n  Terbilang: {n2w(res_fac_m2 * fac_res_rate)}""")
             c2.caption(f"""Hitungan: {proj_fac_u:,.0f} Units x Rp {fac_proj_rate:,.0f}  \n  Total Project Facilities: Rp {proj_fac_u * fac_proj_rate:,.0f}  \n  Terbilang: {n2w(proj_fac_u * fac_proj_rate)}""")
+            facility_misc_subtotal_preview = (
+                pub_fac_m2 * fac_pub_rate
+                + res_fac_m2 * fac_res_rate
+                + proj_fac_u * fac_proj_rate
+            )
+            st.metric("Total Facility / Misc Works", f"Rp {facility_misc_subtotal_preview:,.0f}")
 
     # --- TAB 4: SOFT COSTS ---
     with tab5:
@@ -9037,13 +9149,14 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
     t_pub_fac  = pub_fac_m2 * fac_pub_rate
     t_res_fac  = res_fac_m2 * fac_res_rate
     t_proj_fac = proj_fac_u * fac_proj_rate
+    group_misc = t_pub_fac + t_res_fac + t_proj_fac
 
     construction_subtotal = sum([
         t_earth, t_found, t_struc, t_arch_base, t_precast, t_window, t_double,
         t_w_door, t_g_door, t_s_door, t_lobby, t_gondola, t_unit_san, t_t_male,
         t_t_female, t_t_dis, t_mushola, t_kitchen, t_hw_w, t_hw_s, t_ht, t_vinyl,
         t_marmer, t_carpet, t_glass_work, t_ffe, t_misc, t_mep, t_utility,
-        t_railing, t_skylight, t_external, t_pub_fac, t_res_fac, t_proj_fac,
+        t_railing, t_skylight, t_external, group_misc,
         smart_custom_costs
     ])
 
@@ -9076,7 +9189,6 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
     group_mep = t_mep 
     group_utility = t_utility
     group_ext = t_external
-    group_misc = t_pub_fac + t_res_fac + t_proj_fac
     group_prelim = t_preliminary
     group_conting = t_contingency
     group_soft_cost = total_soft_cost
@@ -9396,6 +9508,9 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
         "u_ffe": ffe_rate, "u_kit": kitchen_rate, "u_misc": misc_rate,
         "u_ext": ext_land_rate, "u_fac_p": fac_pub_rate,
         "u_fac_r": fac_res_rate, "u_fac_pr": fac_proj_rate,
+        "fac_pub_rate": fac_pub_rate, "fac_proj_rate": fac_proj_rate,
+        "t_pub_fac": t_pub_fac, "t_res_fac": t_res_fac, "t_proj_fac": t_proj_fac,
+        "group_misc": group_misc,
         "sc_cons": consultancy_rate, "sc_qs_m": qs_months, "sc_qs_r": qs_rate,
         "sc_pm_m": pm_months, "sc_pm_r": pm_rate, "sc_ins": insurance_pct
     })
