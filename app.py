@@ -7906,6 +7906,31 @@ def show_cost_estimator(): #cost calculator page
         ]
 
         sync_col1, sync_col2 = st.columns([1, 3], vertical_alignment="center")
+        confirm_sync_key = f"confirm_use_area_analysis_{curr_id}"
+        show_sync_details_key = f"show_area_sync_details_{curr_id}"
+
+        def sync_area_value(data_key, widget_key, value, session_key=None):
+            """
+            Sync Area Analysis value into Cost Analysis only if value > 0.
+            This prevents empty / unfilled Area Analysis values from overwriting existing Cost Analysis inputs.
+            """
+            value = _safe_float(value)
+
+            if value > 0:
+                st.session_state.projects[curr_id]["data"][data_key] = value
+                st.session_state[session_key or f"{widget_key}_{curr_id}"] = value
+
+        def perform_area_analysis_sync():
+            for group in sync_groups:
+                for item in group["items"]:
+                    sync_area_value(
+                        item["data_key"],
+                        item["widget_key"],
+                        item["value"],
+                        item.get("session_key"),
+                    )
+
+            return save_after_user_action("Use Area Analysis in Cost Analysis")
 
         with sync_col1:
             if st.button(
@@ -7915,36 +7940,49 @@ def show_cost_estimator(): #cost calculator page
                 width="stretch",
                 icon=mi("sync") if "mi" in globals() else None,
             ):
+                st.session_state[confirm_sync_key] = True
+                st.session_state[show_sync_details_key] = True
 
-                def sync_area_value(data_key, widget_key, value, session_key=None):
-                    """
-                    Sync Area Analysis value into Cost Analysis only if value > 0.
-                    This prevents empty / unfilled Area Analysis values from overwriting existing Cost Analysis inputs.
-                    """
-                    value = _safe_float(value)
+            on = st.toggle(
+                "Show details of synced values",
+                key=show_sync_details_key,
+            )
 
-                    if value > 0:
-                        st.session_state.projects[curr_id]["data"][data_key] = value
-                        st.session_state[session_key or f"{widget_key}_{curr_id}"] = value
+        if st.session_state.get(confirm_sync_key, False):
+            st.warning(
+                "Review the values below. This will update Cost Analysis inputs using nonzero values from Area Analysis and detail-derived rates. Existing Cost Analysis values will not be overwritten by zero values."
+            )
 
-                for group in sync_groups:
-                    for item in group["items"]:
-                        sync_area_value(
-                            item["data_key"],
-                            item["widget_key"],
-                            item["value"],
-                            item.get("session_key"),
-                        )
+            confirm_col, cancel_col, _ = st.columns([1, 1, 4])
 
-                save_ok = save_after_user_action("Use Area Analysis in Cost Analysis")
+            with confirm_col:
+                confirm_sync_clicked = st.button(
+                    "Confirm Sync",
+                    key=f"confirm_area_analysis_sync_{curr_id}",
+                    type="primary",
+                    width="stretch",
+                )
+
+            with cancel_col:
+                cancel_sync_clicked = st.button(
+                    "Cancel",
+                    key=f"cancel_area_analysis_sync_{curr_id}",
+                    width="stretch",
+                )
+
+            if confirm_sync_clicked:
+                save_ok = perform_area_analysis_sync()
 
                 if save_ok:
+                    st.session_state.pop(confirm_sync_key, None)
                     st.success("Area metrics, opening/external quantities, and detail-derived rates applied to Cost Analysis.")
                     st.rerun()
                 else:
                     st.error("Area Analysis values were applied locally, but cloud save failed. Do not log out yet.")
 
-            on = st.toggle("Show details of synced values")
+            if cancel_sync_clicked:
+                st.session_state.pop(confirm_sync_key, None)
+                st.rerun()
 
         if on:
             with sync_col2:
