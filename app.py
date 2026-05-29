@@ -3101,9 +3101,52 @@ def calculate_consultancy_detail(rows, base_values):
     cleaned_rows = clean_consultancy_detail_rows(rows, base_values)
     detail_total = sum(_safe_float(row.get("amount", 0.0)) for row in cleaned_rows)
     gfa = _safe_float(base_values.get("gfa", 0.0))
-    derived_unit_price = detail_total / gfa if gfa > 0 else 0.0
+    consultant_subtotal_excl_qs_pm = sum(
+        _safe_float(row.get("amount", 0.0))
+        for row in cleaned_rows
+        if str(row.get("code", "")) not in ["3", "4"]
+    )
+    derived_unit_price = consultant_subtotal_excl_qs_pm / gfa if gfa > 0 else 0.0
 
     return cleaned_rows, detail_total, derived_unit_price
+
+def get_consultancy_detail_outputs(rows, base_values):
+    base_values = base_values if isinstance(base_values, dict) else {}
+    cleaned_rows, detail_total, consultant_rate_excl_qs_pm = calculate_consultancy_detail(
+        rows,
+        base_values,
+    )
+
+    qs_row = next((row for row in cleaned_rows if str(row.get("code", "")) == "3"), {})
+    pm_row = next((row for row in cleaned_rows if str(row.get("code", "")) == "4"), {})
+    consultant_subtotal_excl_qs_pm = sum(
+        _safe_float(row.get("amount", 0.0))
+        for row in cleaned_rows
+        if str(row.get("code", "")) not in ["3", "4"]
+    )
+
+    return {
+        "consultancy_detail_rows": cleaned_rows,
+        "consultancy_detail_total": detail_total,
+        "consultancy_derived_unit_price": consultant_rate_excl_qs_pm,
+        "qs_duration_from_consultancy": _safe_float(qs_row.get("quantity", 0.0)),
+        "qs_rate_from_consultancy": _safe_float(qs_row.get("unit_price", 0.0)),
+        "pm_duration_from_consultancy": _safe_float(pm_row.get("quantity", 0.0)),
+        "pm_rate_from_consultancy": _safe_float(pm_row.get("unit_price", 0.0)),
+        "consultant_subtotal_excl_qs_pm": consultant_subtotal_excl_qs_pm,
+        "consultant_rate_excl_qs_pm": consultant_rate_excl_qs_pm,
+    }
+
+def store_consultancy_detail_outputs(data, outputs):
+    data["consultancy_detail_rows"] = outputs["consultancy_detail_rows"]
+    data["consultancy_detail_total"] = outputs["consultancy_detail_total"]
+    data["consultancy_derived_unit_price"] = outputs["consultancy_derived_unit_price"]
+    data["qs_duration_from_consultancy"] = outputs["qs_duration_from_consultancy"]
+    data["qs_rate_from_consultancy"] = outputs["qs_rate_from_consultancy"]
+    data["pm_duration_from_consultancy"] = outputs["pm_duration_from_consultancy"]
+    data["pm_rate_from_consultancy"] = outputs["pm_rate_from_consultancy"]
+    data["consultant_subtotal_excl_qs_pm"] = outputs["consultant_subtotal_excl_qs_pm"]
+    data["consultant_rate_excl_qs_pm"] = outputs["consultant_rate_excl_qs_pm"]
 
 def get_default_architectural_detail_rows():
     return [
@@ -3451,7 +3494,9 @@ def get_consultancy_price_difference_status(curr_proj, gfa):
     data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
     derived_rate = _safe_float(data.get("consultancy_derived_unit_price", 0.0))
     current_rate = _safe_float(data.get("sc_cons", 0.0))
-    detail_total = _safe_float(data.get("consultancy_detail_total", 0.0))
+    detail_total = _safe_float(data.get("consultant_subtotal_excl_qs_pm", 0.0))
+    if detail_total <= 0:
+        detail_total = _safe_float(data.get("consultancy_detail_total", 0.0))
     gfa = _safe_float(gfa)
 
     current_total = gfa * current_rate
@@ -3578,7 +3623,7 @@ def build_detail_rate_review_rows(curr_proj, gba, gfa=None, rooms=None):
             "basis_value": gfa,
             "current_rate": _safe_float(data.get("sc_cons", 0.0)),
             "derived_rate": _safe_float(data.get("consultancy_derived_unit_price", 0.0)),
-            "detail_total": _safe_float(data.get("consultancy_detail_total", 0.0)),
+            "detail_total": _safe_float(data.get("consultant_subtotal_excl_qs_pm", data.get("consultancy_detail_total", 0.0))),
         },
         {
             "Section": "FF&E",
@@ -5519,15 +5564,14 @@ def show_area_calculator():
                                 imported_area_df,
                             )
 
-                            (
+                            imported_consultancy_outputs = get_consultancy_detail_outputs(
                                 imported_consultancy_rows,
-                                imported_consultancy_total,
-                                imported_consultancy_derived_unit_price,
-                            ) = calculate_consultancy_detail(imported_consultancy_rows, consultancy_base_values)
-
-                            curr_proj["data"]["consultancy_detail_rows"] = imported_consultancy_rows
-                            curr_proj["data"]["consultancy_detail_total"] = imported_consultancy_total
-                            curr_proj["data"]["consultancy_derived_unit_price"] = imported_consultancy_derived_unit_price
+                                consultancy_base_values,
+                            )
+                            store_consultancy_detail_outputs(
+                                curr_proj["data"],
+                                imported_consultancy_outputs,
+                            )
 
                         if imported_foundation_rows is not None:
                             foundation_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
@@ -7041,10 +7085,13 @@ def show_area_calculator():
             "consultancy_detail_rows",
             get_default_consultancy_detail_rows(),
         )
-        consultancy_detail_rows, consultancy_detail_total, consultancy_derived_unit_price = calculate_consultancy_detail(
+        consultancy_outputs = get_consultancy_detail_outputs(
             saved_consultancy_detail_rows,
             consultancy_base_values,
         )
+        consultancy_detail_rows = consultancy_outputs["consultancy_detail_rows"]
+        consultancy_detail_total = consultancy_outputs["consultancy_detail_total"]
+        consultancy_derived_unit_price = consultancy_outputs["consultancy_derived_unit_price"]
 
         current_consultancy_rate = _safe_float(
             curr_proj["data"].get(
@@ -7083,14 +7130,17 @@ def show_area_calculator():
             },
         )
 
-        consultancy_detail_rows, consultancy_detail_total, consultancy_derived_unit_price = calculate_consultancy_detail(
+        consultancy_outputs = get_consultancy_detail_outputs(
             edited_consultancy_detail,
             consultancy_base_values,
         )
+        consultancy_detail_rows = consultancy_outputs["consultancy_detail_rows"]
+        consultancy_detail_total = consultancy_outputs["consultancy_detail_total"]
+        consultancy_derived_unit_price = consultancy_outputs["consultancy_derived_unit_price"]
 
         current_consultancy_total = consultancy_gfa * current_consultancy_rate
         consultancy_rate_difference = consultancy_derived_unit_price - current_consultancy_rate
-        consultancy_total_difference = consultancy_detail_total - current_consultancy_total
+        consultancy_total_difference = consultancy_outputs["consultant_subtotal_excl_qs_pm"] - current_consultancy_total
 
         if consultancy_gfa <= 0:
             st.warning("Consultancy Detail needs GFA greater than 0 to derive a Consultancy Rate.")
@@ -7101,7 +7151,10 @@ def show_area_calculator():
             f"Koridor/Lobby: {consultancy_koridor_lobby:,.0f} m2\n\n"
             f"Landscape Qty: {consultancy_landscape_qty:,.0f} m2\n\n"
             f"Consultancy Detail Total: Rp {consultancy_detail_total:,.0f}\n\n"
-            f"Derived Consultancy Rate: Rp {consultancy_derived_unit_price:,.0f}/m2\n\n"
+            f"Consultant Subtotal excl. QS/PM: Rp {consultancy_outputs['consultant_subtotal_excl_qs_pm']:,.0f}\n\n"
+            f"Derived Consultancy Rate excl. QS/PM: Rp {consultancy_derived_unit_price:,.0f}/m2\n\n"
+            f"QS from Detail: {consultancy_outputs['qs_duration_from_consultancy']:,.2f} month x Rp {consultancy_outputs['qs_rate_from_consultancy']:,.0f}/month\n\n"
+            f"PM from Detail: {consultancy_outputs['pm_duration_from_consultancy']:,.2f} month x Rp {consultancy_outputs['pm_rate_from_consultancy']:,.0f}/month\n\n"
             f"Current Consultancy Rate from Cost Analysis: Rp {current_consultancy_rate:,.0f}/m2\n\n"
             f"Difference: Rp {consultancy_rate_difference:,.0f}/m2 "
             f"(Rp {consultancy_total_difference:,.0f} total)"
@@ -7110,15 +7163,14 @@ def show_area_calculator():
         cons_c1, cons_c2, cons_c3 = st.columns(3)
         cons_c1.metric("GFA", f"{consultancy_gfa:,.0f} m2")
         cons_c2.metric("Consultancy Detail Total", f"Rp {consultancy_detail_total:,.0f}")
-        cons_c3.metric("Derived Consultancy Rate", f"Rp {consultancy_derived_unit_price:,.0f}/m2")
+        cons_c3.metric("Consultant Rate excl. QS/PM", f"Rp {consultancy_derived_unit_price:,.0f}/m2")
 
         cons_c4, cons_c5, cons_c6 = st.columns(3)
         cons_c4.metric("Current Consultancy Rate", f"Rp {current_consultancy_rate:,.0f}/m2")
-        cons_c5.metric("Current Consultancy Total", f"Rp {current_consultancy_total:,.0f}")
+        cons_c5.metric("Consultant Subtotal excl. QS/PM", f"Rp {consultancy_outputs['consultant_subtotal_excl_qs_pm']:,.0f}")
         cons_c6.metric("Difference", f"Rp {consultancy_rate_difference:,.0f}/m2")
 
-        curr_proj["data"]["consultancy_detail_total"] = consultancy_detail_total
-        curr_proj["data"]["consultancy_derived_unit_price"] = consultancy_derived_unit_price
+        store_consultancy_detail_outputs(curr_proj["data"], consultancy_outputs)
         consultancy_diff_status = get_consultancy_price_difference_status(curr_proj, consultancy_gfa)
 
         if consultancy_diff_status["has_difference"]:
@@ -7140,9 +7192,7 @@ def show_area_calculator():
             )
 
         if save_consultancy_detail_clicked:
-            curr_proj["data"]["consultancy_detail_rows"] = consultancy_detail_rows
-            curr_proj["data"]["consultancy_detail_total"] = consultancy_detail_total
-            curr_proj["data"]["consultancy_derived_unit_price"] = consultancy_derived_unit_price
+            store_consultancy_detail_outputs(curr_proj["data"], consultancy_outputs)
 
             save_ok = save_after_user_action("Save Consultancy Detail")
 
@@ -7893,7 +7943,11 @@ def show_cost_estimator(): #cost calculator page
                     {"label": "FF&E Rate", "data_key": "u_ffe", "widget_key": "u_ffe", "session_key": f"u_ffe_{curr_type_key}", "value": curr_proj["data"].get("ffe_derived_unit_price", 0.0), "unit": "Rp/room"},
                     {"label": "MEP Rate", "data_key": "u_mep", "widget_key": "u_mep", "session_key": f"u_mep_{curr_type_key}", "value": curr_proj["data"].get("mep_derived_unit_price", 0.0), "unit": "Rp/m2"},
                     {"label": "Utility Rate", "data_key": "u_util", "widget_key": "u_util", "session_key": f"u_util_{curr_type_key}", "value": curr_proj["data"].get("utility_derived_unit_price", 0.0), "unit": "Rp/m2"},
-                    {"label": "Consultancy Rate", "data_key": "sc_cons", "widget_key": "sc_cons", "session_key": f"sc_cons_{curr_type_key}", "value": curr_proj["data"].get("consultancy_derived_unit_price", 0.0), "unit": "Rp/m2"},
+                    {"label": "QS Duration", "data_key": "sc_qs_m", "widget_key": "sc_qs_m", "value": curr_proj["data"].get("qs_duration_from_consultancy", 0.0), "unit": "month"},
+                    {"label": "QS Monthly Rate", "data_key": "sc_qs_r", "widget_key": "sc_qs_r", "value": curr_proj["data"].get("qs_rate_from_consultancy", 0.0), "unit": "Rp/month"},
+                    {"label": "PM Duration", "data_key": "sc_pm_m", "widget_key": "sc_pm_m", "value": curr_proj["data"].get("pm_duration_from_consultancy", 0.0), "unit": "month"},
+                    {"label": "PM Monthly Rate", "data_key": "sc_pm_r", "widget_key": "sc_pm_r", "value": curr_proj["data"].get("pm_rate_from_consultancy", 0.0), "unit": "Rp/month"},
+                    {"label": "Consultant Rate excl. QS/PM", "data_key": "sc_cons", "widget_key": "sc_cons", "session_key": f"sc_cons_{curr_type_key}", "value": curr_proj["data"].get("consultant_rate_excl_qs_pm", curr_proj["data"].get("consultancy_derived_unit_price", 0.0)), "unit": "Rp/m2"},
                 ],
             },
         ]
@@ -7987,7 +8041,7 @@ def show_cost_estimator(): #cost calculator page
         if on:
             with sync_col2:
                 if syncable_items:
-                    st.info("Source values available from Area Analysis. Values of 0 will not overwrite existing Cost Analysis inputs.")
+                    st.info("Source values available from Area Analysis. Values of 0 will not overwrite existing Cost Analysis inputs. Consultancy Rate excludes QS and PM to avoid double counting; QS and PM sync to their monthly duration/rate fields.")
 
                     for group in sync_groups:
                         preview_rows = []
