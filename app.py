@@ -5116,73 +5116,6 @@ def show_area_calculator():
             "Download or upload the Area Calculator Excel Form, then review the current values below."
         )
 
-        summary_area_totals = calculate_area_totals_from_table(
-            curr_proj["data"].get("area_table_data", [])
-        )
-        summary_residential_total = _safe_float(
-            curr_proj["data"].get("area_res_fac_amount_calc", 0.0)
-        )
-        summary_external_total = _safe_float(
-            curr_proj["data"].get("area_external_amount_calc", 0.0)
-        )
-        summary_external_rate = _safe_float(curr_proj["data"].get("u_ext", 0.0))
-        summary_residential_rate = _safe_float(curr_proj["data"].get("u_fac_res", 0.0))
-        summary_landscape = (
-            summary_external_total / summary_external_rate
-            if summary_external_total > 0 and summary_external_rate > 0
-            else _safe_float(curr_proj["data"].get("area_landscape_qty_calc", 0.0))
-        )
-        summary_residential_facility = (
-            summary_residential_total / summary_residential_rate
-            if summary_residential_total > 0 and summary_residential_rate > 0
-            else 0.0
-        )
-
-        core_summary_df = pd.DataFrame(
-            [
-                {"Item": "Luas Tanah", "Value": _safe_float(curr_proj["data"].get("m_land", 0.0)), "Unit": "m2"},
-                {"Item": "GBA", "Value": summary_area_totals["gba"], "Unit": "m2"},
-                {"Item": "GFA", "Value": summary_area_totals["gfa"], "Unit": "m2"},
-                {"Item": "SGFA", "Value": summary_area_totals["sgfa"], "Unit": "m2"},
-                {"Item": "NFA", "Value": summary_area_totals["nfa"], "Unit": "m2"},
-                {"Item": "Lobby/Koridor", "Value": _safe_float(curr_proj["data"].get("area_lobby_interior_calc", 0.0)), "Unit": "m2"},
-                {"Item": "Rooms/Units", "Value": _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0)), "Unit": "unit"},
-            ]
-        )
-        opening_summary_df = pd.DataFrame(
-            [
-                {"Item": "Facade", "Value": _safe_float(curr_proj["data"].get("area_facade_calc", 0.0)), "Unit": "m2"},
-                {"Item": "Landscape", "Value": summary_landscape, "Unit": "m2"},
-                {"Item": "Residential Facility", "Value": summary_residential_facility, "Unit": "m2"},
-                {"Item": "Railing", "Value": _safe_float(curr_proj["data"].get("area_railing_length_per_room_calc", curr_proj["data"].get("area_panjang_railing", 0.0))), "Unit": "m'/room"},
-                {"Item": "Wooden Door", "Value": _safe_float(curr_proj["data"].get("area_door_wood_calc", 0.0)), "Unit": "unit"},
-                {"Item": "Steel Door", "Value": _safe_float(curr_proj["data"].get("area_door_steel_calc", 0.0)), "Unit": "unit"},
-                {"Item": "Glass Door", "Value": _safe_float(curr_proj["data"].get("area_door_glass_calc", 0.0)), "Unit": "unit"},
-            ]
-        )
-
-        s1, s2 = st.columns(2)
-        with s1:
-            st.markdown("##### Core Area")
-            st.dataframe(
-                core_summary_df,
-                width="stretch",
-                hide_index=True,
-                column_config={
-                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
-                },
-            )
-        with s2:
-            st.markdown("##### Opening / External")
-            st.dataframe(
-                opening_summary_df,
-                width="stretch",
-                hide_index=True,
-                column_config={
-                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
-                },
-            )
-
         st.markdown("##### Excel Form")
 
         with st.container():
@@ -5274,375 +5207,379 @@ def show_area_calculator():
                 f"{project_type_for_file} - "
                 f"{active_file_name_for_file}.xlsx"
             )
+            s1, s2 = st.columns(2)
 
-            st.download_button(
-                label="Download Area Excel Form",
-                data=excel_form_bytes,
-                file_name=excel_download_filename,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                width="stretch",
-            )
-
-            uploaded_excel = st.file_uploader(
-                "Upload Area Calculator Excel Form",
-                type=["xlsx"],
-                key=f"area_excel_upload_{curr_id}",
-                help="Upload the Excel form generated from this app.",
-            )
-
-            if uploaded_excel is not None:
-                import_clicked = st.button(
-                    "Import Excel to Area Calculator",
+            with s2:
+                st.markdown("Download Area Calculator Excel Form")
+                st.download_button(
+                    label="Download",
                     type="primary",
-                    key=f"import_area_excel_{curr_id}",
+                    data=excel_form_bytes,
+                    file_name=excel_download_filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     width="stretch",
                 )
+            with s1:
+                uploaded_excel = st.file_uploader(
+                    "Upload Area Calculator Excel Form",
+                    type=["xlsx"],
+                    key=f"area_excel_upload_{curr_id}",
+                    help="Upload the Excel form generated from this app.",
+                )
 
-                if import_clicked:
-                    excel_bytes = uploaded_excel.getvalue()
+                if uploaded_excel is not None:
+                    import_clicked = st.button(
+                        "Import Excel to Area Calculator",
+                        type="primary",
+                        key=f"import_area_excel_{curr_id}",
+                        width="stretch",
+                    )
 
-                    try:
-                        imported_area_records = read_area_input_sheet(excel_bytes)
-                        st.write("Imported area rows:", len(imported_area_records))
-                        st.dataframe(pd.DataFrame(imported_area_records).head(10), width="stretch")
+                    if import_clicked:
+                        excel_bytes = uploaded_excel.getvalue()
 
-                        if not imported_area_records:
-                            st.error("Excel import failed: no area rows found in Area Input.")
-                            st.stop()
-
-                        imported_area_df = calculate_area_dataframe(imported_area_records)
-
-                        imported_door_records = read_pintu_sheet(
-                            excel_bytes,
-                            area_df=imported_area_df,
-                        )
-
-                        imported_external_records, imported_landscape_data = read_external_sheet(
-                            excel_bytes
-                        )
-
-                        imported_res_fac_records = read_residential_area_sheet(excel_bytes)
-
-                        imported_earthwork_rows = None
                         try:
-                            imported_earthwork_rows = read_earthworks_sheet(excel_bytes)
-                        except ExcelImportError as e:
-                            st.warning(str(e))
+                            imported_area_records = read_area_input_sheet(excel_bytes)
+                            st.write("Imported area rows:", len(imported_area_records))
+                            st.dataframe(pd.DataFrame(imported_area_records).head(10), width="stretch")
 
-                        imported_architectural_rows = None
-                        try:
-                            imported_architectural_rows = read_architectural_sheet(excel_bytes)
-                        except ExcelImportError as e:
-                            st.warning(str(e))
+                            if not imported_area_records:
+                                st.error("Excel import failed: no area rows found in Area Input.")
+                                st.stop()
 
-                        imported_architectural_facade_inputs = read_architectural_facade_inputs(excel_bytes)
+                            imported_area_df = calculate_area_dataframe(imported_area_records)
 
-                        imported_consultancy_rows = None
-                        try:
-                            imported_consultancy_rows = read_consultancy_sheet(excel_bytes)
-                        except ExcelImportError as e:
-                            st.warning(str(e))
-
-                        imported_foundation_rows = None
-                        try:
-                            imported_foundation_rows = read_foundation_sheet(excel_bytes)
-                        except ExcelImportError as e:
-                            st.warning(str(e))
-
-                        imported_ffe_rows = None
-                        try:
-                            imported_ffe_rows = read_ffe_sheet(excel_bytes)
-                        except ExcelImportError as e:
-                            st.warning(str(e))
-
-                        imported_mep_rows = None
-                        try:
-                            imported_mep_rows = read_mep_sheet(excel_bytes)
-                        except ExcelImportError as e:
-                            st.warning(str(e))
-
-                        imported_utility_rows = None
-                        try:
-                            imported_utility_rows = read_utility_sheet(excel_bytes)
-                        except ExcelImportError as e:
-                            st.warning(str(e))
-
-                        imported_structural_rows = None
-                        try:
-                            imported_structural_rows = read_structural_sheet(excel_bytes)
-                        except ExcelImportError as e:
-                            st.warning(str(e))
-
-                        st.session_state[area_draft_key] = copy.deepcopy(imported_area_records)
-                        st.session_state[area_committed_key] = copy.deepcopy(imported_area_records)
-                        set_data("area_table", copy.deepcopy(imported_area_records))
-
-                        if imported_door_records:
-                            st.session_state[door_draft_key] = copy.deepcopy(imported_door_records)
-                            st.session_state[door_committed_key] = copy.deepcopy(imported_door_records)
-                            curr_proj["data"]["area_door_table_data"] = copy.deepcopy(imported_door_records)
-
-                            door_df_imported = pd.DataFrame(imported_door_records)
-
-                            curr_proj["data"]["area_door_wood_calc"] = (
-                                int(door_df_imported["Pintu Kayu"].sum())
-                                if "Pintu Kayu" in door_df_imported.columns
-                                else 0
+                            imported_door_records = read_pintu_sheet(
+                                excel_bytes,
+                                area_df=imported_area_df,
                             )
 
-                            curr_proj["data"]["area_door_steel_calc"] = (
-                                int(door_df_imported["Pintu Besi"].sum())
-                                if "Pintu Besi" in door_df_imported.columns
-                                else 0
+                            imported_external_records, imported_landscape_data = read_external_sheet(
+                                excel_bytes
                             )
 
-                            curr_proj["data"]["area_door_glass_calc"] = (
-                                int(door_df_imported["Pintu Kaca"].sum())
-                                if "Pintu Kaca" in door_df_imported.columns
-                                else 0
-                            )
+                            imported_res_fac_records = read_residential_area_sheet(excel_bytes)
 
-                        if imported_external_records:
-                            external_key = f"external_table_{curr_id}"
-                            st.session_state[external_key] = copy.deepcopy(imported_external_records)
-                            curr_proj["data"]["area_external_table_data"] = copy.deepcopy(
-                                imported_external_records
-                            )
+                            imported_earthwork_rows = None
+                            try:
+                                imported_earthwork_rows = read_earthworks_sheet(excel_bytes)
+                            except ExcelImportError as e:
+                                st.warning(str(e))
 
-                        for k, v in imported_landscape_data.items():
-                            curr_proj["data"][k] = v
+                            imported_architectural_rows = None
+                            try:
+                                imported_architectural_rows = read_architectural_sheet(excel_bytes)
+                            except ExcelImportError as e:
+                                st.warning(str(e))
 
-                        if imported_architectural_facade_inputs:
-                            for k, v in imported_architectural_facade_inputs.items():
+                            imported_architectural_facade_inputs = read_architectural_facade_inputs(excel_bytes)
+
+                            imported_consultancy_rows = None
+                            try:
+                                imported_consultancy_rows = read_consultancy_sheet(excel_bytes)
+                            except ExcelImportError as e:
+                                st.warning(str(e))
+
+                            imported_foundation_rows = None
+                            try:
+                                imported_foundation_rows = read_foundation_sheet(excel_bytes)
+                            except ExcelImportError as e:
+                                st.warning(str(e))
+
+                            imported_ffe_rows = None
+                            try:
+                                imported_ffe_rows = read_ffe_sheet(excel_bytes)
+                            except ExcelImportError as e:
+                                st.warning(str(e))
+
+                            imported_mep_rows = None
+                            try:
+                                imported_mep_rows = read_mep_sheet(excel_bytes)
+                            except ExcelImportError as e:
+                                st.warning(str(e))
+
+                            imported_utility_rows = None
+                            try:
+                                imported_utility_rows = read_utility_sheet(excel_bytes)
+                            except ExcelImportError as e:
+                                st.warning(str(e))
+
+                            imported_structural_rows = None
+                            try:
+                                imported_structural_rows = read_structural_sheet(excel_bytes)
+                            except ExcelImportError as e:
+                                st.warning(str(e))
+
+                            st.session_state[area_draft_key] = copy.deepcopy(imported_area_records)
+                            st.session_state[area_committed_key] = copy.deepcopy(imported_area_records)
+                            set_data("area_table", copy.deepcopy(imported_area_records))
+
+                            if imported_door_records:
+                                st.session_state[door_draft_key] = copy.deepcopy(imported_door_records)
+                                st.session_state[door_committed_key] = copy.deepcopy(imported_door_records)
+                                curr_proj["data"]["area_door_table_data"] = copy.deepcopy(imported_door_records)
+
+                                door_df_imported = pd.DataFrame(imported_door_records)
+
+                                curr_proj["data"]["area_door_wood_calc"] = (
+                                    int(door_df_imported["Pintu Kayu"].sum())
+                                    if "Pintu Kayu" in door_df_imported.columns
+                                    else 0
+                                )
+
+                                curr_proj["data"]["area_door_steel_calc"] = (
+                                    int(door_df_imported["Pintu Besi"].sum())
+                                    if "Pintu Besi" in door_df_imported.columns
+                                    else 0
+                                )
+
+                                curr_proj["data"]["area_door_glass_calc"] = (
+                                    int(door_df_imported["Pintu Kaca"].sum())
+                                    if "Pintu Kaca" in door_df_imported.columns
+                                    else 0
+                                )
+
+                            if imported_external_records:
+                                external_key = f"external_table_{curr_id}"
+                                st.session_state[external_key] = copy.deepcopy(imported_external_records)
+                                curr_proj["data"]["area_external_table_data"] = copy.deepcopy(
+                                    imported_external_records
+                                )
+
+                            for k, v in imported_landscape_data.items():
                                 curr_proj["data"][k] = v
 
-                            imported_total_floor_height = safe_sum(imported_area_df, F2F_COL)
-                            imported_total_typical_units = (
-                                int(pd.to_numeric(imported_area_df[TYPICAL_UNIT_COL], errors="coerce").fillna(0).sum())
-                                if TYPICAL_UNIT_COL in imported_area_df.columns
-                                else 0
-                            )
-                            imported_keliling_facade = _safe_float(
-                                imported_architectural_facade_inputs.get("area_keliling_facade", 0.0)
-                            )
-                            imported_panjang_railing = _safe_float(
-                                imported_architectural_facade_inputs.get("area_panjang_railing", 0.0)
-                            )
-                            imported_tinggi_railing = _safe_float(
-                                imported_architectural_facade_inputs.get("area_tinggi_railing", 0.0)
-                            )
-                            imported_facade_tolerance_pct = _safe_float(
-                                imported_architectural_facade_inputs.get("area_facade_tolerance_pct", 0.0)
-                            )
-                            imported_facade_wall_area = imported_total_floor_height * imported_keliling_facade
-                            imported_facade_railing_area = (
-                                imported_total_typical_units
-                                * imported_panjang_railing
-                                * imported_tinggi_railing
-                            )
-                            imported_facade_subtotal = imported_facade_wall_area + imported_facade_railing_area
-                            imported_facade_tolerance_area = (
-                                imported_facade_subtotal
-                                * imported_facade_tolerance_pct
-                                / 100
-                            )
-                            imported_total_facade_area = (
-                                imported_facade_subtotal
-                                + imported_facade_tolerance_area
-                            )
+                            if imported_architectural_facade_inputs:
+                                for k, v in imported_architectural_facade_inputs.items():
+                                    curr_proj["data"][k] = v
 
-                            curr_proj["data"]["area_railing_length_per_room_calc"] = imported_panjang_railing
-                            curr_proj["data"]["area_facade_wall_calc"] = imported_facade_wall_area
-                            curr_proj["data"]["area_facade_railing_calc"] = imported_facade_railing_area
-                            curr_proj["data"]["area_facade_subtotal_calc"] = imported_facade_subtotal
-                            curr_proj["data"]["area_facade_tolerance_area_calc"] = imported_facade_tolerance_area
-                            curr_proj["data"]["area_facade_calc"] = imported_total_facade_area
+                                imported_total_floor_height = safe_sum(imported_area_df, F2F_COL)
+                                imported_total_typical_units = (
+                                    int(pd.to_numeric(imported_area_df[TYPICAL_UNIT_COL], errors="coerce").fillna(0).sum())
+                                    if TYPICAL_UNIT_COL in imported_area_df.columns
+                                    else 0
+                                )
+                                imported_keliling_facade = _safe_float(
+                                    imported_architectural_facade_inputs.get("area_keliling_facade", 0.0)
+                                )
+                                imported_panjang_railing = _safe_float(
+                                    imported_architectural_facade_inputs.get("area_panjang_railing", 0.0)
+                                )
+                                imported_tinggi_railing = _safe_float(
+                                    imported_architectural_facade_inputs.get("area_tinggi_railing", 0.0)
+                                )
+                                imported_facade_tolerance_pct = _safe_float(
+                                    imported_architectural_facade_inputs.get("area_facade_tolerance_pct", 0.0)
+                                )
+                                imported_facade_wall_area = imported_total_floor_height * imported_keliling_facade
+                                imported_facade_railing_area = (
+                                    imported_total_typical_units
+                                    * imported_panjang_railing
+                                    * imported_tinggi_railing
+                                )
+                                imported_facade_subtotal = imported_facade_wall_area + imported_facade_railing_area
+                                imported_facade_tolerance_area = (
+                                    imported_facade_subtotal
+                                    * imported_facade_tolerance_pct
+                                    / 100
+                                )
+                                imported_total_facade_area = (
+                                    imported_facade_subtotal
+                                    + imported_facade_tolerance_area
+                                )
 
-                        if imported_res_fac_records:
-                            res_fac_key = f"res_fac_table_{curr_id}"
-                            st.session_state[res_fac_key] = copy.deepcopy(imported_res_fac_records)
-                            curr_proj["data"]["area_res_fac_table_data"] = copy.deepcopy(
-                                imported_res_fac_records
-                            )
+                                curr_proj["data"]["area_railing_length_per_room_calc"] = imported_panjang_railing
+                                curr_proj["data"]["area_facade_wall_calc"] = imported_facade_wall_area
+                                curr_proj["data"]["area_facade_railing_calc"] = imported_facade_railing_area
+                                curr_proj["data"]["area_facade_subtotal_calc"] = imported_facade_subtotal
+                                curr_proj["data"]["area_facade_tolerance_area_calc"] = imported_facade_tolerance_area
+                                curr_proj["data"]["area_facade_calc"] = imported_total_facade_area
 
-                        if imported_earthwork_rows is not None:
-                            earthwork_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
-                            if earthwork_import_gba <= 0:
-                                earthwork_import_gba = safe_sum(imported_area_df, "GBA")
+                            if imported_res_fac_records:
+                                res_fac_key = f"res_fac_table_{curr_id}"
+                                st.session_state[res_fac_key] = copy.deepcopy(imported_res_fac_records)
+                                curr_proj["data"]["area_res_fac_table_data"] = copy.deepcopy(
+                                    imported_res_fac_records
+                                )
 
-                            (
-                                imported_earthwork_rows,
-                                imported_earthwork_total,
-                                imported_earthwork_derived_unit_price,
-                            ) = calculate_earthwork_detail(imported_earthwork_rows, earthwork_import_gba)
+                            if imported_earthwork_rows is not None:
+                                earthwork_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                                if earthwork_import_gba <= 0:
+                                    earthwork_import_gba = safe_sum(imported_area_df, "GBA")
 
-                            curr_proj["data"]["earthwork_detail_enabled"] = True
-                            curr_proj["data"]["earthwork_detail_rows"] = imported_earthwork_rows
-                            curr_proj["data"]["earthwork_detail_total"] = imported_earthwork_total
-                            curr_proj["data"]["earthwork_derived_unit_price"] = imported_earthwork_derived_unit_price
+                                (
+                                    imported_earthwork_rows,
+                                    imported_earthwork_total,
+                                    imported_earthwork_derived_unit_price,
+                                ) = calculate_earthwork_detail(imported_earthwork_rows, earthwork_import_gba)
 
-                            earthwork_diff_status = get_earthwork_price_difference_status(
-                                curr_proj,
-                                earthwork_import_gba,
-                            )
+                                curr_proj["data"]["earthwork_detail_enabled"] = True
+                                curr_proj["data"]["earthwork_detail_rows"] = imported_earthwork_rows
+                                curr_proj["data"]["earthwork_detail_total"] = imported_earthwork_total
+                                curr_proj["data"]["earthwork_derived_unit_price"] = imported_earthwork_derived_unit_price
 
-                            if earthwork_diff_status["has_difference"]:
-                                st.session_state["earthwork_import_warning"] = {
-                                    "derived_rate": earthwork_diff_status["derived_rate"],
-                                    "current_rate": earthwork_diff_status["current_rate"],
-                                    "rate_difference": earthwork_diff_status["rate_difference"],
-                                    "detail_total": earthwork_diff_status["detail_total"],
-                                    "current_total": earthwork_diff_status["current_total"],
-                                    "total_difference": earthwork_diff_status["total_difference"],
-                                }
+                                earthwork_diff_status = get_earthwork_price_difference_status(
+                                    curr_proj,
+                                    earthwork_import_gba,
+                                )
+
+                                if earthwork_diff_status["has_difference"]:
+                                    st.session_state["earthwork_import_warning"] = {
+                                        "derived_rate": earthwork_diff_status["derived_rate"],
+                                        "current_rate": earthwork_diff_status["current_rate"],
+                                        "rate_difference": earthwork_diff_status["rate_difference"],
+                                        "detail_total": earthwork_diff_status["detail_total"],
+                                        "current_total": earthwork_diff_status["current_total"],
+                                        "total_difference": earthwork_diff_status["total_difference"],
+                                    }
+                                else:
+                                    st.session_state.pop("earthwork_import_warning", None)
+
+                            if imported_architectural_rows is not None:
+                                architectural_base_values = get_architectural_detail_base_values(
+                                    curr_proj["data"],
+                                    imported_area_df,
+                                )
+
+                                (
+                                    imported_architectural_rows,
+                                    imported_architectural_total,
+                                    imported_architectural_derived_unit_price,
+                                ) = calculate_architectural_detail(imported_architectural_rows, architectural_base_values)
+
+                                curr_proj["data"]["architectural_detail_rows"] = imported_architectural_rows
+                                curr_proj["data"]["architectural_detail_total"] = imported_architectural_total
+                                curr_proj["data"]["architectural_derived_unit_price"] = imported_architectural_derived_unit_price
+
+                            if imported_consultancy_rows is not None:
+                                consultancy_base_values = get_consultancy_detail_base_values(
+                                    curr_proj["data"],
+                                    imported_area_df,
+                                )
+
+                                imported_consultancy_outputs = get_consultancy_detail_outputs(
+                                    imported_consultancy_rows,
+                                    consultancy_base_values,
+                                )
+                                store_consultancy_detail_outputs(
+                                    curr_proj["data"],
+                                    imported_consultancy_outputs,
+                                )
+
+                            if imported_foundation_rows is not None:
+                                foundation_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                                if foundation_import_gba <= 0:
+                                    foundation_import_gba = safe_sum(imported_area_df, "GBA")
+
+                                (
+                                    imported_foundation_rows,
+                                    imported_foundation_total,
+                                    imported_foundation_derived_unit_price,
+                                ) = calculate_foundation_detail(imported_foundation_rows, foundation_import_gba)
+
+                                curr_proj["data"]["foundation_detail_rows"] = imported_foundation_rows
+                                curr_proj["data"]["foundation_detail_total"] = imported_foundation_total
+                                curr_proj["data"]["foundation_derived_unit_price"] = imported_foundation_derived_unit_price
+
+                            if imported_ffe_rows is not None:
+                                ffe_import_rooms = _safe_float(curr_proj["data"].get("m_rooms", 0.0))
+                                if ffe_import_rooms <= 0:
+                                    ffe_import_rooms = _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0))
+
+                                (
+                                    imported_ffe_rows,
+                                    imported_ffe_total,
+                                    imported_ffe_derived_unit_price,
+                                ) = calculate_ffe_detail(imported_ffe_rows, ffe_import_rooms)
+
+                                curr_proj["data"]["ffe_detail_rows"] = imported_ffe_rows
+                                curr_proj["data"]["ffe_detail_total"] = imported_ffe_total
+                                curr_proj["data"]["ffe_derived_unit_price"] = imported_ffe_derived_unit_price
+
+                            if imported_mep_rows is not None:
+                                mep_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                                if mep_import_gba <= 0:
+                                    mep_import_gba = safe_sum(imported_area_df, "GBA")
+
+                                (
+                                    imported_mep_rows,
+                                    imported_mep_total,
+                                    imported_mep_derived_unit_price,
+                                ) = calculate_mep_detail(imported_mep_rows, mep_import_gba)
+
+                                curr_proj["data"]["mep_detail_rows"] = imported_mep_rows
+                                curr_proj["data"]["mep_detail_total"] = imported_mep_total
+                                curr_proj["data"]["mep_derived_unit_price"] = imported_mep_derived_unit_price
+
+                            if imported_utility_rows is not None:
+                                utility_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                                if utility_import_gba <= 0:
+                                    utility_import_gba = safe_sum(imported_area_df, "GBA")
+
+                                (
+                                    imported_utility_rows,
+                                    imported_utility_total,
+                                    imported_utility_derived_unit_price,
+                                ) = calculate_utility_detail(imported_utility_rows, utility_import_gba)
+
+                                curr_proj["data"]["utility_detail_rows"] = imported_utility_rows
+                                curr_proj["data"]["utility_detail_total"] = imported_utility_total
+                                curr_proj["data"]["utility_derived_unit_price"] = imported_utility_derived_unit_price
+
+                            if imported_structural_rows is not None:
+                                structural_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
+                                if structural_import_gba <= 0:
+                                    structural_import_gba = safe_sum(imported_area_df, "GBA")
+
+                                (
+                                    imported_structural_rows,
+                                    imported_structural_total,
+                                    imported_structural_derived_unit_price,
+                                ) = calculate_structural_detail(imported_structural_rows, structural_import_gba)
+
+                                curr_proj["data"]["structural_detail_rows"] = imported_structural_rows
+                                curr_proj["data"]["structural_detail_total"] = imported_structural_total
+                                curr_proj["data"]["structural_derived_unit_price"] = imported_structural_derived_unit_price
+
+                            clear_area_editor_state()
+
+                            for stale_key in [
+                                door_editor_key,
+                                f"other_external_editor_{curr_id}",
+                                f"res_fac_editor_{curr_id}",
+                                f"architectural_detail_editor_{curr_id}",
+                                f"consultancy_detail_editor_{curr_id}",
+                                f"earthwork_detail_editor_{curr_id}",
+                                f"ffe_detail_editor_{curr_id}",
+                                f"foundation_detail_editor_{curr_id}",
+                                f"mep_detail_editor_{curr_id}",
+                                f"structural_detail_editor_{curr_id}",
+                                f"utility_detail_editor_{curr_id}",
+                                f"area_keliling_facade_{curr_id}",
+                                f"area_panjang_railing_{curr_id}",
+                                f"area_tinggi_railing_{curr_id}",
+                                f"area_facade_tolerance_pct_{curr_id}",
+                            ]:
+                                if stale_key in st.session_state:
+                                    del st.session_state[stale_key]
+
+                            save_ok = save_after_user_action("Area Excel Import")
+
+                            if save_ok:
+                                st.success(
+                                    f"Excel imported successfully. "
+                                    f"{len(imported_area_records)} area rows loaded."
+                                )
+                                st.rerun()
                             else:
-                                st.session_state.pop("earthwork_import_warning", None)
+                                st.error("Cloud save failed. Imported area data changed locally, but was not saved. Do not log out yet.")
 
-                        if imported_architectural_rows is not None:
-                            architectural_base_values = get_architectural_detail_base_values(
-                                curr_proj["data"],
-                                imported_area_df,
-                            )
-
-                            (
-                                imported_architectural_rows,
-                                imported_architectural_total,
-                                imported_architectural_derived_unit_price,
-                            ) = calculate_architectural_detail(imported_architectural_rows, architectural_base_values)
-
-                            curr_proj["data"]["architectural_detail_rows"] = imported_architectural_rows
-                            curr_proj["data"]["architectural_detail_total"] = imported_architectural_total
-                            curr_proj["data"]["architectural_derived_unit_price"] = imported_architectural_derived_unit_price
-
-                        if imported_consultancy_rows is not None:
-                            consultancy_base_values = get_consultancy_detail_base_values(
-                                curr_proj["data"],
-                                imported_area_df,
-                            )
-
-                            imported_consultancy_outputs = get_consultancy_detail_outputs(
-                                imported_consultancy_rows,
-                                consultancy_base_values,
-                            )
-                            store_consultancy_detail_outputs(
-                                curr_proj["data"],
-                                imported_consultancy_outputs,
-                            )
-
-                        if imported_foundation_rows is not None:
-                            foundation_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
-                            if foundation_import_gba <= 0:
-                                foundation_import_gba = safe_sum(imported_area_df, "GBA")
-
-                            (
-                                imported_foundation_rows,
-                                imported_foundation_total,
-                                imported_foundation_derived_unit_price,
-                            ) = calculate_foundation_detail(imported_foundation_rows, foundation_import_gba)
-
-                            curr_proj["data"]["foundation_detail_rows"] = imported_foundation_rows
-                            curr_proj["data"]["foundation_detail_total"] = imported_foundation_total
-                            curr_proj["data"]["foundation_derived_unit_price"] = imported_foundation_derived_unit_price
-
-                        if imported_ffe_rows is not None:
-                            ffe_import_rooms = _safe_float(curr_proj["data"].get("m_rooms", 0.0))
-                            if ffe_import_rooms <= 0:
-                                ffe_import_rooms = _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0))
-
-                            (
-                                imported_ffe_rows,
-                                imported_ffe_total,
-                                imported_ffe_derived_unit_price,
-                            ) = calculate_ffe_detail(imported_ffe_rows, ffe_import_rooms)
-
-                            curr_proj["data"]["ffe_detail_rows"] = imported_ffe_rows
-                            curr_proj["data"]["ffe_detail_total"] = imported_ffe_total
-                            curr_proj["data"]["ffe_derived_unit_price"] = imported_ffe_derived_unit_price
-
-                        if imported_mep_rows is not None:
-                            mep_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
-                            if mep_import_gba <= 0:
-                                mep_import_gba = safe_sum(imported_area_df, "GBA")
-
-                            (
-                                imported_mep_rows,
-                                imported_mep_total,
-                                imported_mep_derived_unit_price,
-                            ) = calculate_mep_detail(imported_mep_rows, mep_import_gba)
-
-                            curr_proj["data"]["mep_detail_rows"] = imported_mep_rows
-                            curr_proj["data"]["mep_detail_total"] = imported_mep_total
-                            curr_proj["data"]["mep_derived_unit_price"] = imported_mep_derived_unit_price
-
-                        if imported_utility_rows is not None:
-                            utility_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
-                            if utility_import_gba <= 0:
-                                utility_import_gba = safe_sum(imported_area_df, "GBA")
-
-                            (
-                                imported_utility_rows,
-                                imported_utility_total,
-                                imported_utility_derived_unit_price,
-                            ) = calculate_utility_detail(imported_utility_rows, utility_import_gba)
-
-                            curr_proj["data"]["utility_detail_rows"] = imported_utility_rows
-                            curr_proj["data"]["utility_detail_total"] = imported_utility_total
-                            curr_proj["data"]["utility_derived_unit_price"] = imported_utility_derived_unit_price
-
-                        if imported_structural_rows is not None:
-                            structural_import_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
-                            if structural_import_gba <= 0:
-                                structural_import_gba = safe_sum(imported_area_df, "GBA")
-
-                            (
-                                imported_structural_rows,
-                                imported_structural_total,
-                                imported_structural_derived_unit_price,
-                            ) = calculate_structural_detail(imported_structural_rows, structural_import_gba)
-
-                            curr_proj["data"]["structural_detail_rows"] = imported_structural_rows
-                            curr_proj["data"]["structural_detail_total"] = imported_structural_total
-                            curr_proj["data"]["structural_derived_unit_price"] = imported_structural_derived_unit_price
-
-                        clear_area_editor_state()
-
-                        for stale_key in [
-                            door_editor_key,
-                            f"other_external_editor_{curr_id}",
-                            f"res_fac_editor_{curr_id}",
-                            f"architectural_detail_editor_{curr_id}",
-                            f"consultancy_detail_editor_{curr_id}",
-                            f"earthwork_detail_editor_{curr_id}",
-                            f"ffe_detail_editor_{curr_id}",
-                            f"foundation_detail_editor_{curr_id}",
-                            f"mep_detail_editor_{curr_id}",
-                            f"structural_detail_editor_{curr_id}",
-                            f"utility_detail_editor_{curr_id}",
-                            f"area_keliling_facade_{curr_id}",
-                            f"area_panjang_railing_{curr_id}",
-                            f"area_tinggi_railing_{curr_id}",
-                            f"area_facade_tolerance_pct_{curr_id}",
-                        ]:
-                            if stale_key in st.session_state:
-                                del st.session_state[stale_key]
-
-                        save_ok = save_after_user_action("Area Excel Import")
-
-                        if save_ok:
-                            st.success(
-                                f"Excel imported successfully. "
-                                f"{len(imported_area_records)} area rows loaded."
-                            )
-                            st.rerun()
-                        else:
-                            st.error("Cloud save failed. Imported area data changed locally, but was not saved. Do not log out yet.")
-
-                    except ExcelImportError as e:
-                        st.error(f"Excel import failed: {e}")
-                    except Exception as e:
-                        st.error("Excel import failed. Please upload a valid .xlsx file generated from this app.")
-                        with st.expander("Technical details"):
-                            st.code(str(e))
+                        except ExcelImportError as e:
+                            st.error(f"Excel import failed: {e}")
+                        except Exception as e:
+                            st.error("Excel import failed. Please upload a valid .xlsx file generated from this app.")
+                            with st.expander("Technical details"):
+                                st.code(str(e))
 
             earthwork_import_warning = st.session_state.get("earthwork_import_warning")
             if isinstance(earthwork_import_warning, dict):
@@ -5677,6 +5614,74 @@ def show_area_calculator():
                     ):
                         st.session_state.pop("earthwork_import_warning", None)
                         st.rerun()
+                        
+        summary_area_totals = calculate_area_totals_from_table(
+            curr_proj["data"].get("area_table_data", [])
+        )
+        summary_residential_total = _safe_float(
+            curr_proj["data"].get("area_res_fac_amount_calc", 0.0)
+        )
+        summary_external_total = _safe_float(
+            curr_proj["data"].get("area_external_amount_calc", 0.0)
+        )
+        summary_external_rate = _safe_float(curr_proj["data"].get("u_ext", 0.0))
+        summary_residential_rate = _safe_float(curr_proj["data"].get("u_fac_res", 0.0))
+        summary_landscape = (
+            summary_external_total / summary_external_rate
+            if summary_external_total > 0 and summary_external_rate > 0
+            else _safe_float(curr_proj["data"].get("area_landscape_qty_calc", 0.0))
+        )
+        summary_residential_facility = (
+            summary_residential_total / summary_residential_rate
+            if summary_residential_total > 0 and summary_residential_rate > 0
+            else 0.0
+        )
+
+        core_summary_df = pd.DataFrame(
+            [
+                {"Item": "Luas Tanah", "Value": _safe_float(curr_proj["data"].get("m_land", 0.0)), "Unit": "m2"},
+                {"Item": "GBA", "Value": summary_area_totals["gba"], "Unit": "m2"},
+                {"Item": "GFA", "Value": summary_area_totals["gfa"], "Unit": "m2"},
+                {"Item": "SGFA", "Value": summary_area_totals["sgfa"], "Unit": "m2"},
+                {"Item": "NFA", "Value": summary_area_totals["nfa"], "Unit": "m2"},
+                {"Item": "Lobby/Koridor", "Value": _safe_float(curr_proj["data"].get("area_lobby_interior_calc", 0.0)), "Unit": "m2"},
+                {"Item": "Rooms/Units", "Value": _safe_float(curr_proj["data"].get("area_rooms_calc", 0.0)), "Unit": "unit"},
+            ]
+        )
+        opening_summary_df = pd.DataFrame(
+            [
+                {"Item": "Facade", "Value": _safe_float(curr_proj["data"].get("area_facade_calc", 0.0)), "Unit": "m2"},
+                {"Item": "Landscape", "Value": summary_landscape, "Unit": "m2"},
+                {"Item": "Residential Facility", "Value": summary_residential_facility, "Unit": "m2"},
+                {"Item": "Railing", "Value": _safe_float(curr_proj["data"].get("area_railing_length_per_room_calc", curr_proj["data"].get("area_panjang_railing", 0.0))), "Unit": "m'/room"},
+                {"Item": "Wooden Door", "Value": _safe_float(curr_proj["data"].get("area_door_wood_calc", 0.0)), "Unit": "unit"},
+                {"Item": "Steel Door", "Value": _safe_float(curr_proj["data"].get("area_door_steel_calc", 0.0)), "Unit": "unit"},
+                {"Item": "Glass Door", "Value": _safe_float(curr_proj["data"].get("area_door_glass_calc", 0.0)), "Unit": "unit"},
+            ]
+        )
+
+        s1, s2 = st.columns(2)
+        with s1:
+            st.markdown("##### Core Area")
+            st.dataframe(
+                core_summary_df,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
+                },
+            )
+        with s2:
+            st.markdown("##### Opening / External")
+            st.dataframe(
+                opening_summary_df,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
+                },
+            )
+
 
     # ==================================================
     # TAB 2 - GBA INPUT DRAFT ONLY
