@@ -4957,6 +4957,8 @@ def get_project_versions(project):
 
     return versions
 
+MAX_RESTORE_POINTS_PER_PROJECT = 10
+
 def get_next_version_label(project):
     max_no = 0
 
@@ -4979,6 +4981,14 @@ def _get_current_user_label():
         email = user.get("email")
     return email or ""
 
+def _get_restore_point_owner_email(show_warning=False):
+    email = str(_get_current_user_label() or "").strip().lower()
+
+    if not email and show_warning:
+        st.warning("Project History requires login/user identity before restore points can be used.")
+
+    return email
+
 def _make_project_version_snapshot(project):
     snapshot = copy.deepcopy(project) if isinstance(project, dict) else {}
 
@@ -4994,6 +5004,160 @@ def _make_project_version_snapshot(project):
                 ui_state.pop(key, None)
 
     return clean_for_json(snapshot)
+
+def clean_project_snapshot_for_restore_point(project):
+    return _make_project_version_snapshot(project)
+
+def get_restore_points_from_supabase(project_id, show_error=False):
+    authed_client, user_id = _get_authed_snapshot_client(show_error=show_error)
+    owner_email = _get_restore_point_owner_email(show_warning=show_error)
+
+    if not authed_client or not user_id or not project_id or not owner_email:
+        return []
+
+    try:
+        response = authed_client.table("project_restore_points") \
+            .select("id, label, note, created_at, created_by") \
+            .eq("project_id", str(project_id)) \
+            .eq("created_by", owner_email) \
+            .order("created_at", desc=True) \
+            .execute()
+
+        return response.data if response.data else []
+
+    except Exception as e:
+        if show_error:
+            st.warning(f"Could not load restore points: {e}")
+        return []
+
+def get_next_restore_point_label(project_id):
+    restore_points = get_restore_points_from_supabase(project_id, show_error=False)
+    max_no = 0
+
+    for restore_point in restore_points:
+        label = str(restore_point.get("label", "")).strip().upper()
+        if label.startswith("RP-"):
+            label = label[3:]
+
+        try:
+            max_no = max(max_no, int(label))
+        except Exception:
+            continue
+
+    return f"RP-{max_no + 1:03d}"
+
+def create_restore_point_in_supabase(project, note):
+    curr_id = st.session_state.get("current_proj_id")
+    if not curr_id:
+        st.error("Cannot create restore point: no active project.")
+        return None
+
+    owner_email = _get_restore_point_owner_email(show_warning=True)
+    if not owner_email:
+        return None
+
+    restore_points = get_restore_points_from_supabase(curr_id, show_error=True)
+    if len(restore_points) >= MAX_RESTORE_POINTS_PER_PROJECT:
+        st.warning("Restore point limit reached. Delete an old restore point before creating a new one.")
+        return None
+
+    authed_client, user_id = _get_authed_snapshot_client(show_error=True)
+    if not authed_client or not user_id:
+        return None
+
+    label = get_next_restore_point_label(curr_id)
+    snapshot = clean_project_snapshot_for_restore_point(project)
+
+    try:
+        response = authed_client.table("project_restore_points").insert({
+            "project_id": str(curr_id),
+            "label": label,
+            "note": str(note or "").strip(),
+            "snapshot_json": snapshot,
+            "created_by": owner_email,
+        }).execute()
+
+        if not response.data:
+            st.error("Restore point was not created - Supabase returned no row.")
+            return None
+
+        return response.data[0]
+
+    except Exception as e:
+        st.error(f"Restore point create error: {e}")
+        return None
+
+def load_restore_point_from_supabase(restore_point_id):
+    authed_client, user_id = _get_authed_snapshot_client(show_error=True)
+    curr_id = st.session_state.get("current_proj_id")
+    owner_email = _get_restore_point_owner_email(show_warning=True)
+
+    if not authed_client or not user_id or not restore_point_id or not curr_id or not owner_email:
+        return None
+
+    try:
+        response = authed_client.table("project_restore_points") \
+            .select("id, project_id, label, note, snapshot_json, created_at, created_by") \
+            .eq("id", str(restore_point_id)) \
+            .eq("project_id", str(curr_id)) \
+            .eq("created_by", owner_email) \
+            .execute()
+
+        if response.data:
+            return response.data[0]
+
+        st.error("Restore point was not found for the current project and user.")
+        return None
+
+    except Exception as e:
+        st.error(f"Restore point load error: {e}")
+        return None
+
+def delete_restore_point_from_supabase(restore_point_id):
+    authed_client, user_id = _get_authed_snapshot_client(show_error=True)
+    curr_id = st.session_state.get("current_proj_id")
+    owner_email = _get_restore_point_owner_email(show_warning=True)
+
+    if not authed_client or not user_id or not restore_point_id or not curr_id or not owner_email:
+        return False
+
+    try:
+        response = authed_client.table("project_restore_points") \
+            .delete() \
+            .eq("id", str(restore_point_id)) \
+            .eq("project_id", str(curr_id)) \
+            .eq("created_by", owner_email) \
+            .execute()
+
+        if not response.data:
+            st.error("Restore point was not deleted - no matching row was found for the current project and user.")
+            return False
+
+        return True
+
+    except Exception as e:
+        st.error(f"Restore point delete error: {e}")
+        return False
+
+def restore_project_from_restore_point(project, snapshot):
+    if not isinstance(project, dict) or not isinstance(snapshot, dict):
+        return False
+
+    preserved = {
+        key: copy.deepcopy(project[key])
+        for key in ("id", "name", "owner", "owner_id", "user_id", "created_at")
+        if key in project
+    }
+
+    restored = copy.deepcopy(snapshot)
+    restored.pop("versions", None)
+    restored.pop("published_version_id", None)
+
+    project.clear()
+    project.update(restored)
+    project.update(preserved)
+
+    return True
 
 def make_version_record(project, note):
     import uuid
@@ -5020,7 +5184,7 @@ def create_project_version(project, note):
     return record
 
 def create_restore_point(project, note):
-    return create_project_version(project, note)
+    return create_restore_point_in_supabase(project, note)
 
 def publish_project_version(project, version_id):
     versions = get_project_versions(project)
@@ -5132,7 +5296,7 @@ def summarize_version_diff(current_project, version_snapshot):
         rows.append({
             "Metric": metric,
             "Current": current_value,
-            "Version": version_value,
+            "Restore Point": version_value,
             "Change": delta,
         })
 
@@ -10979,9 +11143,17 @@ def show_snapshots():
     with atab4:
         st.header("Project History")
         curr_id, curr_proj = get_current_project()
-        versions = get_project_versions(curr_proj)
+        legacy_versions = curr_proj.get("versions", [])
+        if not isinstance(legacy_versions, list):
+            legacy_versions = []
+        restore_points = get_restore_points_from_supabase(curr_id, show_error=True)
+        restore_point_limit_reached = len(restore_points) >= MAX_RESTORE_POINTS_PER_PROJECT
 
         st.caption(f"Working copy: {curr_proj.get('name', curr_id)}")
+        if legacy_versions:
+            st.warning(
+                "Legacy in-project restore points detected. New restore points are stored externally."
+            )
 
         save_col, create_col = st.columns([1, 2])
 
@@ -11002,49 +11174,53 @@ def show_snapshots():
 
         with create_col:
             st.subheader("Create Restore Point")
+            st.caption(f"{len(restore_points)} of {MAX_RESTORE_POINTS_PER_PROJECT} restore points used.")
             note = st.text_input(
                 "Restore point note",
                 key=f"version_note_{curr_id}",
-                placeholder="e.g. QS review before VE changes"
+                placeholder="e.g. QS review before VE changes",
+                disabled=restore_point_limit_reached
             )
+
+            if restore_point_limit_reached:
+                st.info(
+                    "Restore point limit reached. Delete old restore points first to create another one."
+                )
 
             if st.button(
                 "Create Restore Point",
                 key=f"create_version_{curr_id}",
                 width="stretch",
-                icon=icon_safe("add")
+                icon=icon_safe("add"),
+                disabled=restore_point_limit_reached
             ):
                 record = create_restore_point(curr_proj, note)
-                if save_after_user_action(
-                    success_message=f"Restore point {record['version_label']} created.",
-                    fail_message="Restore point created locally, but cloud save failed. Do not log out yet."
-                ):
+                if record:
+                    st.success(f"Restore point {record.get('label', '')} created.")
                     st.rerun()
 
         st.divider()
 
-        if not versions:
-            st.info("No restore points yet. Create a restore point from the current working copy first.")
+        if not restore_points:
+            st.info("No restore points yet. Create one before making risky changes.")
         else:
             version_options = {
-                f"{v.get('version_label', 'Restore Point')} - {format_snapshot_time(v.get('created_at')) or v.get('created_at', '')}": v.get("version_id")
-                for v in reversed(versions)
+                f"{rp.get('label', 'Restore Point')} - {format_snapshot_time(rp.get('created_at')) or rp.get('created_at', '')}": rp.get("id")
+                for rp in restore_points
             }
 
             st.subheader("Restore Points")
-            version_rows = []
-            for version in reversed(versions):
-                raw_status = str(version.get("status", "restore point")).strip().lower()
-                status_label = "Selected" if raw_status == "published" else "Saved"
-                version_rows.append({
-                    "Restore Point": version.get("version_label", ""),
-                    "Note": version.get("note", ""),
-                    "Created At": format_snapshot_time(version.get("created_at")) or version.get("created_at", ""),
-                    "Status": status_label,
+            restore_point_rows = []
+            for restore_point in restore_points:
+                restore_point_rows.append({
+                    "Label": restore_point.get("label", ""),
+                    "Note": restore_point.get("note", ""),
+                    "Created At": format_snapshot_time(restore_point.get("created_at")) or restore_point.get("created_at", ""),
+                    "Created By": restore_point.get("created_by", ""),
                 })
 
             st.dataframe(
-                pd.DataFrame(version_rows),
+                pd.DataFrame(restore_point_rows),
                 width="stretch",
                 hide_index=True
             )
@@ -11068,10 +11244,13 @@ def show_snapshots():
                 disabled=not restore_confirm,
                 icon=icon_safe("restore")
             ):
-                if restore_restore_point(curr_proj, restore_id):
+                restore_point = load_restore_point_from_supabase(restore_id)
+                snapshot = restore_point.get("snapshot_json") if restore_point else None
+
+                if restore_project_from_restore_point(curr_proj, snapshot):
                     clear_project_ui_cache()
                     if save_after_user_action(
-                        success_message="Restore point restored to working copy.",
+                        success_message="Restore selected restore point saved to working copy.",
                         fail_message="Restore point restored locally, but cloud save failed. Do not log out yet."
                     ):
                         st.rerun()
@@ -11086,25 +11265,51 @@ def show_snapshots():
                 key=f"compare_version_select_{curr_id}"
             )
             compare_id = version_options[compare_label]
-            compare_version = next(
-                (v for v in versions if str(v.get("version_id")) == str(compare_id)),
-                None
+            compare_restore_point = load_restore_point_from_supabase(compare_id)
+            compare_snapshot = (
+                compare_restore_point.get("snapshot_json")
+                if compare_restore_point
+                else None
             )
 
-            if compare_version and isinstance(compare_version.get("snapshot"), dict):
-                diff_df = summarize_restore_point_diff(curr_proj, compare_version["snapshot"])
+            if isinstance(compare_snapshot, dict):
+                diff_df = summarize_restore_point_diff(curr_proj, compare_snapshot)
                 st.dataframe(
                     diff_df,
                     width="stretch",
                     hide_index=True,
                     column_config={
                         "Current": st.column_config.NumberColumn("Current", format="%.2f"),
-                        "Version": st.column_config.NumberColumn("Version", format="%.2f"),
+                        "Restore Point": st.column_config.NumberColumn("Restore Point", format="%.2f"),
                         "Change": st.column_config.NumberColumn("Change", format="%.2f"),
                     }
                 )
             else:
                 st.warning("Selected restore point has no restorable snapshot.")
+
+            st.divider()
+            st.subheader("Delete Restore Point")
+            delete_label = st.selectbox(
+                "Select restore point to delete",
+                options=list(version_options.keys()),
+                key=f"delete_restore_point_select_{curr_id}"
+            )
+            delete_id = version_options[delete_label]
+            delete_confirm = st.checkbox(
+                "I understand this will permanently delete only this restore point.",
+                key=f"delete_restore_point_confirm_{curr_id}"
+            )
+
+            if st.button(
+                "Delete Restore Point",
+                key=f"delete_restore_point_btn_{curr_id}",
+                width="stretch",
+                disabled=not delete_confirm,
+                icon=icon_safe("delete")
+            ):
+                if delete_restore_point_from_supabase(delete_id):
+                    st.success("Restore point deleted.")
+                    st.rerun()
 
     with atab3:
         st.subheader("Notes")
