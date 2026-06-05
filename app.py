@@ -5073,8 +5073,12 @@ def show_area_calculator():
     # ==================================================
     # PAGE SELECTOR
     # ==================================================
-    area_page_options = [
+    area_main_options = [
             "Excel",
+            "Manual Input",
+    ]
+
+    manual_area_page_options = [
             "GBA Input",
             "Pintu",
             "Eksternal",
@@ -5089,24 +5093,46 @@ def show_area_calculator():
             "Consultancy",
     ]
 
-    area_page_key = f"area_page_{curr_id}"
-    if st.session_state.get(area_page_key) not in [None, *area_page_options]:
-        st.session_state[area_page_key] = "Excel"
+    area_main_page_key = f"area_main_page_{curr_id}"
+    area_manual_page_key = f"area_manual_page_{curr_id}"
+
+    if st.session_state.get(area_main_page_key) not in [None, *area_main_options]:
+        st.session_state[area_main_page_key] = "Excel"
+    if st.session_state.get(area_manual_page_key) not in [None, *manual_area_page_options]:
+        st.session_state[area_manual_page_key] = "GBA Input"
 
     if callable(getattr(st, "segmented_control", None)):
-        area_page = st.segmented_control(
-            "Area Page",
-            options=area_page_options,
+        area_main_page = st.segmented_control(
+            "Area Input Mode",
+            options=area_main_options,
             default="Excel",
-            key=area_page_key,
+            key=area_main_page_key,
         )
     else:
-        area_page = st.radio(
-            "Area Page",
-            options=area_page_options,
+        area_main_page = st.radio(
+            "Area Input Mode",
+            options=area_main_options,
             horizontal=True,
-            key=area_page_key,
+            key=area_main_page_key,
         )
+
+    if area_main_page == "Excel":
+        area_page = "Excel"
+    else:
+        if callable(getattr(st, "segmented_control", None)):
+            area_page = st.segmented_control(
+                "Manual Input Page",
+                options=manual_area_page_options,
+                default="GBA Input",
+                key=area_manual_page_key,
+            )
+        else:
+            area_page = st.radio(
+                "Manual Input Page",
+                options=manual_area_page_options,
+                horizontal=True,
+                key=area_manual_page_key,
+            )
 
     # ==================================================
     # TAB 1 - EXCEL FORM
