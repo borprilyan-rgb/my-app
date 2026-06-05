@@ -5718,6 +5718,7 @@ def show_area_calculator():
             ]
         )
 
+        st.subheader("File Information:")
         s1, s2 = st.columns(2)
         with s1:
             st.markdown("##### Core Area")
@@ -7988,7 +7989,31 @@ def update_price(metric_key, db_key): #this function pulls~
         st.session_state[f"u_fl_{metric_key}_{c_type_key}"] = _safe_float(new_val)
 
 def show_cost_estimator(): #cost calculator page
-    st.title("Cost Analysis")
+    curr_id, curr_proj = get_current_project()
+
+    header_col, save_col = st.columns([8, 1], vertical_alignment="center")
+
+    with header_col:
+        st.title("Cost Analysis")
+
+    with save_col:
+        save_cost_clicked = st.button(
+            "Save",
+            key=f"save_cost_analysis_{curr_id}",
+            type="primary",
+            width="stretch",
+            icon=mi("save") if "mi" in globals() else None,
+            help="Save Cost Analysis",
+        )
+
+    if save_cost_clicked:
+        save_ok = save_after_user_action("Save Cost Analysis")
+
+        if save_ok:
+            st.success("Cost Analysis saved to cloud.")
+            st.rerun()
+        else:
+            st.error("Cost Analysis changed locally, but cloud save failed. Do not log out yet.")
 
     st.markdown("""
         <style>
@@ -8035,8 +8060,6 @@ def show_cost_estimator(): #cost calculator page
         </style>
         """, unsafe_allow_html=True)
 
-    curr_id, curr_proj = get_current_project()
-
     if "data" not in curr_proj:
         st.session_state.projects[curr_id]["data"] = {}
 
@@ -8069,25 +8092,6 @@ def show_cost_estimator(): #cost calculator page
     ])
 
     with tab2:
-        save_cost_placeholder = st.empty()
-
-        with save_cost_placeholder.container():
-            save_cost_clicked = st.button(
-                "Save Cost Analysis",
-                key=f"save_cost_analysis_{curr_id}",
-                type="primary",
-                use_container_width=True
-            )
-
-        if save_cost_clicked:
-            save_ok = save_after_user_action("Save Cost Analysis")
-
-            if save_ok:
-                st.success("Cost Analysis saved to cloud.")
-                st.rerun()
-            else:
-                st.error("Cost Analysis changed locally, but cloud save failed. Do not log out yet.")
-
         # ==================================================
         # IMPORT AREA ANALYSIS TOTALS INTO COST ANALYSIS
         # ==================================================
