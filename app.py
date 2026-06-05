@@ -4945,6 +4945,201 @@ def save_after_user_action(success_message="Saved to cloud.", fail_message="Chan
 
     st.error(fail_message)
     return False
+
+def get_project_versions(project):
+    if not isinstance(project, dict):
+        return []
+
+    versions = project.setdefault("versions", [])
+    if not isinstance(versions, list):
+        versions = []
+        project["versions"] = versions
+
+    return versions
+
+def get_next_version_label(project):
+    max_no = 0
+
+    for version in get_project_versions(project):
+        label = str(version.get("version_label") or version.get("version_no") or "").strip()
+        if label.lower().startswith("v"):
+            label = label[1:]
+
+        try:
+            max_no = max(max_no, int(float(label)))
+        except Exception:
+            continue
+
+    return f"v{max_no + 1}"
+
+def _get_current_user_label():
+    user = st.session_state.get("user")
+    email = getattr(user, "email", None)
+    if email is None and isinstance(user, dict):
+        email = user.get("email")
+    return email or ""
+
+def _make_project_version_snapshot(project):
+    snapshot = copy.deepcopy(project) if isinstance(project, dict) else {}
+
+    # Keep version records lean and avoid each version carrying all previous versions.
+    snapshot.pop("versions", None)
+    snapshot.pop("published_version_id", None)
+
+    ui_state = snapshot.get("ui")
+    if isinstance(ui_state, dict):
+        ui_state.pop("published_version_id", None)
+        for key in list(ui_state.keys()):
+            if str(key).startswith(("version_control_", "_debug", "temp_", "widget_")):
+                ui_state.pop(key, None)
+
+    return clean_for_json(snapshot)
+
+def make_version_record(project, note):
+    import uuid
+
+    curr_id = st.session_state.get("current_proj_id")
+    label = get_next_version_label(project)
+
+    return {
+        "version_id": str(uuid.uuid4()),
+        "version_no": label,
+        "version_label": label,
+        "note": str(note or "").strip(),
+        "created_at": datetime.utcnow().isoformat(),
+        "created_by": _get_current_user_label(),
+        "status": "version",
+        "source_project_id": curr_id,
+        "snapshot": _make_project_version_snapshot(project),
+    }
+
+def create_project_version(project, note):
+    versions = get_project_versions(project)
+    record = make_version_record(project, note)
+    versions.append(record)
+    return record
+
+def create_restore_point(project, note):
+    return create_project_version(project, note)
+
+def publish_project_version(project, version_id):
+    versions = get_project_versions(project)
+    selected_id = str(version_id)
+    found = False
+
+    for version in versions:
+        if str(version.get("version_id")) == selected_id:
+            version["status"] = "published"
+            found = True
+        elif version.get("status") == "published":
+            version["status"] = "version"
+
+    if found:
+        project["published_version_id"] = selected_id
+
+    return found
+
+def restore_project_version(project, version_id):
+    versions = get_project_versions(project)
+    selected = next(
+        (version for version in versions if str(version.get("version_id")) == str(version_id)),
+        None
+    )
+
+    if not selected or not isinstance(selected.get("snapshot"), dict):
+        return False
+
+    preserved_versions = copy.deepcopy(versions)
+    published_version_id = project.get("published_version_id")
+    restored = copy.deepcopy(selected["snapshot"])
+
+    project.clear()
+    project.update(restored)
+    project["versions"] = preserved_versions
+
+    if published_version_id:
+        project["published_version_id"] = published_version_id
+
+    return True
+
+def restore_restore_point(project, version_id):
+    return restore_project_version(project, version_id)
+
+def _project_metric_summary(project):
+    if not isinstance(project, dict):
+        project = {}
+
+    data = project.get("data", {})
+    if not isinstance(data, dict):
+        data = {}
+
+    curr_type = project.get("type", "Hotel")
+    gba, gfa, sgfa, budget, rooms = calculate_project_totals(project, curr_type)
+    nfa = _safe_float(data.get("m_nfa", 0.0))
+    land_area = _safe_float(data.get("m_land", data.get("m_land_m2", 0.0)))
+
+    earthwork = gba * _safe_float(data.get("u_earth", 0.0))
+    foundation = gba * _safe_float(data.get("u_found", 0.0))
+    structure = gba * _safe_float(data.get("u_struc", 0.0))
+    architecture = gfa * _safe_float(data.get("u_arch", 0.0))
+    ffe = _safe_float(data.get("m_rooms", rooms)) * _safe_float(data.get("u_ffe", 0.0))
+    mep = gba * _safe_float(data.get("u_mep", 0.0))
+    utility = gba * _safe_float(data.get("u_util", 0.0))
+    external = _safe_float(data.get("m_land_m2", 0.0)) * _safe_float(data.get("u_ext", 0.0))
+    misc = _safe_float(data.get("group_misc", 0.0))
+
+    known_hard_base = sum([
+        earthwork, foundation, structure, architecture, ffe, mep, utility, external, misc
+    ])
+    prelim = known_hard_base * 0.05
+    contingency = (known_hard_base + prelim) * 0.03
+    hard_cost = known_hard_base + prelim + contingency
+    soft_cost = max(_safe_float(data.get("grand_total_project", budget)) - hard_cost, 0.0)
+    grand_total = _safe_float(data.get("grand_total_project", budget))
+
+    return {
+        "GBA": gba,
+        "GFA": gfa,
+        "SGFA": sgfa,
+        "NFA": nfa,
+        "Land Area": land_area,
+        "Earthwork": earthwork,
+        "Foundation": foundation,
+        "Structure": structure,
+        "Architecture": architecture,
+        "FF&E": ffe,
+        "MEP": mep,
+        "Utility": utility,
+        "External": external,
+        "Misc": misc,
+        "Prelim": prelim,
+        "Contingency": contingency,
+        "Soft Cost": soft_cost,
+        "Hard Cost": hard_cost,
+        "Grand Total": grand_total,
+    }
+
+def summarize_version_diff(current_project, version_snapshot):
+    current = _project_metric_summary(current_project)
+    version = _project_metric_summary(version_snapshot)
+    rows = []
+
+    for metric in current.keys():
+        current_value = _safe_float(current.get(metric, 0.0))
+        version_value = _safe_float(version.get(metric, 0.0))
+        delta = current_value - version_value
+
+        rows.append({
+            "Metric": metric,
+            "Current": current_value,
+            "Version": version_value,
+            "Change": delta,
+        })
+
+    return pd.DataFrame(rows)
+
+def summarize_restore_point_diff(current_project, restore_point_snapshot):
+    return summarize_version_diff(current_project, restore_point_snapshot)
 #endregion
 
 def show_area_calculator():
@@ -10777,9 +10972,139 @@ def show_snapshots():
     st.title("Archive")
     curr_id, curr_proj = get_current_project()
 
-    atab1, atab2, atab3= st.tabs([
-        "Online Backup", "Offline Backup", "Notes"
+    atab1, atab2, atab3, atab4 = st.tabs([
+        "Online Backup", "Offline Backup", "Notes", "Project History"
     ])
+
+    with atab4:
+        st.header("Project History")
+        curr_id, curr_proj = get_current_project()
+        versions = get_project_versions(curr_proj)
+
+        st.caption(f"Working copy: {curr_proj.get('name', curr_id)}")
+
+        save_col, create_col = st.columns([1, 2])
+
+        with save_col:
+            st.subheader("Save Draft")
+            if st.button(
+                "Save Draft",
+                key=f"version_save_draft_{curr_id}",
+                type="primary",
+                width="stretch",
+                icon=icon_safe("save")
+            ):
+                if save_after_user_action(
+                    success_message="Draft saved to cloud.",
+                    fail_message="Draft changed locally, but cloud save failed. Do not log out yet."
+                ):
+                    st.rerun()
+
+        with create_col:
+            st.subheader("Create Restore Point")
+            note = st.text_input(
+                "Restore point note",
+                key=f"version_note_{curr_id}",
+                placeholder="e.g. QS review before VE changes"
+            )
+
+            if st.button(
+                "Create Restore Point",
+                key=f"create_version_{curr_id}",
+                width="stretch",
+                icon=icon_safe("add")
+            ):
+                record = create_restore_point(curr_proj, note)
+                if save_after_user_action(
+                    success_message=f"Restore point {record['version_label']} created.",
+                    fail_message="Restore point created locally, but cloud save failed. Do not log out yet."
+                ):
+                    st.rerun()
+
+        st.divider()
+
+        if not versions:
+            st.info("No restore points yet. Create a restore point from the current working copy first.")
+        else:
+            version_options = {
+                f"{v.get('version_label', 'Restore Point')} - {format_snapshot_time(v.get('created_at')) or v.get('created_at', '')}": v.get("version_id")
+                for v in reversed(versions)
+            }
+
+            st.subheader("Restore Points")
+            version_rows = []
+            for version in reversed(versions):
+                raw_status = str(version.get("status", "restore point")).strip().lower()
+                status_label = "Selected" if raw_status == "published" else "Saved"
+                version_rows.append({
+                    "Restore Point": version.get("version_label", ""),
+                    "Note": version.get("note", ""),
+                    "Created At": format_snapshot_time(version.get("created_at")) or version.get("created_at", ""),
+                    "Status": status_label,
+                })
+
+            st.dataframe(
+                pd.DataFrame(version_rows),
+                width="stretch",
+                hide_index=True
+            )
+
+            st.subheader("Restore Selected Restore Point")
+            restore_label = st.selectbox(
+                "Select restore point",
+                options=list(version_options.keys()),
+                key=f"restore_version_select_{curr_id}"
+            )
+            restore_id = version_options[restore_label]
+            restore_confirm = st.checkbox(
+                "I understand this will replace the current working copy.",
+                key=f"restore_version_confirm_{curr_id}"
+            )
+
+            if st.button(
+                "Restore Selected Restore Point",
+                key=f"restore_version_btn_{curr_id}",
+                width="stretch",
+                disabled=not restore_confirm,
+                icon=icon_safe("restore")
+            ):
+                if restore_restore_point(curr_proj, restore_id):
+                    clear_project_ui_cache()
+                    if save_after_user_action(
+                        success_message="Restore point restored to working copy.",
+                        fail_message="Restore point restored locally, but cloud save failed. Do not log out yet."
+                    ):
+                        st.rerun()
+                else:
+                    st.error("Selected restore point could not be restored.")
+
+            st.divider()
+            st.subheader("Compare Current vs Restore Point")
+            compare_label = st.selectbox(
+                "Select restore point to compare",
+                options=list(version_options.keys()),
+                key=f"compare_version_select_{curr_id}"
+            )
+            compare_id = version_options[compare_label]
+            compare_version = next(
+                (v for v in versions if str(v.get("version_id")) == str(compare_id)),
+                None
+            )
+
+            if compare_version and isinstance(compare_version.get("snapshot"), dict):
+                diff_df = summarize_restore_point_diff(curr_proj, compare_version["snapshot"])
+                st.dataframe(
+                    diff_df,
+                    width="stretch",
+                    hide_index=True,
+                    column_config={
+                        "Current": st.column_config.NumberColumn("Current", format="%.2f"),
+                        "Version": st.column_config.NumberColumn("Version", format="%.2f"),
+                        "Change": st.column_config.NumberColumn("Change", format="%.2f"),
+                    }
+                )
+            else:
+                st.warning("Selected restore point has no restorable snapshot.")
 
     with atab3:
         st.subheader("Notes")
