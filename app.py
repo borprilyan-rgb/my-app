@@ -3773,11 +3773,35 @@ def create_new_feasibility_study(study_name, project_type="Hotel"):
 
     return True
 
+def is_duplicate_study_or_archive_name(clean_name, current_id=None):
+    normalized_name = str(clean_name).strip().lower()
+
+    if normalized_name == "":
+        return False
+
+    if is_duplicate_project_name(normalized_name, current_id=current_id):
+        return True
+
+    snapshots = load_snapshots()
+    for snap in snapshots:
+        if not isinstance(snap, dict):
+            continue
+
+        snapshot_name = str(snap.get("snapshot_name", "")).strip().lower()
+        if snapshot_name == normalized_name:
+            return True
+
+    return False
+
 def create_new_study_and_archive(study_name, project_type="Hotel"):
     clean_name = str(study_name).strip()
 
     if clean_name == "":
         st.error("Please enter feasibility study name.")
+        return False
+
+    if is_duplicate_study_or_archive_name(clean_name):
+        st.error("A study with this name already exists. Use a different name.")
         return False
 
     if not create_new_feasibility_study(clean_name, project_type=project_type):
