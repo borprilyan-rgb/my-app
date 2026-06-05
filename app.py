@@ -8347,13 +8347,158 @@ def update_price(metric_key, db_key): #this function pulls~
         new_val = db_val.get(selected_spec, 0.0)
         st.session_state[f"u_fl_{metric_key}_{c_type_key}"] = _safe_float(new_val)
 
+def build_cost_sync_review_rows(sync_groups, curr_proj):
+    rows = []
+    project_data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
+
+    for group in sync_groups:
+        group_title = group.get("title", "")
+
+        for item in group.get("items", []):
+            source_value = _safe_float(item.get("value", 0.0))
+            data_key = item.get("data_key")
+            widget_key = item.get("widget_key")
+            session_key = item.get("session_key")
+
+            current_found = False
+            current_value = 0.0
+
+            if session_key and session_key in st.session_state:
+                current_value = _safe_float(st.session_state.get(session_key, 0.0))
+                current_found = True
+            elif widget_key:
+                keyed_widget = f"{widget_key}_{st.session_state.get('current_proj_id')}"
+                if keyed_widget in st.session_state:
+                    current_value = _safe_float(st.session_state.get(keyed_widget, 0.0))
+                    current_found = True
+            elif data_key and data_key in project_data:
+                current_value = _safe_float(project_data.get(data_key, 0.0))
+                current_found = True
+
+            if not current_found and data_key and data_key in project_data:
+                current_value = _safe_float(project_data.get(data_key, 0.0))
+                current_found = True
+
+            if source_value <= 0:
+                status = "Skipped - zero source"
+            elif not current_found:
+                status = "Missing target"
+            elif abs(source_value - current_value) > 0.000001:
+                status = "Changed"
+            else:
+                status = "Unchanged"
+
+            rows.append({
+                "Group": group_title,
+                "Value": item.get("label", ""),
+                "Current Value": current_value,
+                "Source Value": source_value,
+                "Difference": source_value - current_value,
+                "Unit": item.get("unit", ""),
+                "Status": status,
+            })
+
+    return rows
+
+def render_cost_sync_review_panel(curr_id, sync_groups, curr_proj, perform_area_analysis_sync):
+    review_key = f"show_cost_sync_review_{curr_id}"
+
+    if not st.session_state.get(review_key, False):
+        return
+
+    rows = build_cost_sync_review_rows(sync_groups, curr_proj)
+    review_df = pd.DataFrame(rows)
+
+    with st.container(border=True):
+        st.subheader("Review Area Sync")
+        st.caption(
+            "Nonzero source values can update Cost Analysis inputs. Zero source values are skipped."
+        )
+
+        tab_changed, tab_unchanged, tab_skipped, tab_all = st.tabs([
+            "Changed", "Unchanged", "Skipped / Zero", "All"
+        ])
+
+        def show_review_table(df):
+            if df.empty:
+                st.info("No values in this group.")
+                return
+
+            st.dataframe(
+                df,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "Current Value": st.column_config.NumberColumn("Current Value", format="%.2f"),
+                    "Source Value": st.column_config.NumberColumn("Source Value", format="%.2f"),
+                    "Difference": st.column_config.NumberColumn("Difference", format="%.2f"),
+                },
+            )
+
+        with tab_changed:
+            show_review_table(review_df[review_df["Status"] == "Changed"])
+
+        with tab_unchanged:
+            show_review_table(review_df[review_df["Status"] == "Unchanged"])
+
+        with tab_skipped:
+            show_review_table(review_df[review_df["Status"].isin(["Skipped - zero source", "Missing target"])])
+
+        with tab_all:
+            show_review_table(review_df)
+
+        apply_col, cancel_col, _ = st.columns([1, 1, 4])
+
+        with apply_col:
+            apply_clicked = st.button(
+                "Apply Sync",
+                key=f"apply_area_analysis_sync_{curr_id}",
+                type="primary",
+                width="stretch",
+            )
+
+        with cancel_col:
+            cancel_clicked = st.button(
+                "Cancel",
+                key=f"cancel_area_analysis_sync_{curr_id}",
+                width="stretch",
+            )
+
+        if apply_clicked:
+            save_ok = perform_area_analysis_sync()
+
+            if save_ok:
+                st.session_state.pop(review_key, None)
+                st.session_state.pop(f"confirm_use_area_analysis_{curr_id}", None)
+                st.session_state.pop(f"show_area_sync_details_{curr_id}", None)
+                st.success("Area metrics, opening/external quantities, and detail-derived rates applied to Cost Analysis.")
+                st.rerun()
+            else:
+                st.error("Area Analysis values were applied locally, but cloud save failed. Do not log out yet.")
+
+        if cancel_clicked:
+            st.session_state.pop(review_key, None)
+            st.session_state.pop(f"confirm_use_area_analysis_{curr_id}", None)
+            st.session_state.pop(f"show_area_sync_details_{curr_id}", None)
+            st.rerun()
+
 def show_cost_estimator(): #cost calculator page
     curr_id, curr_proj = get_current_project()
+    show_cost_sync_review_key = f"show_cost_sync_review_{curr_id}"
 
-    header_col, save_col = st.columns([8, 1], vertical_alignment="center")
+    header_col, sync_col, save_col = st.columns([7, 1, 1], vertical_alignment="center")
 
     with header_col:
         st.title("Cost Analysis")
+
+    with sync_col:
+        sync_clicked = st.button(
+            "Sync",
+            key=f"use_area_analysis_{curr_id}",
+            width="stretch",
+            icon=mi("sync") if "mi" in globals() else None,
+            help="Review Area Analysis values before syncing",
+        )
 
     with save_col:
         save_cost_clicked = st.button(
@@ -8364,6 +8509,9 @@ def show_cost_estimator(): #cost calculator page
             icon=mi("save") if "mi" in globals() else None,
             help="Save Cost Analysis",
         )
+
+    if sync_clicked:
+        st.session_state[show_cost_sync_review_key] = True
 
     if save_cost_clicked:
         save_ok = save_after_user_action("Save Cost Analysis")
@@ -8572,17 +8720,6 @@ def show_cost_estimator(): #cost calculator page
             },
         ]
 
-        syncable_items = [
-            item
-            for group in sync_groups
-            for item in group["items"]
-            if _safe_float(item.get("value", 0.0)) > 0
-        ]
-
-        sync_col1, sync_col2 = st.columns([1, 3], vertical_alignment="center")
-        confirm_sync_key = f"confirm_use_area_analysis_{curr_id}"
-        show_sync_details_key = f"show_area_sync_details_{curr_id}"
-
         def sync_area_value(data_key, widget_key, value, session_key=None):
             """
             Sync Area Analysis value into Cost Analysis only if value > 0.
@@ -8606,90 +8743,14 @@ def show_cost_estimator(): #cost calculator page
                         item.get("session_key"),
                     )
 
-            return save_after_user_action("Use Area Analysis in Cost Analysis")
+            return save_after_user_action("Sync Area Analysis to Cost Analysis")
 
-        with sync_col1:
-            if st.button(
-                "Use Area Analysis",
-                key=f"use_area_analysis_{curr_id}",
-                type="primary",
-                width="stretch",
-                icon=mi("sync") if "mi" in globals() else None,
-            ):
-                st.session_state[confirm_sync_key] = True
-                st.session_state[show_sync_details_key] = True
-
-            on = st.toggle(
-                "Show details of synced values",
-                key=show_sync_details_key,
-            )
-
-        if st.session_state.get(confirm_sync_key, False):
-            st.warning(
-                "Review the values below. This will update Cost Analysis inputs using nonzero values from Area Analysis and detail-derived rates. Existing Cost Analysis values will not be overwritten by zero values."
-            )
-
-            confirm_col, cancel_col, _ = st.columns([1, 1, 4])
-
-            with confirm_col:
-                confirm_sync_clicked = st.button(
-                    "Confirm Sync",
-                    key=f"confirm_area_analysis_sync_{curr_id}",
-                    type="primary",
-                    width="stretch",
-                )
-
-            with cancel_col:
-                cancel_sync_clicked = st.button(
-                    "Cancel",
-                    key=f"cancel_area_analysis_sync_{curr_id}",
-                    width="stretch",
-                )
-
-            if confirm_sync_clicked:
-                save_ok = perform_area_analysis_sync()
-
-                if save_ok:
-                    st.session_state.pop(confirm_sync_key, None)
-                    st.success("Area metrics, opening/external quantities, and detail-derived rates applied to Cost Analysis.")
-                    st.rerun()
-                else:
-                    st.error("Area Analysis values were applied locally, but cloud save failed. Do not log out yet.")
-
-            if cancel_sync_clicked:
-                st.session_state.pop(confirm_sync_key, None)
-                st.rerun()
-
-        if on:
-            with sync_col2:
-                if syncable_items:
-                    st.info("Source values available from Area Analysis. Values of 0 will not overwrite existing Cost Analysis inputs. Consultancy Rate excludes QS and PM to avoid double counting; QS and PM sync to their monthly duration/rate fields.")
-
-                    for group in sync_groups:
-                        preview_rows = []
-                        for item in group["items"]:
-                            value = _safe_float(item.get("value", 0.0))
-                            preview_rows.append({
-                                "Value": item["label"],
-                                "Source Value": value,
-                                "Unit": item.get("unit", ""),
-                                "Will Sync": "Yes" if value > 0 else "No - zero skipped",
-                            })
-
-                        st.markdown(f"**{group['title']}**")
-                        st.dataframe(
-                            pd.DataFrame(preview_rows),
-                            hide_index=True,
-                            width="stretch",
-                            column_config={
-                                "Source Value": st.column_config.NumberColumn(
-                                    "Source Value",
-                                    format="%.2f",
-                                ),
-                            },
-                        )
-                else:
-                    st.info("No data found in Area Analysis to sync.")
+        render_cost_sync_review_panel(
+            curr_id,
+            sync_groups,
+            curr_proj,
+            perform_area_analysis_sync,
+        )
             
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
 
@@ -8803,7 +8864,7 @@ Current SGFA: {_safe_float(sgfa):,.0f} m2
                 value=_safe_float(get_val("r_rail_qty", suggested_railing_qty)),
                 step=1.0,
                 key=f"r_rail_qty_{curr_id}",
-                help="Can be synced from Area Analysis > Panjang Railing(m) using the main Use Area Analysis button."
+                help="Can be synced from Area Analysis > Panjang Railing(m) using the Sync button."
                 )
                 st.caption(f"Total Railing: {railing_qty:.2f} m/room * {rooms:.0f} ruang = {railing_qty * rooms:,.2f} m'")    
                 st.subheader("Pintu")
