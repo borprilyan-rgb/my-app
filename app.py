@@ -43,7 +43,6 @@ from report_excel_helpers import (
 
 import altair as alt
 import plotly.graph_objects as go
-import num2words as n2w
 import ast
 import numpy as np
 from io import BytesIO
@@ -101,18 +100,32 @@ DEFAULT_REPORT_CONFIG = {
 }
 
 def get_valid_token():
-    """Refresh the session token if needed before any Supabase write."""
+    """Return the current Supabase access token without assuming SDK response shape."""
+    stored_token = st.session_state.get("access_token")
+    if stored_token:
+        return stored_token
+
     try:
-        session = supabase.auth.get_session()
-        if session and session.session:
-            # Refresh token in session state
-            st.session_state.access_token = session.session.access_token
-            return session.session.access_token
+        session_response = supabase.auth.get_session()
+        session_obj = getattr(session_response, "session", None)
+
+        if session_obj is None and isinstance(session_response, dict):
+            session_obj = session_response.get("session")
+
+        if session_obj is None:
+            session_obj = session_response
+
+        access_token = getattr(session_obj, "access_token", None)
+        if access_token is None and isinstance(session_obj, dict):
+            access_token = session_obj.get("access_token")
+
+        if access_token:
+            st.session_state.access_token = access_token
+            return access_token
     except Exception:
         pass
-    
-    # Fall back to stored token
-    return st.session_state.get("access_token")
+
+    return None
 
 def clean_for_json(obj):
     """
