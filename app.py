@@ -3952,8 +3952,6 @@ def render_feasibility_study_landing(): #start page
 
         with col_back:
             if st.button("Back", key="landing_create_back", width="stretch"):
-                st.session_state.confirm_create_new_study_start = False
-                st.session_state.pending_create_new_study_start = ""
                 st.session_state.fs_landing_mode = None
                 st.rerun()
 
@@ -3977,27 +3975,13 @@ def render_feasibility_study_landing(): #start page
                     if study_name.strip() == "":
                         st.warning("Please enter feasibility study name.")
                     else:
-                        st.session_state.confirm_create_new_study_start = True
-                        st.session_state.pending_create_new_study_start = study_name.strip()
+                        clean_study_name = study_name.strip()
+                        if create_new_study_and_archive(clean_study_name):
+                            st.session_state.fs_landing_mode = None
+                            st.success(f"Study **{clean_study_name}** created and saved to archive.")
+                            st.rerun()
 
-            if st.session_state.get("confirm_create_new_study_start"):
-                pending_study_name = st.session_state.get("pending_create_new_study_start", "")
-
-                st.caption("Create and link this study to Archive?")
-                col_cancel, col_confirm = st.columns(2)
-
-                if col_cancel.button("Cancel", key="cancel_create_new_study_start", width="stretch"):
-                    st.session_state.confirm_create_new_study_start = False
-                    st.session_state.pending_create_new_study_start = ""
-                    st.rerun()
-
-                if col_confirm.button("Confirm", key="confirm_create_new_study_start_btn", type="primary", width="stretch"):
-                    if create_new_study_and_archive(pending_study_name):
-                        st.session_state.confirm_create_new_study_start = False
-                        st.session_state.pending_create_new_study_start = ""
-                        st.session_state.fs_landing_mode = None
-                        st.success(f"Study **{pending_study_name}** created and saved to archive.")
-                        st.rerun()
+            st.caption("Save the current page first if needed.")
     
     snapshots = load_snapshots()
 
@@ -11414,30 +11398,10 @@ def show_snapshots():
             if snapshot_name.strip() == "":
                 col_create.warning("Please enter Project name.")
             else:
-                st.session_state.confirm_create_new_study_archive = True
-                st.session_state.pending_create_new_study_archive = snapshot_name.strip()
-
-        if st.session_state.get("confirm_create_new_study_archive"):
-            pending_study_name = st.session_state.get("pending_create_new_study_archive", "")
-
-            with st.container(border=True):
-                st.subheader("Create New Study")
-                st.write("Create and link this study to Archive?")
-                st.caption("Save the current page first if needed.")
-
-                col_cancel, col_confirm, _ = st.columns([1, 1, 4])
-
-                if col_cancel.button("Cancel", key="cancel_create_new_study_archive", width="stretch"):
-                    st.session_state.confirm_create_new_study_archive = False
-                    st.session_state.pending_create_new_study_archive = ""
+                clean_snapshot_name = snapshot_name.strip()
+                if create_new_study_and_archive(clean_snapshot_name):
+                    st.success(f"Study **{clean_snapshot_name}** created and saved to archive.")
                     st.rerun()
-
-                if col_confirm.button("Confirm", key="confirm_create_new_study_archive_btn", type="primary", width="stretch"):
-                    if create_new_study_and_archive(pending_study_name):
-                        st.session_state.confirm_create_new_study_archive = False
-                        st.session_state.pending_create_new_study_archive = ""
-                        st.success(f"Study **{pending_study_name}** created and saved to archive.")
-                        st.rerun()
 
         if col_save.button(
             "Save",
