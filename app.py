@@ -8757,82 +8757,10 @@ def show_cost_estimator(): #cost calculator page
         with col_m1:
             with st.expander("Ukuran Proyek", expanded=True):
                 st.subheader("Ukuran")
-                c_land_input, c_land_info = st.columns([5, 1])
-                with c_land_input:
-                    land_area = st.number_input("Luas Tanah (m2)", value=get_val("m_land", 0.0), step=100.0, key=f"m_land_{curr_id}")
-                with c_land_info:
-                    st.write("")
-                    with st.popover(" "):
-                        st.info(
-                            f"""
-**Luas Tanah**
-Used as project land reference.
-Current Luas Tanah: {_safe_float(land_area):,.0f} m2
-                            """
-                        )
-
-                c_gba_input, c_gba_info = st.columns([5, 1])
-                with c_gba_input:
-                    gba = st.number_input("GBA (m2)", value=get_val("m_gba", 0.0), step=100.0, key=f"m_gba_{curr_id}")
-                with c_gba_info:
-                    st.write("")
-                    with st.popover(" "):
-                        gba_qty = _safe_float(gba)
-                        gba_affected = [
-                            ("Earthwork", _safe_float(get_val("u_earth", pt_data.get("struc_earth", 0.0)))),
-                            ("Foundation", _safe_float(get_val("u_found", pt_data.get("struc_found", 0.0)))),
-                            ("Structure", _safe_float(get_val("u_struc", pt_data.get("struc_work", 0.0)))),
-                            ("MEP", _safe_float(get_val("u_mep", pt_data.get("mep", 0.0)))),
-                            ("Utility", _safe_float(get_val("u_util", pt_data.get("utility", 0.0)))),
-                        ]
-
-                        for item_name, rate in gba_affected:
-                            total = rate * gba_qty
-                            st.info(
-                                f"""
-**{item_name}**
-Hitungan: Rp {rate:,.0f} x GBA: {gba_qty:,.0f} m2
-Total {item_name}: Rp {total:,.0f}
-Terbilang: {n2w(total)}
-                                """
-                            )
-
-                c_gfa_input, c_gfa_info = st.columns([5, 1])
-                with c_gfa_input:
-                    gfa = st.number_input("GFA (m2)", value=get_val("m_gfa", 0.0), step=100.0, key=f"m_gfa_{curr_id}")
-                with c_gfa_info:
-                    st.write("")
-                    with st.popover(" "):
-                        gfa_qty = _safe_float(gfa)
-                        gfa_affected = [
-                            ("Architecture", _safe_float(get_val("u_arch", pt_data.get("arch_base", 0.0)))),
-                            ("Consultancy", _safe_float(get_val("sc_cons", pt_data.get("cons", 0.0)))),
-                        ]
-
-                        for item_name, rate in gfa_affected:
-                            total = rate * gfa_qty
-                            st.info(
-                                f"""
-**{item_name}**
-Hitungan: Rp {rate:,.0f} x GFA: {gfa_qty:,.0f} m2
-Total {item_name}: Rp {total:,.0f}
-Terbilang: {n2w(total)}
-                                """
-                            )
-
-                c_sgfa_input, c_sgfa_info = st.columns([5, 1])
-                with c_sgfa_input:
-                    sgfa = st.number_input("SGFA (m2)", value=get_val("m_sgfa", 0.0), step=100.0, key=f"m_sgfa_{curr_id}")
-                with c_sgfa_info:
-                    st.write("")
-                    with st.popover(" "):
-                        st.info(
-                            f"""
-**SGFA**
-Used mainly for cost ratio/reporting reference.
-Current SGFA: {_safe_float(sgfa):,.0f} m2
-                            """
-                        )
+                land_area = st.number_input("Luas Tanah (m2)", value=get_val("m_land", 0.0), step=100.0, key=f"m_land_{curr_id}")
+                gba = st.number_input("GBA (m2)", value=get_val("m_gba", 0.0), step=100.0, key=f"m_gba_{curr_id}")
+                gfa = st.number_input("GFA (m2)", value=get_val("m_gfa", 0.0), step=100.0, key=f"m_gfa_{curr_id}")
+                sgfa = st.number_input("SGFA (m2)", value=get_val("m_sgfa", 0.0), step=100.0, key=f"m_sgfa_{curr_id}")
 
         with col_m2:
             with st.expander("Arsitektur", expanded=True):
