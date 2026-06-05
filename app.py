@@ -3938,8 +3938,6 @@ def render_feasibility_study_landing(): #start page
                 st.session_state.fs_landing_mode = "create"
                 st.rerun()
 
-        with col_load_btn:
-            st.info("**or load saved FS below:**")
 
 
     # ==================================================
@@ -3960,36 +3958,33 @@ def render_feasibility_study_landing(): #start page
                 st.rerun()
 
 
-        col_title, col_back = st.columns([5, 1])
+        create_col, _ = st.columns([2, 4])
 
-        with col_title.form("create_new_feasibility_study_form", clear_on_submit=False):
-            study_name = st.text_input(
-                "Feasibility Study Name",
-                placeholder="e.g. Project X - Option 1 - Rev 0"
-            )
+        with create_col:
+            with st.form("create_new_feasibility_study_form", clear_on_submit=False):
+                study_name = st.text_input(
+                    "Feasibility Study Name",
+                    placeholder="e.g. Project X - Option 1 - Rev 0"
+                )
 
-            create_clicked = st.form_submit_button(
-                "Create New Study",
-                type="primary",
-                width="stretch"
-            )
+                create_clicked = st.form_submit_button(
+                    "Create New Study",
+                    type="primary",
+                    width="stretch"
+                )
 
-            if create_clicked:
-                if study_name.strip() == "":
-                    st.warning("Please enter feasibility study name.")
-                else:
-                    st.session_state.confirm_create_new_study_start = True
-                    st.session_state.pending_create_new_study_start = study_name.strip()
+                if create_clicked:
+                    if study_name.strip() == "":
+                        st.warning("Please enter feasibility study name.")
+                    else:
+                        st.session_state.confirm_create_new_study_start = True
+                        st.session_state.pending_create_new_study_start = study_name.strip()
 
-        if st.session_state.get("confirm_create_new_study_start"):
-            pending_study_name = st.session_state.get("pending_create_new_study_start", "")
+            if st.session_state.get("confirm_create_new_study_start"):
+                pending_study_name = st.session_state.get("pending_create_new_study_start", "")
 
-            with st.container(border=True):
-                st.subheader("Create New Study")
-                st.write("Create and link this study to Archive?")
-                st.caption("Save the current page first if needed.")
-
-                col_cancel, col_confirm, _ = st.columns([1, 1, 4])
+                st.caption("Create and link this study to Archive?")
+                col_cancel, col_confirm = st.columns(2)
 
                 if col_cancel.button("Cancel", key="cancel_create_new_study_start", width="stretch"):
                     st.session_state.confirm_create_new_study_start = False
@@ -11992,10 +11987,6 @@ def main_app():
     st.session_state.current_study_name = current_study_name
 
     st.sidebar.badge(f"Current study: {current_study_name}")
-    if active_archive_id and active_archive_name:
-        st.sidebar.badge("Status: Linked to archive", color="green")
-    else:
-        st.sidebar.badge("Status: Unsaved (Click Save Button in Archive)", color="red")
 
     on = st.sidebar.toggle("Show detailed control.")
     if on:
