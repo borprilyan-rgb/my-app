@@ -3773,6 +3773,25 @@ def create_new_feasibility_study(study_name, project_type="Hotel"):
 
     return True
 
+def create_new_study_and_archive(study_name, project_type="Hotel"):
+    clean_name = str(study_name).strip()
+
+    if clean_name == "":
+        st.error("Please enter feasibility study name.")
+        return False
+
+    if not create_new_feasibility_study(clean_name, project_type=project_type):
+        return False
+
+    if save_snapshot(clean_name):
+        return True
+
+    st.warning(
+        f"Study **{clean_name}** was created in the current session, "
+        "but the initial archive record could not be created."
+    )
+    return False
+
 def generate_excel_template():
     """Generates an Excel template in memory with formatting and data validation."""
     
@@ -3857,10 +3876,8 @@ def render_feasibility_study_landing(): #start page
 
     if active_file_id and st.session_state.fs_landing_mode is None:
         
-        c1, c2 = st.columns([1, 1])
         
-        c1.success(f"**{active_file_name}** is currently loaded (You can start calculating your project)", icon=":material/check:")
-        c2.info("Use the page-level Save buttons or Archive > Online Backup to save changes.", icon=":material/help:")
+        st.success(f"**{active_file_name}** is currently loaded (You can start calculating your project)", icon=":material/check:")
 
         col_msg, col_back = st.columns([1, 5])
     
@@ -3888,7 +3905,7 @@ def render_feasibility_study_landing(): #start page
 
         with col_create_btn:
             if st.button(
-                "Create New Feasibility Study",
+                "Create New Study",
                 key="landing_choose_create_study",
                 type="primary",
                 width="stretch",
@@ -3913,6 +3930,8 @@ def render_feasibility_study_landing(): #start page
 
         with col_back:
             if st.button("Back", key="landing_create_back", width="stretch"):
+                st.session_state.confirm_create_new_study_start = False
+                st.session_state.pending_create_new_study_start = ""
                 st.session_state.fs_landing_mode = None
                 st.rerun()
 
@@ -3926,7 +3945,7 @@ def render_feasibility_study_landing(): #start page
             )
 
             create_clicked = st.form_submit_button(
-                "Create New Feasibility Study",
+                "Create New Study",
                 type="primary",
                 width="stretch"
             )
@@ -3935,11 +3954,30 @@ def render_feasibility_study_landing(): #start page
                 if study_name.strip() == "":
                     st.warning("Please enter feasibility study name.")
                 else:
-                    # Uses default project type from create_new_feasibility_study()
-                    # Usually default = Hotel
-                    if create_new_feasibility_study(study_name):
+                    st.session_state.confirm_create_new_study_start = True
+                    st.session_state.pending_create_new_study_start = study_name.strip()
+
+        if st.session_state.get("confirm_create_new_study_start"):
+            pending_study_name = st.session_state.get("pending_create_new_study_start", "")
+
+            with st.container(border=True):
+                st.subheader("Create New Study")
+                st.write("Create and link this study to Archive?")
+                st.caption("Save the current page first if needed.")
+
+                col_cancel, col_confirm, _ = st.columns([1, 1, 4])
+
+                if col_cancel.button("Cancel", key="cancel_create_new_study_start", width="stretch"):
+                    st.session_state.confirm_create_new_study_start = False
+                    st.session_state.pending_create_new_study_start = ""
+                    st.rerun()
+
+                if col_confirm.button("Confirm", key="confirm_create_new_study_start_btn", type="primary", width="stretch"):
+                    if create_new_study_and_archive(pending_study_name):
+                        st.session_state.confirm_create_new_study_start = False
+                        st.session_state.pending_create_new_study_start = ""
                         st.session_state.fs_landing_mode = None
-                        st.success(f"Started local study **{study_name.strip()}**. Use Archive > Online Backup > Save to archive it.")
+                        st.success(f"Study **{pending_study_name}** created and saved to archive.")
                         st.rerun()
     
     snapshots = load_snapshots()
@@ -4028,7 +4066,7 @@ def render_feasibility_study_landing(): #start page
 
         with col_prev:
             if st.button(
-                "Previous",
+                "<<",
                 key="fs_load_prev_page",
                 width="stretch",
                 disabled=st.session_state.fs_load_page <= 0
@@ -4046,7 +4084,7 @@ def render_feasibility_study_landing(): #start page
 
         with col_next:
             if st.button(
-                "Next",
+                ">>",
                 key="fs_load_next_page",
                 width="stretch",
                 disabled=st.session_state.fs_load_page >= total_pages - 1
@@ -5551,9 +5589,6 @@ def show_area_calculator():
     # ==================================================
     if area_page == "Excel":
         st.subheader("Area Analysis (Excel)")
-        st.caption(
-            "Download or upload the Area Calculator Excel Form, then review the current values below."
-        )
 
         st.markdown("##### Excel Form")
 
@@ -6130,28 +6165,29 @@ def show_area_calculator():
             ]
         )
 
-        st.subheader("File Information:")
-        s1, s2 = st.columns(2)
-        with s1:
-            st.markdown("##### Core Area")
-            st.dataframe(
-                core_summary_df,
-                width="stretch",
-                hide_index=True,
-                column_config={
-                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
-                },
-            )
-        with s2:
-            st.markdown("##### Opening / External")
-            st.dataframe(
-                opening_summary_df,
-                width="stretch",
-                hide_index=True,
-                column_config={
-                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
-                },
-            )
+        with st.expander("Summary of Key Area Metrics", expanded=False):
+            st.subheader("File Information:")
+            s1, s2 = st.columns(2)
+            with s1:
+                st.markdown("##### Core Area")
+                st.dataframe(
+                    core_summary_df,
+                    width="stretch",
+                    hide_index=True,
+                    column_config={
+                        "Value": st.column_config.NumberColumn("Value", format="%.2f"),
+                    },
+                )
+            with s2:
+                st.markdown("##### Opening / External")
+                st.dataframe(
+                    opening_summary_df,
+                    width="stretch",
+                    hide_index=True,
+                    column_config={
+                        "Value": st.column_config.NumberColumn("Value", format="%.2f"),
+                    },
+                )
 
 
     # ==================================================
@@ -11355,13 +11391,34 @@ def show_snapshots():
         )
         col_create, col_save, _ = st.columns([2, 2, 3])
 
-        if col_create.button("Create New", width="stretch", icon=icon_safe("create_new_folder")):
+        if col_create.button("Create New Study", width="stretch", icon=icon_safe("create_new_folder")):
             if snapshot_name.strip() == "":
                 col_create.warning("Please enter Project name.")
             else:
-                if create_new_feasibility_study(snapshot_name):
-                    st.success(f"Started local study **{snapshot_name.strip()}**. Use Save to archive it.")
+                st.session_state.confirm_create_new_study_archive = True
+                st.session_state.pending_create_new_study_archive = snapshot_name.strip()
+
+        if st.session_state.get("confirm_create_new_study_archive"):
+            pending_study_name = st.session_state.get("pending_create_new_study_archive", "")
+
+            with st.container(border=True):
+                st.subheader("Create New Study")
+                st.write("Create and link this study to Archive?")
+                st.caption("Save the current page first if needed.")
+
+                col_cancel, col_confirm, _ = st.columns([1, 1, 4])
+
+                if col_cancel.button("Cancel", key="cancel_create_new_study_archive", width="stretch"):
+                    st.session_state.confirm_create_new_study_archive = False
+                    st.session_state.pending_create_new_study_archive = ""
                     st.rerun()
+
+                if col_confirm.button("Confirm", key="confirm_create_new_study_archive_btn", type="primary", width="stretch"):
+                    if create_new_study_and_archive(pending_study_name):
+                        st.session_state.confirm_create_new_study_archive = False
+                        st.session_state.pending_create_new_study_archive = ""
+                        st.success(f"Study **{pending_study_name}** created and saved to archive.")
+                        st.rerun()
 
         if col_save.button(
             "Save",
@@ -11910,11 +11967,11 @@ def main_app():
     current_study_name = resolve_current_study_name()
     st.session_state.current_study_name = current_study_name
 
-    st.sidebar.caption(f"Current study: {current_study_name}")
+    st.sidebar.badge(f"Current study: {current_study_name}")
     if active_archive_id and active_archive_name:
-        st.sidebar.caption("Status: Linked to archive")
+        st.sidebar.badge("Status: Linked to archive", color="green")
     else:
-        st.sidebar.caption("Status: Unsaved / not archived")
+        st.sidebar.badge("Status: Unsaved (Click Save Button in Archive)", color="red")
 
     on = st.sidebar.toggle("Show detailed control.")
     if on:
