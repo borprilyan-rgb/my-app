@@ -3860,7 +3860,7 @@ def render_feasibility_study_landing(): #start page
         c1, c2 = st.columns([1, 1])
         
         c1.success(f"**{active_file_name}** is currently loaded (You can start calculating your project)", icon=":material/check:")
-        c2.info("Use **Quick Save** button on the sidebar to save calculation", icon=":material/help:")
+        c2.info("Use the page-level Save buttons or Archive > Online Backup to save changes.", icon=":material/help:")
 
         col_msg, col_back = st.columns([1, 5])
     
@@ -5320,8 +5320,6 @@ def summarize_restore_point_diff(current_project, restore_point_snapshot):
 #endregion
 
 def show_area_calculator():
-    st.title("Area Analysis")
-
     curr_id, curr_proj = get_current_project()
 
     if "data" not in curr_proj or not isinstance(curr_proj["data"], dict):
@@ -5472,6 +5470,48 @@ def show_area_calculator():
         st.session_state[area_main_page_key] = "Excel"
     if st.session_state.get(area_manual_page_key) not in [None, *manual_area_page_options]:
         st.session_state[area_manual_page_key] = "GBA Input"
+
+    current_area_main_page = st.session_state.get(area_main_page_key, "Excel")
+    current_area_manual_page = st.session_state.get(area_manual_page_key, "GBA Input")
+    current_area_page_label = (
+        current_area_manual_page
+        if current_area_main_page == "Manual Input"
+        else "Excel"
+    )
+
+    area_saveable_pages = {
+        "GBA Input",
+        "Pintu",
+        "Eksternal",
+        "Facility / Misc",
+        "Earthworks",
+        "Structural",
+        "Foundation",
+        "Architectural",
+        "FF&E",
+        "MEP",
+        "Utility",
+        "Consultancy",
+    }
+    area_save_enabled = current_area_page_label in area_saveable_pages
+
+    header_col, save_col = st.columns([8, 1], vertical_alignment="center")
+    with header_col:
+        st.title("Area Analysis")
+    with save_col:
+        area_save_clicked = st.button(
+            "Save",
+            key=f"save_area_current_page_{curr_id}",
+            type="primary",
+            width="stretch",
+            icon=mi("save") if "mi" in globals() else None,
+            help=(
+                f"Save current Area page: {current_area_page_label}"
+                if area_save_enabled
+                else f"No save action for current Area page: {current_area_page_label}"
+            ),
+            disabled=not area_save_enabled,
+        )
 
     if callable(getattr(st, "segmented_control", None)):
         area_main_page = st.segmented_control(
@@ -6118,9 +6158,9 @@ def show_area_calculator():
     # TAB 2 - GBA INPUT DRAFT ONLY
     # ==================================================
     elif area_page == "GBA Input":
-        st.subheader("GBA Input Draft")
+        st.subheader("Manual Input")
         st.caption(
-            "Edit here first. Calculations and cost sync will not update until you click Save Change."
+            "Edit here first. Calculations and cost sync will not update until you click Save."
         )
 
         with st.container(border=True):
@@ -6382,17 +6422,7 @@ def show_area_calculator():
             },
         )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_area_clicked = st.button(
-                "Save Change",
-                key=f"save_area_table_{curr_id}",
-                type="primary",
-                width="stretch"
-            )
-
-        if save_area_clicked:
+        if area_save_clicked:
             warnings = validate_consultant_summary_input(edited_draft_df)
 
             if warnings:
@@ -6795,17 +6825,7 @@ def show_area_calculator():
             f"Kaca {preview_door_glass:,} unit"
         )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_door_cloud_clicked = st.button(
-                "Save Change",
-                key=f"save_door_table_to_cloud_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_door_cloud_clicked:
+        if area_save_clicked:
             if save_door_table_to_cloud(
                 edited_door_df=edited_door_df,
                 area_df=edited_df,
@@ -6981,17 +7001,7 @@ def show_area_calculator():
         g2.metric("Other External Works", f"Rp {total_other_amount:,.0f}")
         g3.metric("External Works Grand Total", f"Rp {total_external_amount:,.0f}")
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_external_clicked = st.button(
-                "Save Change",
-                key=f"save_external_{curr_id}",
-                type="primary",
-                width="stretch"
-            )
-
-        if save_external_clicked:
+        if area_save_clicked:
             curr_proj["data"]["area_external_table_data"] = saved_other_records
             curr_proj["data"]["area_external_amount_calc"] = total_external_amount
             curr_proj["data"]["area_landscape_qty_calc"] = landscape_qty
@@ -7134,17 +7144,7 @@ def show_area_calculator():
         group_misc_area = t_pub_fac_area + total_res_fac_amount + t_proj_fac_area
         st.metric("Total Facility / Misc Works", f"Rp {group_misc_area:,.0f}")
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_res_fac_clicked = st.button(
-                "Save Change",
-                key=f"save_res_fac_{curr_id}",
-                type="primary",
-                width="stretch"
-            )
-
-        if save_res_fac_clicked:
+        if area_save_clicked:
             curr_proj["data"]["area_res_fac_table_data"] = saved_res_fac_records
             curr_proj["data"]["area_res_fac_amount_calc"] = total_res_fac_amount
             curr_proj["data"]["m_fac_pub"] = pub_fac_m2_area
@@ -7251,17 +7251,7 @@ def show_area_calculator():
             diff_c2.metric("Earthworks Detail Total", f"Rp {earthwork_diff_status['detail_total']:,.0f}")
             diff_c3.metric("Current Total Difference", f"Rp {earthwork_diff_status['total_difference']:,.0f}")
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_earthwork_detail_clicked = st.button(
-                "Save Earthworks Detail",
-                key=f"earthwork_detail_save_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_earthwork_detail_clicked:
+        if area_save_clicked:
             curr_proj["data"]["earthwork_detail_enabled"] = earthwork_detail_enabled
             curr_proj["data"]["earthwork_detail_rows"] = earthwork_detail_rows
             curr_proj["data"]["earthwork_detail_total"] = earthwork_detail_total
@@ -7360,17 +7350,7 @@ def show_area_calculator():
                 "Cost Analysis has not been updated automatically."
             )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_foundation_detail_clicked = st.button(
-                "Save Foundation Detail",
-                key=f"foundation_detail_save_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_foundation_detail_clicked:
+        if area_save_clicked:
             curr_proj["data"]["foundation_detail_rows"] = foundation_detail_rows
             curr_proj["data"]["foundation_detail_total"] = foundation_detail_total
             curr_proj["data"]["foundation_derived_unit_price"] = foundation_derived_unit_price
@@ -7474,17 +7454,7 @@ def show_area_calculator():
                 "Cost Analysis has not been updated automatically."
             )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_structural_detail_clicked = st.button(
-                "Save Structural Detail",
-                key=f"structural_detail_save_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_structural_detail_clicked:
+        if area_save_clicked:
             curr_proj["data"]["structural_detail_rows"] = structural_detail_rows
             curr_proj["data"]["structural_detail_total"] = structural_detail_total
             curr_proj["data"]["structural_derived_unit_price"] = structural_derived_unit_price
@@ -7653,17 +7623,7 @@ def show_area_calculator():
                 "Cost Analysis has not been updated automatically."
             )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_architectural_detail_clicked = st.button(
-                "Save Facade + Architectural Detail",
-                key=f"architectural_detail_save_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_architectural_detail_clicked:
+        if area_save_clicked:
             curr_proj["data"]["area_keliling_facade"] = keliling_facade
             curr_proj["data"]["area_panjang_railing"] = panjang_railing
             curr_proj["data"]["area_tinggi_railing"] = tinggi_railing
@@ -7795,17 +7755,7 @@ def show_area_calculator():
                 "Cost Analysis has not been updated automatically."
             )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_consultancy_detail_clicked = st.button(
-                "Save Consultancy Detail",
-                key=f"consultancy_detail_save_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_consultancy_detail_clicked:
+        if area_save_clicked:
             store_consultancy_detail_outputs(curr_proj["data"], consultancy_outputs)
 
             save_ok = save_after_user_action("Save Consultancy Detail")
@@ -7911,17 +7861,7 @@ def show_area_calculator():
                 "Cost Analysis has not been updated automatically."
             )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_ffe_detail_clicked = st.button(
-                "Save FF&E Detail",
-                key=f"ffe_detail_save_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_ffe_detail_clicked:
+        if area_save_clicked:
             curr_proj["data"]["ffe_detail_rows"] = ffe_detail_rows
             curr_proj["data"]["ffe_detail_total"] = ffe_detail_total
             curr_proj["data"]["ffe_derived_unit_price"] = ffe_derived_unit_price
@@ -8027,17 +7967,7 @@ def show_area_calculator():
                 "Cost Analysis has not been updated automatically."
             )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_mep_detail_clicked = st.button(
-                "Save MEP Detail",
-                key=f"mep_detail_save_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_mep_detail_clicked:
+        if area_save_clicked:
             curr_proj["data"]["mep_detail_rows"] = mep_detail_rows
             curr_proj["data"]["mep_detail_total"] = mep_detail_total
             curr_proj["data"]["mep_derived_unit_price"] = mep_derived_unit_price
@@ -8143,17 +8073,7 @@ def show_area_calculator():
                 "Cost Analysis has not been updated automatically."
             )
 
-        save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
-
-        with save_c1:
-            save_utility_detail_clicked = st.button(
-                "Save Utility Detail",
-                key=f"utility_detail_save_{curr_id}",
-                type="primary",
-                width="stretch",
-            )
-
-        if save_utility_detail_clicked:
+        if area_save_clicked:
             curr_proj["data"]["utility_detail_rows"] = utility_detail_rows
             curr_proj["data"]["utility_detail_total"] = utility_detail_total
             curr_proj["data"]["utility_derived_unit_price"] = utility_derived_unit_price
@@ -11983,11 +11903,10 @@ def main_app():
     current_index = proj_ids.index(curr_id) if curr_id in proj_ids else 0
     
     # ==================================================
-    # SIDEBAR CURRENT FILE / QUICK SAVE
+    # SIDEBAR CURRENT FILE
     # ==================================================
     active_archive_id = st.session_state.get("loaded_snapshot_id")
     active_archive_name = st.session_state.get("loaded_snapshot_name")
-    active_file_name = st.session_state.get("loaded_snapshot_name")
     current_study_name = resolve_current_study_name()
     st.session_state.current_study_name = current_study_name
 
@@ -11999,35 +11918,6 @@ def main_app():
 
     on = st.sidebar.toggle("Show detailed control.")
     if on:
-        if active_archive_id:
-            if st.sidebar.button(
-                "Quick Save",
-                key="sidebar_save_current_archive",
-                type="primary",
-                width="stretch",
-                icon=mi("save") if "mi" in globals() else None,
-                help=f"{active_file_name} is currently loaded."
-            ):
-                snapshot_ok = overwrite_current_snapshot()
-                storage_ok = save_data()
-
-                if snapshot_ok and storage_ok:
-                    st.sidebar.success("Saved.")
-                else:
-                    st.sidebar.error("Quick Save failed - check errors above.")
-                st.rerun()
-        else:
-            st.sidebar.info("No file linked yet.")
-            st.sidebar.button(
-                "Quick Save",
-                key="sidebar_save_disabled_no_archive",
-                width="stretch",
-                disabled=True,
-                icon=mi("save") if "mi" in globals() else None,
-            )
-
-
-
         # ==================================================
         # ACTIVE COMPONENT SELECTOR
         # ==================================================
