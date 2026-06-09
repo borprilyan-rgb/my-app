@@ -65,11 +65,11 @@ import copy
 # ==================================================
 DEFAULT_REPORT_CONFIG = {
     "port_meta": {
-        "title": "PROJECT PORTFOLIO | PIK2.D2.GINZA.MIDTOWN OPT.2 R(1)",
-        "ref": "REF. DATA R(0) | CONCEPT DWG 2026-02-02.DPA",
-        "version": "R (1) OPT2",
-        "updated": "02-02-2026",
-        "created": "02-02-2026"
+        "title": "",
+        "ref": "",
+        "version": "",
+        "updated": "",
+        "created": ""
     },
     "export_settings": {
         "prepared_by": "",
@@ -10580,14 +10580,16 @@ CREATED &nbsp;: {created}
             "prepared_by": "",
             "checked_by": ""
         })
+        today_iso = date.today().strftime("%Y-%m-%d")
+        today_display = date.today().strftime("%d-%m-%Y")
         default_header_inputs = {
-            "project_location": "PIK2.D2.",
-            "project_name": "GINZA.MIDTOWN",
-            "option_number": "2",
-            "revision_number": "0",
-            "drawing_date": "2026-02-02",
-            "updated_date": date.today().strftime("%d-%m-%Y"),
-            "created_date": date.today().strftime("%d-%m-%Y"),
+            "project_location": "",
+            "project_name": "",
+            "option_number": "",
+            "revision_number": "",
+            "drawing_date": today_iso,
+            "updated_date": today_display,
+            "created_date": today_display,
         }
         header_inputs = cfg.setdefault("header_inputs", copy.deepcopy(default_header_inputs))
         for key, value in default_header_inputs.items():
@@ -10619,7 +10621,8 @@ CREATED &nbsp;: {created}
                 header_inputs["project_location"] = normalize_header_token(
                     c1.text_input(
                         "Project Location",
-                        value=header_inputs.get("project_location", "PIK2.D2.")
+                        value=header_inputs.get("project_location", ""),
+                        placeholder="Example: PIK2.D2."
                     ),
                     trailing_dot=True,
                 )
@@ -10627,7 +10630,8 @@ CREATED &nbsp;: {created}
                 header_inputs["project_name"] = normalize_header_token(
                     c2.text_input(
                         "Project Name",
-                        value=header_inputs.get("project_name", "GINZA.MIDTOWN")
+                        value=header_inputs.get("project_name", ""),
+                        placeholder="Example: GINZA.MIDTOWN"
                     )
                 )
 
@@ -10635,12 +10639,14 @@ CREATED &nbsp;: {created}
 
                 header_inputs["option_number"] = c3.text_input(
                     "Option Number",
-                    value=header_inputs.get("option_number", "2")
+                    value=header_inputs.get("option_number", ""),
+                    placeholder="Example: 2"
                 )
 
                 header_inputs["revision_number"] = c4.text_input(
                     "Revision Number",
-                    value=header_inputs.get("revision_number", "0")
+                    value=header_inputs.get("revision_number", ""),
+                    placeholder="Example: 0"
                 )
 
                 c5, c6, c7 = st.columns(3)
@@ -10648,8 +10654,8 @@ CREATED &nbsp;: {created}
                 drawing_date_value = c5.date_input(
                     "Drawing Date",
                     value=_parse_date_safe(
-                        header_inputs.get("drawing_date", "2026-02-02"),
-                        fallback=date(2026, 2, 2),
+                        header_inputs.get("drawing_date", today_iso),
+                        fallback=date.today(),
                         dayfirst=False
                     )
                 )

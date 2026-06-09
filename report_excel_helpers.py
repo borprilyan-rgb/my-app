@@ -176,6 +176,7 @@ def normalize_header_token(value, trailing_dot=False):
     text = str(value or "").strip().upper()
     text = re.sub(r"(?<=[A-Z])\s+(?=\d)", "", text)
     text = re.sub(r"\s+", ".", text)
+    text = re.sub(r"\.+", ".", text)
 
     if trailing_dot and text and not text.endswith("."):
         text = f"{text}."
@@ -195,19 +196,28 @@ def build_portfolio_meta_from_inputs(header_inputs):
     updated_date = str(header_inputs.get("updated_date", "")).strip()
     created_date = str(header_inputs.get("created_date", "")).strip()
 
-    title = (
-        f"PROJECT PORTFOLIO | "
-        f"{project_location}{project_name} "
-        f"OPT.{option_number} "
-        f"R({revision_number})"
-    )
+    project_label = f"{project_location}{project_name}".strip(".")
+    title_parts = [project_label] if project_label else []
+    if option_number:
+        title_parts.append(f"OPT.{option_number}")
+    title_revision = "R(1)" if revision_number else ""
+    if title_revision:
+        title_parts.append(title_revision)
+    title = "PROJECT PORTFOLIO"
+    if title_parts:
+        title = f"{title} | {' '.join(title_parts)}"
 
-    ref = (
-        f"REF. DATA R({revision_number}) | "
-        f"CONCEPT DWG {drawing_date}.DPA"
-    )
+    ref_parts = ["REF. DATA"]
+    if revision_number:
+        ref_parts.append(f"R({revision_number})")
+    ref = f"{' '.join(ref_parts)} | CONCEPT DWG {drawing_date}.DPA"
 
-    version = f"R ({revision_number}) OPT{option_number}"
+    version_parts = []
+    if title_revision:
+        version_parts.append("R (1)")
+    if option_number:
+        version_parts.append(f"OPT{option_number}")
+    version = " ".join(version_parts) if version_parts else "-"
 
     return {
         "title": title,
