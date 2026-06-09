@@ -12277,7 +12277,7 @@ def main_app():
 
         st.rerun()
         
-    st.sidebar.caption(f"v{APP_VERSION} | (c) 2026 QS & Procurement - ASG")
+    st.sidebar.caption(f"v{APP_VERSION} | &copy; 2026 QS & Procurement - ASG")
     #endregion
 
     #debugcode
