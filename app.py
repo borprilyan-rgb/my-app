@@ -5554,6 +5554,39 @@ def show_area_calculator():
             disabled=not area_save_enabled,
         )
 
+    with st.container(border=True):
+        st.markdown("##### GBA Setup")
+        c_h, c_b, c_u = st.columns(3)
+
+        c_h.number_input(
+            "Basements / LG",
+            min_value=0,
+            value=int(get_area_val("base_in", 1)),
+            step=1,
+            key=base_key,
+            help="1 = LG, 2 = B1, 3 = B2, etc",
+        )
+
+        c_b.number_input(
+            "Floors",
+            min_value=1,
+            value=int(get_area_val("up_in", 5)),
+            step=1,
+            key=up_key,
+        )
+
+        c_u.number_input(
+            "Luas Tanah (m2)",
+            min_value=0.0,
+            value=_safe_float(get_area_val("m_land", 0.0)),
+            step=100.0,
+            key=land_key,
+        )
+
+        curr_proj["data"]["base_in"] = int(st.session_state[base_key])
+        curr_proj["data"]["up_in"] = int(st.session_state[up_key])
+        curr_proj["data"]["m_land"] = _safe_float(st.session_state[land_key])
+
     if callable(getattr(st, "segmented_control", None)):
         area_main_page = st.segmented_control(
             "Area Input Mode",
@@ -6201,46 +6234,6 @@ def show_area_calculator():
         st.caption(
             "Edit here first. Calculations and cost sync will not update until you click Save."
         )
-
-        with st.container(border=True):
-            c_name, c_h, c_b, c_u = st.columns(4)
-
-            c_name.text_input(
-                "Project Name",
-                value=tower_name,
-                key=f"wid_tname_{curr_id}",
-                disabled=True,
-                help="This follows the active component name from the sidebar.",
-            )
-
-            c_h.number_input(
-                "Basements / LG",
-                min_value=0,
-                value=int(get_area_val("base_in", 1)),
-                step=1,
-                key=base_key,
-                help="1 = LG, 2 = B1, 3 = B2, etc",
-            )
-
-            c_b.number_input(
-                "Floors",
-                min_value=1,
-                value=int(get_area_val("up_in", 5)),
-                step=1,
-                key=up_key,
-            )
-
-            c_u.number_input(
-                "Luas Tanah (m2)",
-                min_value=0.0,
-                value=_safe_float(get_area_val("m_land", 0.0)),
-                step=100.0,
-                key=land_key,
-            )
-
-            curr_proj["data"]["base_in"] = int(st.session_state[base_key])
-            curr_proj["data"]["up_in"] = int(st.session_state[up_key])
-            curr_proj["data"]["m_land"] = _safe_float(st.session_state[land_key])
 
         def store_gba_setup_table_outputs(records):
             clean_records = clean_area_records(records)
