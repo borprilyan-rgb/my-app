@@ -3102,6 +3102,9 @@ def create_area_excel_form_bytes(
     # Area Input
     mark_range_dark_red(ws, f"M{start_row}:P{total_row}")
     mark_range_dark_red(ws, f"C{total_row}:T{total_row}")
+    for row in ws.iter_rows(min_row=start_row, max_row=end_row, min_col=8, max_col=10):
+        for cell in row:
+            _set_font_color(cell, "000000")
 
     # Area Chart is retained for formulas/references but hidden by default.
     ws_chart.sheet_state = "hidden"
