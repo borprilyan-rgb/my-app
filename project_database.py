@@ -237,5 +237,69 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 0.0, "san_mushola": 0.0, "ext_land": 0.0,
         "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 0.0,
         "cons": 52500.0
+    },
+    "Apartment 3": {
+    # Foundation & Structure
+    "struc_earth": 25000.0,
+    "struc_found": 400000.0,
+    "struc_work": 1933000.0,
+
+    # Architecture
+    "arch_base": 1058000.0,
+    "lobby": 1500000.0,
+    "facade_precast_rate": 800000.0,
+    "facade_window_rate": 1250000.0,
+    "facade_double_rate": 2500000.0,
+
+    # Pintu & Hardware
+    "door_wood": 3500000.0,
+    "door_steel": 7000000.0,
+    "hw_wood": 750000.0,
+    "hw_steel": 1850000.0,
+    "door_glass": 1000000.0,
+
+    # Sanitari
+    "san_room_rate": 26875000.0,
+    "san_pub_f": 98075000.0,
+    "san_pub_m": 77050000.0,
+    "san_dis": 30275000.0,
+    "san_mushola": 36500000.0,
+
+    # Lantai, Finishing & Interior
+    "fl_waste": 10.0,
+    "fl_ht_rate": {"Type1": 150000.0, "Type2": 0.0},
+    "fl_vinyl_rate": {"Type1": 0.0, "Type2": 750000.0},
+    "fl_marmer_rate": {"Type1": 750000.0, "Type2": 0.0},
+
+    "gondola": 600000000.0,
+    "carpet": 1200000.0,
+    "glass": 700000.0,
+
+    "ffe": 32000000.0,
+    "misc": 32000000.0,
+    "kitchen": 0.0,
+
+    # Calculation defaults / percentages from database
+    "facade_precast_pct": 10.0,
+    "facade_window_pct": 80.0,
+    "facade_double_pct": 10.0,
+    "fl_ht_pct": 90.0,
+    "fl_vinyl_pct": 0.0,
+    "fl_marmer_pct": 10.0,
+    "san_room_qty": 1.0,
+    "railing_qty": 0.0,
+
+    "mep": 2810941.0,
+    "utility": 93058.0,
+
+    "railing_rate": 2200000.0,
+    "skylight_rate": 4500000.0,
+
+    "ext_land": 1563000.0,
+    "fac_pub": 31000000.0,
+    "fac_res": 10000000.0,
+    "fac_proj": 2000000000.0,
+
+    "cons": 174000.0
     }
 }
