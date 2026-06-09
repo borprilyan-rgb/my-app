@@ -10574,8 +10574,6 @@ CREATED &nbsp;: {created}
     # --- TAB 1: EDITABLE NATIVE COMPONENTS ---
     # --- TAB 1: CONFIG ---
     with summary_tabs[0]:
-        st.subheader("Config")
-        st.caption("Configure the report header and assumptions used in both FAD and Rekap previews.")
 
         cfg = get_report_config()
         export_settings = cfg.setdefault("export_settings", {
@@ -10609,44 +10607,12 @@ CREATED &nbsp;: {created}
             value=export_settings.get("checked_by", "")
         )
 
-        project_count = len(st.session_state.projects)
-        assumption_count = len(port_assumptions_df)
-
-        st.markdown(
-            f"""
-            <div class="summary-kpi-grid">
-                <div class="summary-kpi-card">
-                    <div class="summary-kpi-label">Active Projects</div>
-                    <div class="summary-kpi-value">{project_count}</div>
-                </div>
-                <div class="summary-kpi-card">
-                    <div class="summary-kpi-label">Assumptions</div>
-                    <div class="summary-kpi-value">{assumption_count} items</div>
-                </div>
-                <div class="summary-kpi-card">
-                    <div class="summary-kpi-label">Output Format</div>
-                    <div class="summary-kpi-value">FAD + Rekap</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
         col_cfg, col_preview = st.columns([1.1, 1], gap="large")
 
         with col_cfg:
             with st.container(border=True):
                 st.markdown("##### Header Configuration")
-                st.caption("Input the variables only. The report header is generated automatically.")
 
-                st.markdown(
-                    """
-                    <div class="summary-config-desc">
-                        These fields control the blue report header. The same header will appear in both FAD and Rekap.
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
 
                 c1, c2 = st.columns(2)
 
@@ -10665,7 +10631,7 @@ CREATED &nbsp;: {created}
                     )
                 )
 
-                c3, c4, c5 = st.columns(3)
+                c3, c4 = st.columns(2)
 
                 header_inputs["option_number"] = c3.text_input(
                     "Option Number",
@@ -10676,6 +10642,8 @@ CREATED &nbsp;: {created}
                     "Revision Number",
                     value=header_inputs.get("revision_number", "0")
                 )
+
+                c5, c6, c7 = st.columns(3)
 
                 drawing_date_value = c5.date_input(
                     "Drawing Date",
@@ -10688,7 +10656,7 @@ CREATED &nbsp;: {created}
 
                 header_inputs["drawing_date"] = drawing_date_value.strftime("%Y-%m-%d")
 
-                c6, c7 = st.columns(2)
+                
 
                 updated_date_value = c6.date_input(
                     "Updated Date",
@@ -10719,10 +10687,6 @@ CREATED &nbsp;: {created}
 
             st.markdown(
                 f"""
-<div class="summary-note-box">
-This preview uses the same header renderer used in FAD and Rekap.
-Adjust the fields on the left and the preview will update automatically.
-</div>
 <div class="asg-container">
 {render_portfolio_header(port_meta)}
 </div>
@@ -10833,11 +10797,6 @@ Adjust the fields on the left and the preview will update automatically.
                 type="primary"
             )
 
-        with col_btn2:
-            st.info(
-                "PDF export removed. Please export the generated Excel file to PDF from Excel for exact formatting."
-            )
-                
         header_html = f"""
         <div class="asg-container">
             {render_portfolio_header(port_meta)}
@@ -10952,29 +10911,6 @@ Adjust the fields on the left and the preview will update automatically.
                 width="stretch",
                 type="primary"
             )
-
-        with col_info:
-            curr_id, curr_proj = get_current_project()
-            curr_data = curr_proj.get("data", {}) if isinstance(curr_proj, dict) else {}
-            stored_total = _safe_float(curr_data.get("grand_total_project", 0))
-            recap_values = math_engine(curr_proj) if isinstance(curr_proj, dict) else {}
-            recap_total = _safe_float(recap_values.get("TOTAL, EXCLD PPN", 0))
-            diff_total = recap_total - stored_total
-            diff_pct = (diff_total / stored_total * 100) if stored_total > 0 else 0
-            tolerance = max(1000, stored_total * 0.0001)
-            control_msg = (
-                f"Stored Cost Analysis Total: Rp {stored_total:,.0f} | "
-                f"Recap Calculated Total: Rp {recap_total:,.0f} | "
-                f"Difference: Rp {diff_total:,.0f} ({diff_pct:,.4f}%)"
-            )
-
-            if abs(diff_total) <= tolerance:
-                st.success(f"Recap matches Cost Analysis control total. {control_msg}")
-            else:
-                st.warning(
-                    "Recap differs from stored Cost Analysis total. Check whether Cost Analysis was saved or formulas changed. "
-                    + control_msg
-                )
 
         # --- GENERATE HTML PREVIEW ---
         bg_colors = ["#EAEAEA", "#FCE4D6", "#F2DCDB", "#E1D5E7", "#DDEBF7", "#E2EFDA", "#D9E1F2", "#F4B084", "#FFF2CC"]
