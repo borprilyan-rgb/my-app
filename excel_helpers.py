@@ -1668,36 +1668,19 @@ def create_area_excel_form_bytes(
     start_row = 5
     end_row = start_row + len(floor_rows) - 1
     total_row = end_row + 1
+    area_gba_total_ref = f"='Area Input'!M{total_row}"
 
     # ==================================================
     # AREA INPUT SHEET
     # ==================================================
     ws.sheet_view.showGridLines = False
 
-    ws.merge_cells("A1:N1")
+    ws.merge_cells("A1:P1")
     ws["A1"] = f"AREA INPUT FORM - {project_name or 'PROJECT'}"
     ws["A1"].font = Font(bold=True, color=white, size=14)
     ws["A1"].fill = PatternFill("solid", fgColor=dark)
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 26
-
-    ws.merge_cells("A2:D2")
-    ws["A2"] = "BASIC FLOOR INFO"
-
-    ws.merge_cells("E2:G2")
-    ws["E2"] = "GBA"
-
-    ws.merge_cells("H2:H2")
-    ws["H2"] = "GFA"
-
-    ws.merge_cells("I2:I2")
-    ws["I2"] = "SGFA"
-
-    ws.merge_cells("J2:K2")
-    ws["J2"] = "NFA"
-
-    ws.merge_cells("L2:N2")
-    ws["L2"] = "FORMULA CHECK"
 
     ws["A3"] = "FL"
     ws["B3"] = "Space Type"
@@ -1710,9 +1693,11 @@ def create_area_excel_form_bytes(
     ws["I3"] = "Koridor/Lobby"
     ws["J3"] = "Unit Area"
     ws["K3"] = "Office"
-    ws["L3"] = "TOTAL"
+    ws["L3"] = ""
     ws["M3"] = "GBA"
     ws["N3"] = "GFA"
+    ws["O3"] = "SGFA"
+    ws["P3"] = "NFA"
 
     # Hidden stable import key row
     ws["A4"] = "FL"
@@ -1726,19 +1711,16 @@ def create_area_excel_form_bytes(
     ws["I4"] = "Koridor/Lobby"
     ws["J4"] = "Unit Area"
     ws["K4"] = "Office"
-    ws["L4"] = "TOTAL"
+    ws["L4"] = ""
     ws["M4"] = "GBA"
     ws["N4"] = "GFA"
+    ws["O4"] = "SGFA"
+    ws["P4"] = "NFA"
     ws.row_dimensions[4].hidden = True
 
-    style_range(ws, "A2:D2", blue, bold=True)
-    style_range(ws, "E2:G2", gray, bold=True)
-    style_range(ws, "H2:H2", yellow, bold=True)
-    style_range(ws, "I2:I2", green, bold=True)
-    style_range(ws, "J2:K2", blue, bold=True)
-    style_range(ws, "L2:N2", formula_fill, bold=True)
+    style_range(ws, "A2:P2", None)
 
-    style_range(ws, "A3:N4", dark, font_color=white, bold=True)
+    style_range(ws, "A3:P4", dark, font_color=white, bold=True)
 
     for r, (fl, space_type, height) in enumerate(floor_rows, start=start_row):
         ws.cell(r, 1).value = fl
@@ -1749,25 +1731,30 @@ def create_area_excel_form_bytes(
         for c in range(5, 12):
             ws.cell(r, c).value = 0
 
-        ws.cell(r, 12).value = f"=SUM(E{r}:K{r})"
-        ws.cell(r, 13).value = f"=L{r}"
-        ws.cell(r, 14).value = f"=L{r}-SUM(E{r}:G{r})"
+        ws.cell(r, 12).value = None
+        ws.cell(r, 13).value = f"=SUM(E{r}:K{r})"
+        ws.cell(r, 14).value = f"=SUM(H{r}:K{r})"
+        ws.cell(r, 15).value = f"=SUM(I{r}:K{r})"
+        ws.cell(r, 16).value = f"=SUM(J{r}:K{r})"
 
     ws.cell(total_row, 1).value = "TOTAL"
     ws.cell(total_row, 1).font = Font(bold=True)
 
-    for c in range(3, 15):
+    for c in range(3, 17):
         col = get_column_letter(c)
-        ws.cell(total_row, c).value = f"=SUM({col}{start_row}:{col}{end_row})"
+        if c == 12:
+            ws.cell(total_row, c).value = None
+        else:
+            ws.cell(total_row, c).value = f"=SUM({col}{start_row}:{col}{end_row})"
         ws.cell(total_row, c).font = Font(bold=True)
 
-    style_range(ws, f"A{start_row}:N{total_row}", None)
-    style_range(ws, f"L{start_row}:N{total_row}", formula_fill)
+    style_range(ws, f"A{start_row}:P{total_row}", None)
+    style_range(ws, f"M{start_row}:P{total_row}", formula_fill)
     style_range(ws, f"A{total_row}:B{total_row}", dark, font_color=white, bold=True)
-    style_range(ws, f"C{total_row}:N{total_row}", "FFFFFF", font_color="000000", bold=True)
+    style_range(ws, f"C{total_row}:P{total_row}", "FFFFFF", font_color="000000", bold=True)
 
     # Editable cells only
-    lock_range(ws, f"A1:N{total_row}")
+    lock_range(ws, f"A1:P{total_row}")
     unlock_range(ws, f"A{start_row}:K{end_row}")
 
     # Data validation for Space Type
@@ -1780,7 +1767,7 @@ def create_area_excel_form_bytes(
     dv_space.add(f"B{start_row}:B{end_row}")
 
     # Number formats
-    for row in ws.iter_rows(min_row=start_row, max_row=total_row, min_col=3, max_col=14):
+    for row in ws.iter_rows(min_row=start_row, max_row=total_row, min_col=3, max_col=16):
         for cell in row:
             cell.number_format = '#,##0.00'
 
@@ -1800,11 +1787,15 @@ def create_area_excel_form_bytes(
         "I": 16,
         "J": 14,
         "K": 12,
-        "L": 14,
+        "L": 3,
         "M": 14,
         "N": 14,
+        "O": 14,
+        "P": 14,
     }.items():
         ws.column_dimensions[col].width = width
+    ws.column_dimensions["K"].hidden = True
+    ws.column_dimensions["L"].hidden = True
 
     ws.freeze_panes = "A5"
     ws.protection.sheet = True
@@ -2211,7 +2202,7 @@ def create_area_excel_form_bytes(
 
     summary_start = earth_total_row + 2
     ws_earth.cell(summary_start, 1).value = "GBA"
-    ws_earth.cell(summary_start, 2).value = _excel_safe_float(earthwork_gba)
+    ws_earth.cell(summary_start, 2).value = area_gba_total_ref
     ws_earth.cell(summary_start + 1, 1).value = "Earthworks Detail Total"
     ws_earth.cell(summary_start + 1, 2).value = f"=F{earth_total_row}"
     ws_earth.cell(summary_start + 2, 1).value = "Derived Earthwork Price"
@@ -2299,7 +2290,7 @@ def create_area_excel_form_bytes(
 
     foundation_summary_start = foundation_total_row + 2
     ws_found.cell(foundation_summary_start, 1).value = "GBA"
-    ws_found.cell(foundation_summary_start, 2).value = _excel_safe_float(foundation_gba)
+    ws_found.cell(foundation_summary_start, 2).value = area_gba_total_ref
     ws_found.cell(foundation_summary_start + 1, 1).value = "Foundation Detail Total"
     ws_found.cell(foundation_summary_start + 1, 2).value = f"=F{foundation_total_row}"
     ws_found.cell(foundation_summary_start + 2, 1).value = "Derived Foundation Rate"
@@ -2386,7 +2377,7 @@ def create_area_excel_form_bytes(
         ws_struct.cell(r, 7).value = _excel_safe_float(row.get("unit_price", 0.0))
 
         if idx == 0:
-            ws_struct.cell(r, 6).value = f"={_excel_safe_float(structural_gba)}*D{r}"
+            ws_struct.cell(r, 6).value = f"{area_gba_total_ref}*D{r}"
         elif idx in [1, 2, 3]:
             ws_struct.cell(r, 6).value = f"=F{struct_start_row}*D{r}"
         elif idx == 4:
@@ -2404,7 +2395,7 @@ def create_area_excel_form_bytes(
 
     struct_summary_start = struct_total_row + 2
     ws_struct.cell(struct_summary_start, 1).value = "GBA"
-    ws_struct.cell(struct_summary_start, 2).value = _excel_safe_float(structural_gba)
+    ws_struct.cell(struct_summary_start, 2).value = area_gba_total_ref
     ws_struct.cell(struct_summary_start + 1, 1).value = "Structural Detail Total"
     ws_struct.cell(struct_summary_start + 1, 2).value = f"=H{struct_total_row}"
     ws_struct.cell(struct_summary_start + 2, 1).value = "Derived Structural Rate"
@@ -2771,10 +2762,9 @@ def create_area_excel_form_bytes(
     ws_mep["A2"].font = Font(italic=True, color=dark, size=10)
     ws_mep["A2"].alignment = Alignment(horizontal="left", vertical="center")
 
-    ws_mep["A3"] = "Current Project GBA"
-    ws_mep["B3"] = "='Area Input'!M13"
-    ws_mep["C3"] = "Reminder only - not imported as a detail row"
-    style_range(ws_mep, "A3:C3", formula_fill, bold=True)
+    ws_mep["A3"] = None
+    ws_mep["B3"] = None
+    ws_mep["C3"] = None
 
     mep_headers = ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)", "Amount (Rp)"]
     for c, h in enumerate(mep_headers, start=1):
@@ -2805,7 +2795,7 @@ def create_area_excel_form_bytes(
 
     mep_summary_start = mep_total_row + 2
     ws_mep.cell(mep_summary_start, 1).value = "GBA"
-    ws_mep.cell(mep_summary_start, 2).value = _excel_safe_float(mep_gba)
+    ws_mep.cell(mep_summary_start, 2).value = area_gba_total_ref
     ws_mep.cell(mep_summary_start + 1, 1).value = "MEP Detail Total"
     ws_mep.cell(mep_summary_start + 1, 2).value = f"=F{mep_total_row}"
     ws_mep.cell(mep_summary_start + 2, 1).value = "Derived MEP Rate"
@@ -2854,10 +2844,9 @@ def create_area_excel_form_bytes(
     ws_utility["A2"].font = Font(italic=True, color=dark, size=10)
     ws_utility["A2"].alignment = Alignment(horizontal="left", vertical="center")
 
-    ws_utility["A3"] = "Current Project GBA"
-    ws_utility["B3"] = "='Area Input'!M13"
-    ws_utility["C3"] = "Reminder only - not imported as a detail row"
-    style_range(ws_utility, "A3:C3", formula_fill, bold=True)
+    ws_utility["A3"] = None
+    ws_utility["B3"] = None
+    ws_utility["C3"] = None
 
     utility_headers = ["Code", "Description", "Unit", "Quantity", "Unit Price (Rp)", "Amount (Rp)"]
     for c, h in enumerate(utility_headers, start=1):
@@ -2888,7 +2877,7 @@ def create_area_excel_form_bytes(
 
     utility_summary_start = utility_total_row + 2
     ws_utility.cell(utility_summary_start, 1).value = "GBA"
-    ws_utility.cell(utility_summary_start, 2).value = _excel_safe_float(utility_gba)
+    ws_utility.cell(utility_summary_start, 2).value = area_gba_total_ref
     ws_utility.cell(utility_summary_start + 1, 1).value = "Utility Detail Total"
     ws_utility.cell(utility_summary_start + 1, 2).value = f"=F{utility_total_row}"
     ws_utility.cell(utility_summary_start + 2, 1).value = "Derived Utility Rate"
@@ -3085,8 +3074,8 @@ def create_area_excel_form_bytes(
         mark_formula_cells_dark_red(worksheet)
 
     # Area Input
-    mark_range_dark_red(ws, f"L{start_row}:N{total_row}")
-    mark_range_dark_red(ws, f"C{total_row}:N{total_row}")
+    mark_range_dark_red(ws, f"M{start_row}:P{total_row}")
+    mark_range_dark_red(ws, f"C{total_row}:P{total_row}")
 
     # Area Chart is retained for formulas/references but hidden by default.
     ws_chart.sheet_state = "hidden"
