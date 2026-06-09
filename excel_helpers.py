@@ -1675,7 +1675,7 @@ def create_area_excel_form_bytes(
     # ==================================================
     ws.sheet_view.showGridLines = False
 
-    ws.merge_cells("A1:P1")
+    ws.merge_cells("A1:T1")
     ws["A1"] = f"AREA INPUT FORM - {project_name or 'PROJECT'}"
     ws["A1"].font = Font(bold=True, color=white, size=14)
     ws["A1"].fill = PatternFill("solid", fgColor=dark)
@@ -1698,6 +1698,10 @@ def create_area_excel_form_bytes(
     ws["N3"] = "GFA"
     ws["O3"] = "SGFA"
     ws["P3"] = "NFA"
+    ws["Q3"] = ""
+    ws["R3"] = "C.GFA"
+    ws["S3"] = "C.SGFA"
+    ws["T3"] = "C.NFA"
 
     # Hidden stable import key row
     ws["A4"] = "FL"
@@ -1716,11 +1720,19 @@ def create_area_excel_form_bytes(
     ws["N4"] = "GFA"
     ws["O4"] = "SGFA"
     ws["P4"] = "NFA"
+    ws["Q4"] = ""
+    ws["R4"] = "C.GFA"
+    ws["S4"] = "C.SGFA"
+    ws["T4"] = "C.NFA"
     ws.row_dimensions[4].hidden = True
 
-    style_range(ws, "A2:P2", None)
+    ws.merge_cells("R2:T2")
+    ws["R2"] = "CONSULTANT TABLE"
 
-    style_range(ws, "A3:P4", dark, font_color=white, bold=True)
+    style_range(ws, "A2:T2", None)
+    style_range(ws, "R2:T2", formula_fill, bold=True)
+
+    style_range(ws, "A3:T4", dark, font_color=white, bold=True)
 
     for r, (fl, space_type, height) in enumerate(floor_rows, start=start_row):
         ws.cell(r, 1).value = fl
@@ -1728,34 +1740,44 @@ def create_area_excel_form_bytes(
         ws.cell(r, 3).value = height
         ws.cell(r, 4).value = 0
 
-        for c in range(5, 12):
+        for c in range(5, 8):
             ws.cell(r, c).value = 0
 
+        ws.cell(r, 8).value = f"=MAX(0,R{r}-S{r})"
+        ws.cell(r, 9).value = f"=MAX(0,S{r}-T{r})"
+        ws.cell(r, 10).value = f"=T{r}"
+        ws.cell(r, 11).value = 0
         ws.cell(r, 12).value = None
         ws.cell(r, 13).value = f"=SUM(E{r}:K{r})"
         ws.cell(r, 14).value = f"=SUM(H{r}:K{r})"
         ws.cell(r, 15).value = f"=SUM(I{r}:K{r})"
         ws.cell(r, 16).value = f"=SUM(J{r}:K{r})"
+        ws.cell(r, 17).value = None
+        ws.cell(r, 18).value = 0
+        ws.cell(r, 19).value = 0
+        ws.cell(r, 20).value = 0
 
     ws.cell(total_row, 1).value = "TOTAL"
     ws.cell(total_row, 1).font = Font(bold=True)
 
-    for c in range(3, 17):
+    for c in range(3, 21):
         col = get_column_letter(c)
-        if c == 12:
+        if c in [12, 17]:
             ws.cell(total_row, c).value = None
         else:
             ws.cell(total_row, c).value = f"=SUM({col}{start_row}:{col}{end_row})"
         ws.cell(total_row, c).font = Font(bold=True)
 
-    style_range(ws, f"A{start_row}:P{total_row}", None)
+    style_range(ws, f"A{start_row}:T{total_row}", None)
     style_range(ws, f"M{start_row}:P{total_row}", formula_fill)
+    style_range(ws, f"R{start_row}:T{total_row}", None)
     style_range(ws, f"A{total_row}:B{total_row}", dark, font_color=white, bold=True)
-    style_range(ws, f"C{total_row}:P{total_row}", "FFFFFF", font_color="000000", bold=True)
+    style_range(ws, f"C{total_row}:T{total_row}", "FFFFFF", font_color="000000", bold=True)
 
     # Editable cells only
-    lock_range(ws, f"A1:P{total_row}")
+    lock_range(ws, f"A1:T{total_row}")
     unlock_range(ws, f"A{start_row}:K{end_row}")
+    unlock_range(ws, f"R{start_row}:T{end_row}")
 
     # Data validation for Space Type
     dv_space = DataValidation(
@@ -1767,7 +1789,7 @@ def create_area_excel_form_bytes(
     dv_space.add(f"B{start_row}:B{end_row}")
 
     # Number formats
-    for row in ws.iter_rows(min_row=start_row, max_row=total_row, min_col=3, max_col=16):
+    for row in ws.iter_rows(min_row=start_row, max_row=total_row, min_col=3, max_col=20):
         for cell in row:
             cell.number_format = '#,##0.00'
 
@@ -1792,6 +1814,10 @@ def create_area_excel_form_bytes(
         "N": 14,
         "O": 14,
         "P": 14,
+        "Q": 3,
+        "R": 16,
+        "S": 16,
+        "T": 16,
     }.items():
         ws.column_dimensions[col].width = width
     ws.column_dimensions["K"].hidden = True
@@ -3075,7 +3101,7 @@ def create_area_excel_form_bytes(
 
     # Area Input
     mark_range_dark_red(ws, f"M{start_row}:P{total_row}")
-    mark_range_dark_red(ws, f"C{total_row}:P{total_row}")
+    mark_range_dark_red(ws, f"C{total_row}:T{total_row}")
 
     # Area Chart is retained for formulas/references but hidden by default.
     ws_chart.sheet_state = "hidden"
