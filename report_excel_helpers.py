@@ -283,6 +283,8 @@ def get_recap_values(pdata):
     proj_fac_u = get_val("m_fac_proj", None, 0); fac_proj_rate = get_val("u_fac_pr", "fac_proj", 0)
     consultancy_rate = get_val("sc_cons", "cons", 0); qs_months = get_val("sc_qs_m", None, 0); qs_rate = get_val("sc_qs_r", None, 0)
     pm_months = get_val("sc_pm_m", None, 0); pm_rate = get_val("sc_pm_r", None, 0); insurance_pct = get_val("sc_ins", None, 0.12)
+    prelim_pct = _safe_float(d.get("sc_prelim_pct", 5.0))
+    contingency_pct = _safe_float(d.get("sc_contingency_pct", 3.0))
     smart_custom_costs = sum(_safe_float(i.get("Rate (Rp)", 0)) * _safe_float(i.get("Quantity", 1)) for i in d.get("smart_custom_costs", []) if isinstance(i, dict))
 
     t_earth = gba * struc_earth; t_found = gba * struc_found; t_struc = gba * struc_work; t_arch_base = gfa * arch_base
@@ -307,8 +309,8 @@ def get_recap_values(pdata):
         t_external, t_pub_fac, t_res_fac, t_proj_fac, smart_custom_costs
     ])
 
-    t_preliminary = construction_subtotal * 0.05
-    t_contingency = (construction_subtotal + t_preliminary) * 0.03
+    t_preliminary = construction_subtotal * (prelim_pct / 100.0)
+    t_contingency = (construction_subtotal + t_preliminary) * (contingency_pct / 100.0)
     grand_total_hc = construction_subtotal + t_preliminary + t_contingency
 
     t_consultancy = gfa * consultancy_rate

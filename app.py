@@ -846,6 +846,8 @@ def calculate_project_totals(pdata, curr_type):
     
     consultancy_rate = get_val("sc_cons", pt_data.get("cons", 0))
     insurance_pct = get_val("sc_ins", 0.12)
+    prelim_pct = get_val("sc_prelim_pct", 5.0)
+    contingency_pct = get_val("sc_contingency_pct", 3.0)
     
     smart_custom_costs = sum(_safe_float(item.get("Rate (Rp)", 0)) * _safe_float(item.get("Quantity", 1)) for item in get_val("smart_custom_costs", []))
 
@@ -860,8 +862,8 @@ def calculate_project_totals(pdata, curr_type):
     
     construction_subtotal = sum([t_earth, t_found, t_struc, t_arch_base, t_precast, t_ffe, t_mep, t_utility, smart_custom_costs])
 
-    t_preliminary = construction_subtotal * 0.05
-    t_contingency = (construction_subtotal + t_preliminary) * 0.03
+    t_preliminary = construction_subtotal * (_safe_float(prelim_pct, 5.0) / 100.0)
+    t_contingency = (construction_subtotal + t_preliminary) * (_safe_float(contingency_pct, 3.0) / 100.0)
     grand_total_hc = construction_subtotal + t_preliminary + t_contingency
 
     total_soft_cost = (calc_gfa * consultancy_rate) + (grand_total_hc * (insurance_pct / 100.0)) 
@@ -5263,8 +5265,10 @@ def _project_metric_summary(project):
     known_hard_base = sum([
         earthwork, foundation, structure, architecture, ffe, mep, utility, external, misc
     ])
-    prelim = known_hard_base * 0.05
-    contingency = (known_hard_base + prelim) * 0.03
+    prelim_pct = _safe_float(data.get("sc_prelim_pct", 5.0))
+    contingency_pct = _safe_float(data.get("sc_contingency_pct", 3.0))
+    prelim = known_hard_base * (prelim_pct / 100.0)
+    contingency = (known_hard_base + prelim) * (contingency_pct / 100.0)
     hard_cost = known_hard_base + prelim + contingency
     soft_cost = max(_safe_float(data.get("grand_total_project", budget)) - hard_cost, 0.0)
     grand_total = _safe_float(data.get("grand_total_project", budget))
@@ -8432,14 +8436,8 @@ def show_cost_estimator(): #cost calculator page
     if sync_clicked:
         st.session_state[show_cost_sync_review_key] = True
 
-    if save_cost_clicked:
-        save_ok = save_after_user_action("Save Cost Analysis")
-
-        if save_ok:
-            st.success("Cost Analysis saved to cloud.")
-            st.rerun()
-        else:
-            st.error("Cost Analysis changed locally, but cloud save failed. Do not log out yet.")
+    # Save is handled after live calculations so the explicit Save button stores
+    # the current calculated values and cost assumptions from this rerun.
 
     st.markdown("""
         <style>
@@ -8503,6 +8501,33 @@ def show_cost_estimator(): #cost calculator page
         except (ValueError, TypeError):
             # If it's not a number (like "Type1"), return it as is
             return val
+
+    st.subheader("Cost Assumptions")
+    st.caption("These percentages affect the final hardcost calculation for the current project.")
+
+    assump_col1, assump_col2 = st.columns(2)
+
+    with assump_col1:
+        prelim_pct = st.number_input(
+            "Preliminaries %",
+            min_value=0.0,
+            max_value=100.0,
+            value=float(_safe_float(curr_proj["data"].get("sc_prelim_pct", 5.0))),
+            step=0.5,
+            key=f"sc_prelim_pct_{curr_id}",
+            help="Applied to Construction Subtotal."
+        )
+
+    with assump_col2:
+        contingency_pct = st.number_input(
+            "Contingencies %",
+            min_value=0.0,
+            max_value=100.0,
+            value=float(_safe_float(curr_proj["data"].get("sc_contingency_pct", 3.0))),
+            step=0.5,
+            key=f"sc_contingency_pct_{curr_id}",
+            help="Applied to Construction Subtotal + Preliminaries."
+        )
 
     # --- PROJECT SETUP ---
     curr_type = curr_proj["type"]
@@ -9511,8 +9536,11 @@ def show_cost_estimator(): #cost calculator page
         smart_custom_costs
     ])
 
-    t_preliminary = (construction_subtotal) * 0.05
-    t_contingency = (construction_subtotal + t_preliminary) * 0.03
+    prelim_pct = _safe_float(prelim_pct, 5.0)
+    contingency_pct = _safe_float(contingency_pct, 3.0)
+
+    t_preliminary = construction_subtotal * (prelim_pct / 100.0)
+    t_contingency = (construction_subtotal + t_preliminary) * (contingency_pct / 100.0)
     grand_total_hc = construction_subtotal + t_preliminary + t_contingency
 
     t_consultancy = gfa * consultancy_rate
@@ -9863,9 +9891,20 @@ def show_cost_estimator(): #cost calculator page
         "t_pub_fac": t_pub_fac, "t_res_fac": t_res_fac, "t_proj_fac": t_proj_fac,
         "group_misc": group_misc,
         "sc_cons": consultancy_rate, "sc_qs_m": qs_months, "sc_qs_r": qs_rate,
-        "sc_pm_m": pm_months, "sc_pm_r": pm_rate, "sc_ins": insurance_pct
+        "sc_pm_m": pm_months, "sc_pm_r": pm_rate, "sc_ins": insurance_pct,
+        "sc_prelim_pct": prelim_pct,
+        "sc_contingency_pct": contingency_pct
     })
     st.session_state.projects[curr_id]["data"]["grand_total_project"] = grand_total_project
+
+    if save_cost_clicked:
+        save_ok = save_after_user_action("Save Cost Analysis")
+
+        if save_ok:
+            st.success("Cost Analysis saved to cloud.")
+            st.rerun()
+        else:
+            st.error("Cost Analysis changed locally, but cloud save failed. Do not log out yet.")
 
     with tab8:
         st.header("Detail Pembuktian & Logika Perhitungan")
@@ -10164,7 +10203,7 @@ def show_cost_estimator(): #cost calculator page
             audit_prelim = pd.DataFrame([
                 {
                     "Item": "Preliminary Works",
-                    "Formula": f"Construction Subtotal (Rp {construction_subtotal:,.0f}) * 5%",
+                    "Formula": f"Construction Subtotal (Rp {construction_subtotal:,.0f}) * {prelim_pct:.2f}%",
                     "Total": t_preliminary,
                 },
             ])
@@ -10178,7 +10217,7 @@ def show_cost_estimator(): #cost calculator page
             audit_conting = pd.DataFrame([
                 {
                     "Item": "Contingencies",
-                    "Formula": f"(Subtotal + Prelim) (Rp {construction_subtotal + t_preliminary:,.0f}) * 3%",
+                    "Formula": f"(Subtotal + Preliminaries) (Rp {construction_subtotal + t_preliminary:,.0f}) * {contingency_pct:.2f}%",
                     "Total": t_contingency,
                 },
             ])

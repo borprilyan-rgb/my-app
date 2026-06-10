@@ -301,5 +301,47 @@ PROJECT_DATABASE = { #Change only when asked
     "fac_proj": 2000000000.0,
 
     "cons": 174000.0
+    },
+        "Parking2": {
+        "arch_base": 668000.0,
+        "mep": 928384.0,
+        "utility": 0.0,
+        "door_wood": 0.0, "door_steel": 0.0, "door_glass": 0.0,
+        "hw_wood": 0.0, "hw_steel": 0.0, "lobby": 0.0, "gondola": 0.0,
+        "carpet": 0.0, "glass": 0.0, "ffe": 0.0, "misc": 0.0, "kitchen": 0.0,
+        "san_room_rate": 0.0, "san_pub_f": 0.0, "san_pub_m": 0.0,
+        "fl_ht_rate": {"Type1": 0.0, "Type2": 0.0},
+        "fl_vinyl_rate": {"Type1": 0.0, "Type2": 0.0},
+        "fl_marmer_rate": {"Type1": 0.0, "Type2": 0.0},
+        "facade_precast_pct": 10.0, "facade_window_pct": 80.0, "facade_double_pct": 10.0,
+        "fl_ht_pct": 90.0, "fl_vinyl_pct": 0.0, "fl_marmer_pct": 10.0,
+        "san_room_qty": 0.0, "railing_qty": 0.0,
+        "struc_earth": 25000.0, "struc_found": 400000.0, "struc_work": 1933000.0,
+        "facade_precast_rate": 800000.0, "facade_window_rate": 1250000.0, "facade_double_rate": 2500000.0,
+        "railing_rate": 2200000.0, "skylight_rate": 4500000.0,
+        "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
+        "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
+        "cons": 53000.0
+    },
+        "Ampitheatre": {
+        "arch_base": 0.0,
+        "mep": 0.0,
+        "utility": 0.0,
+        "door_wood": 0.0, "door_steel": 0.0, "door_glass": 0.0,
+        "hw_wood": 0.0, "hw_steel": 0.0, "lobby": 0.0, "gondola": 0.0,
+        "carpet": 0.0, "glass": 0.0, "ffe": 0.0, "misc": 0.0, "kitchen": 0.0,
+        "san_room_rate": 0.0, "san_pub_f": 0.0, "san_pub_m": 0.0,
+        "fl_ht_rate": {"Type1": 0.0, "Type2": 0.0},
+        "fl_vinyl_rate": {"Type1": 0.0, "Type2": 0.0},
+        "fl_marmer_rate": {"Type1": 0.0, "Type2": 0.0},
+        "facade_precast_pct": 0.0, "facade_window_pct": 0.0, "facade_double_pct": 0.0,
+        "fl_ht_pct": 0.0, "fl_vinyl_pct": 0.0, "fl_marmer_pct": 0.0,
+        "san_room_qty": 0.0, "railing_qty": 0.0,
+        "struc_earth": 0.0, "struc_found": 0.0, "struc_work": 17500000.0,
+        "facade_precast_rate": 0.0, "facade_window_rate": 0.0, "facade_double_rate": 0.0,
+        "railing_rate": 0.0, "skylight_rate": 0.0,
+        "san_dis": 0.0, "san_mushola": 0.0, "ext_land": 0.0,
+        "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 0.0,
+        "cons": 0.0
     }
 }
