@@ -4610,52 +4610,6 @@ def show_project_database():  # database page
     """, unsafe_allow_html=True)
 
     # ==================================================
-    # SUMMARY CARDS
-    # ==================================================
-    total_project_types = len(project_types)
-    total_items = df_long["Cost Item"].nunique()
-    total_groups = df_long["Group"].nunique()
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown(
-            f"""
-            <div class="db-card">
-                <div class="db-label">Project Types</div>
-                <div class="db-value">{total_project_types}</div>
-                <div class="db-sub">Available benchmark templates</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with c2:
-        st.markdown(
-            f"""
-            <div class="db-card">
-                <div class="db-label">Cost Items</div>
-                <div class="db-value">{total_items}</div>
-                <div class="db-sub">Contextual database fields</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with c3:
-        st.markdown(
-            f"""
-            <div class="db-card">
-                <div class="db-label">Cost Groups</div>
-                <div class="db-value">{total_groups}</div>
-                <div class="db-sub">Grouped by QS discipline</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    st.divider()
-    # ==================================================
     # MAIN TABS
     # ==================================================
     tab_search, tab_project, tab_matrix, tab_raw = st.tabs([
@@ -10275,6 +10229,143 @@ def _parse_date_safe(value, fallback=None, dayfirst=True):
 
 #endregion
 
+def show_dashboard():
+    st.title("Dashboard")
+    st.caption("Read-only study overview. This page does not change saved data.")
+
+    repair_projects_state(save=False)
+
+    projects = st.session_state.get("projects", {})
+    if not isinstance(projects, dict) or len(projects) == 0:
+        st.info("No projects found in this study.")
+        return
+
+    study_name = resolve_current_study_name(projects)
+
+    rows = []
+    warning_rows = []
+
+    total_gba = 0.0
+    total_gfa = 0.0
+    total_sgfa = 0.0
+    total_nfa = 0.0
+    total_budget = 0.0
+
+    def fmt_area(value):
+        return f"{_safe_float(value):,.2f}"
+
+    def fmt_rp(value):
+        return f"Rp {_safe_float(value):,.0f}"
+
+    def safe_ratio(numerator, denominator):
+        denominator = _safe_float(denominator)
+        if denominator <= 0:
+            return 0.0
+        return _safe_float(numerator) / denominator
+
+    for pid, pdata in projects.items():
+        if not isinstance(pdata, dict):
+            continue
+
+        project_name = str(pdata.get("name", pid)).strip() or pid
+        project_type = str(pdata.get("type", "")).strip() or "-"
+        data = pdata.get("data", {})
+        if not isinstance(data, dict):
+            data = {}
+
+        gba, gfa, sgfa, budget, rooms = calculate_project_totals(pdata, project_type)
+        nfa = _safe_float(data.get("m_nfa", 0.0))
+
+        warnings = []
+
+        if gba <= 0:
+            warnings.append("Missing GBA")
+        if gfa <= 0:
+            warnings.append("Missing GFA")
+        if sgfa <= 0:
+            warnings.append("Missing SGFA")
+        if nfa <= 0:
+            warnings.append("Missing NFA")
+        if budget <= 0:
+            warnings.append("Missing Budget")
+
+        if gba > 0 and gfa > gba:
+            warnings.append("GFA > GBA")
+        if gfa > 0 and sgfa > gfa:
+            warnings.append("SGFA > GFA")
+        if sgfa > 0 and nfa > sgfa:
+            warnings.append("NFA > SGFA")
+
+        if project_type in ["Apartment", "Hotel"] and _safe_float(rooms) <= 0:
+            warnings.append("Missing Rooms")
+
+        for warning in warnings:
+            warning_rows.append({
+                "Project": project_name,
+                "Warning": warning,
+            })
+
+        total_gba += _safe_float(gba)
+        total_gfa += _safe_float(gfa)
+        total_sgfa += _safe_float(sgfa)
+        total_nfa += _safe_float(nfa)
+        total_budget += _safe_float(budget)
+
+        rows.append({
+            "Project": project_name,
+            "Type": project_type,
+            "GBA": fmt_area(gba),
+            "GFA": fmt_area(gfa),
+            "SGFA": fmt_area(sgfa),
+            "NFA": fmt_area(nfa),
+            "Rooms / Units": f"{_safe_float(rooms):,.0f}",
+            "Budget": fmt_rp(budget),
+            "Rp/m² GBA": fmt_rp(safe_ratio(budget, gba)),
+            "Rp/m² GFA": fmt_rp(safe_ratio(budget, gfa)),
+            "Status": "OK" if not warnings else "; ".join(warnings),
+        })
+
+    avg_rp_gba = safe_ratio(total_budget, total_gba)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Study Name", study_name)
+    c2.metric("Project Count", f"{len(projects):,.0f}")
+    c3.metric("Total GBA", fmt_area(total_gba))
+    c4.metric("Total GFA", fmt_area(total_gfa))
+
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric("Total SGFA", fmt_area(total_sgfa))
+    c6.metric("Total NFA", fmt_area(total_nfa))
+    c7.metric("Total Budget", fmt_rp(total_budget))
+    c8.metric("Avg Rp/m² GBA", fmt_rp(avg_rp_gba))
+
+    st.divider()
+
+    st.subheader("Project Comparison")
+    st.dataframe(
+        pd.DataFrame(rows),
+        width="stretch",
+        hide_index=True,
+    )
+
+    st.subheader("Dashboard Warnings")
+
+    if not warning_rows:
+        st.success("No dashboard warnings detected.")
+    else:
+        affected_project_count = len(set(row["Project"] for row in warning_rows))
+        warning_count = len(warning_rows)
+        st.warning(
+            f"{warning_count} warning(s) detected across "
+            f"{affected_project_count} project(s)."
+        )
+        st.dataframe(
+            pd.DataFrame(warning_rows),
+            width="stretch",
+            hide_index=True,
+        )
+
+
 def show_portfolio_summary():
     st.title("Summary")
     
@@ -11863,7 +11954,7 @@ def main_app():
 
     page_choice = st.sidebar.radio(
         "Pilih Pekerjaan:",
-        ["Start", "Area Analysis", "Cost Analysis", "Database", "Summary", "Archive"]
+        ["Start", "Dashboard", "Area Analysis", "Cost Analysis", "Database", "Summary", "Archive"]
     )
 
     # Always build sidebar list AFTER project repair
@@ -12247,7 +12338,9 @@ def main_app():
     #enddebugcode
 
 
-    if page_choice == "Area Analysis":
+    if page_choice == "Dashboard":
+        show_dashboard()
+    elif page_choice == "Area Analysis":
         show_area_calculator()
     elif page_choice == "Database":
         show_project_database()
