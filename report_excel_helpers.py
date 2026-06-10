@@ -5,7 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter
 
-from project_database import PROJECT_DATABASE
+from project_database import get_project_type_data
 
 
 def _safe_float(v, default=0.0):
@@ -230,7 +230,7 @@ def build_portfolio_meta_from_inputs(header_inputs):
 def get_recap_values(pdata):
     d = pdata.get("data", {})
     curr_type = pdata.get("type", "Hotel")
-    pt_data = PROJECT_DATABASE.get(curr_type, {})
+    pt_data = get_project_type_data(curr_type)
     
     def get_val(key, default_db_key, default_val=0.0):
         val = d.get(key)

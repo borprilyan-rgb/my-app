@@ -788,8 +788,7 @@ supabase: Client = create_client(url, key)
 def calculate_project_totals(pdata, curr_type):
     """Calculates all totals dynamically for a given project."""
     d = pdata.get("data", {})
-    # Default to empty dict if project type isn't in database yet
-    pt_data = PROJECT_DATABASE.get(curr_type, {})
+    pt_data = get_project_type_data(curr_type)
 
     def get_val(key, default=0.0):
         val = d.get(key, default)
@@ -3702,7 +3701,13 @@ def build_detail_rate_review_rows(curr_proj, gba, gfa=None, rooms=None):
 
     return rows
 
-from project_database import PROJECT_DATABASE
+from project_database import (
+    PROJECT_DATABASE,
+    get_project_type_data,
+    get_project_type_options,
+    is_hidden_project_type,
+    is_known_project_type,
+)
 
 #region --- DO NOT CHANGE#2 (OR I WILL KICK YOUR FACE)---
 def mi(name):
@@ -3710,6 +3715,13 @@ def mi(name):
 
 def icon_safe(name):
     return mi(name) if "mi" in globals() else None    
+
+def warn_if_unknown_project_type(project_type, context="project"):
+    if project_type and not is_known_project_type(project_type):
+        st.warning(
+            f"This {context} uses an unknown project type: {project_type}. "
+            "Fallback defaults are being used, but the saved project type was not changed."
+        )
 
 def cb_switch_project():
     # Use .get() to avoid the AttributeError if the key is missing
@@ -4513,6 +4525,9 @@ def show_project_database():  # database page
         rows = []
 
         for project_type, metrics in PROJECT_DATABASE.items():
+            if is_hidden_project_type(project_type):
+                continue
+
             for key_name, value in metrics.items():
 
                 if isinstance(value, dict):
@@ -4560,7 +4575,7 @@ def show_project_database():  # database page
 
     df_long = flatten_project_database()
 
-    project_types = list(PROJECT_DATABASE.keys())
+    project_types = get_project_type_options(include_hidden=False)
 
     # ==================================================
     # PAGE STYLE
@@ -6089,7 +6104,7 @@ def show_area_calculator():
 
                 project_type = curr_proj.get("type", "")
                 database_price = _safe_float(
-                    PROJECT_DATABASE.get(project_type, {}).get("struc_earth", 0.0)
+                    get_project_type_data(project_type).get("struc_earth", 0.0)
                 )
 
                 warn_col, dismiss_col = st.columns([5, 1])
@@ -7206,7 +7221,7 @@ def show_area_calculator():
         manual_earthwork_price = _safe_float(
             curr_proj["data"].get(
                 "u_earth",
-                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("struc_earth", 0.0),
+                get_project_type_data(curr_proj.get("type", "Hotel")).get("struc_earth", 0.0),
             )
         )
         current_earthworks_total = earthwork_gba * manual_earthwork_price
@@ -7275,7 +7290,7 @@ def show_area_calculator():
         current_foundation_rate = _safe_float(
             curr_proj["data"].get(
                 "u_found",
-                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("struc_found", 0.0),
+                get_project_type_data(curr_proj.get("type", "Hotel")).get("struc_found", 0.0),
             )
         )
 
@@ -7373,7 +7388,7 @@ def show_area_calculator():
         current_structural_rate = _safe_float(
             curr_proj["data"].get(
                 "u_struc",
-                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("struc_work", 0.0),
+                get_project_type_data(curr_proj.get("type", "Hotel")).get("struc_work", 0.0),
             )
         )
         current_structural_total = structural_gba * current_structural_rate
@@ -7539,7 +7554,7 @@ def show_area_calculator():
         current_architectural_rate = _safe_float(
             curr_proj["data"].get(
                 "u_arch",
-                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("arch_base", 0.0),
+                get_project_type_data(curr_proj.get("type", "Hotel")).get("arch_base", 0.0),
             )
         )
 
@@ -7660,7 +7675,7 @@ def show_area_calculator():
         current_consultancy_rate = _safe_float(
             curr_proj["data"].get(
                 "sc_cons",
-                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("cons", 0.0),
+                get_project_type_data(curr_proj.get("type", "Hotel")).get("cons", 0.0),
             )
         )
 
@@ -7778,7 +7793,7 @@ def show_area_calculator():
         current_ffe_rate = _safe_float(
             curr_proj["data"].get(
                 "u_ffe",
-                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("ffe", 0.0),
+                get_project_type_data(curr_proj.get("type", "Hotel")).get("ffe", 0.0),
             )
         )
 
@@ -7884,7 +7899,7 @@ def show_area_calculator():
         current_mep_rate = _safe_float(
             curr_proj["data"].get(
                 "u_mep",
-                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("mep", 0.0),
+                get_project_type_data(curr_proj.get("type", "Hotel")).get("mep", 0.0),
             )
         )
 
@@ -7990,7 +8005,7 @@ def show_area_calculator():
         current_utility_rate = _safe_float(
             curr_proj["data"].get(
                 "u_util",
-                PROJECT_DATABASE.get(curr_proj.get("type", "Hotel"), {}).get("utility", 0.0),
+                get_project_type_data(curr_proj.get("type", "Hotel")).get("utility", 0.0),
             )
         )
 
@@ -8264,7 +8279,7 @@ def update_price(metric_key, db_key): #this function pulls~
 
     # 4. Proceed with normal update
     st.session_state.projects[c_id]["data"][f"{metric_key}_spec_type"] = selected_spec
-    db_val = PROJECT_DATABASE.get(p_type, {}).get(db_key, {})
+    db_val = get_project_type_data(p_type).get(db_key, {})
     
     if isinstance(db_val, dict):
         new_val = db_val.get(selected_spec, 0.0)
@@ -8502,10 +8517,7 @@ def show_cost_estimator(): #cost calculator page
             # If it's not a number (like "Type1"), return it as is
             return val
 
-    st.subheader("Cost Assumptions")
-    st.caption("These percentages affect the final hardcost calculation for the current project.")
-
-    assump_col1, assump_col2 = st.columns(2)
+    assump_col1, assump_col2, assump_col3 = st.columns([1, 1, 2])
 
     with assump_col1:
         prelim_pct = st.number_input(
@@ -8531,7 +8543,8 @@ def show_cost_estimator(): #cost calculator page
 
     # --- PROJECT SETUP ---
     curr_type = curr_proj["type"]
-    pt_data = PROJECT_DATABASE[curr_type]
+    pt_data = get_project_type_data(curr_type)
+    warn_if_unknown_project_type(curr_type, context="project")
     curr_type_key = f"{curr_id}_{curr_type}"
 
     # --- TABS ---
@@ -8839,7 +8852,7 @@ def show_cost_estimator(): #cost calculator page
 
     # --- TAB 3: UNIT RATES ---
     with tab4:
-        with st.expander("Detail-Derived Rate Review", expanded=True):
+        with st.expander("Detail-Derived Rate Review", expanded=False):
             detail_rate_review_rows = build_detail_rate_review_rows(curr_proj, gba, gfa, rooms)
             detail_rate_review_df = pd.DataFrame(detail_rate_review_rows)
 
@@ -9907,7 +9920,7 @@ def show_cost_estimator(): #cost calculator page
             st.error("Cost Analysis changed locally, but cloud save failed. Do not log out yet.")
 
     with tab8:
-        st.header("Detail Pembuktian & Logika Perhitungan")
+        st.header("Detail")
 
         # ==================================================
         # Group 1: Earthwork
@@ -11729,6 +11742,14 @@ def show_snapshots():
         c1, c2 = st.columns(2)
         with c1:
             st.subheader("Import")
+            csv_import_unknown_types = st.session_state.pop("csv_import_unknown_project_types", [])
+            if csv_import_unknown_types:
+                st.warning(
+                    "CSV import preserved unknown project type(s): "
+                    f"{', '.join(csv_import_unknown_types)}. "
+                    "Fallback defaults may be used until those types are added to the project database."
+                )
+
             uploaded_file = st.file_uploader("Upload CSV Database:", type=["csv"])
 
             if uploaded_file is not None:
@@ -11743,6 +11764,7 @@ def show_snapshots():
                         if df_import is not None and not df_import.empty:
                             global_temp_custom = {}
                             import_pid_map = {} # Track mapped IDs to prevent row-by-row renaming
+                            unknown_import_types = set()
 
                             for index, row in df_import.iterrows():
                                 # Get raw ID
@@ -11773,7 +11795,10 @@ def show_snapshots():
                                 if key == "proj_name":
                                     st.session_state.projects[pid]["name"] = str(val)
                                 elif key == "proj_type":
-                                    st.session_state.projects[pid]["type"] = str(val)
+                                    imported_type = str(val)
+                                    st.session_state.projects[pid]["type"] = imported_type
+                                    if imported_type and not is_known_project_type(imported_type):
+                                        unknown_import_types.add(imported_type)
                                 
                                 # 3. Handle Custom Item Reconstruction
                                 elif key.startswith(("input_name", "input_rate", "input_qty")):
@@ -11822,6 +11847,9 @@ def show_snapshots():
 
                             # 6. CLEAR UI CACHE ANCHORS (Crucial for Area Analysis reload)
                             clear_project_ui_cache()
+
+                            if unknown_import_types:
+                                st.session_state.csv_import_unknown_project_types = sorted(unknown_import_types)
 
                             st.session_state.last_loaded_file = file_key
                             save_data()
@@ -12099,7 +12127,7 @@ def main_app():
         if "sidebar_component_mode" not in st.session_state:
             st.session_state.sidebar_component_mode = None
 
-        project_type_options = list(PROJECT_DATABASE.keys())
+        project_type_options = get_project_type_options(include_hidden=False)
 
 
         # ==================================================
@@ -12214,11 +12242,25 @@ def main_app():
             current_name = curr_proj.get("name", "")
             current_type = curr_proj.get("type", "Hotel")
 
-            if current_type not in project_type_options:
-                current_type = "Hotel"
+            edit_project_type_options = list(project_type_options)
+            if current_type and current_type not in edit_project_type_options:
+                edit_project_type_options = [current_type] + edit_project_type_options
+            if current_type not in edit_project_type_options and edit_project_type_options:
+                current_type = edit_project_type_options[0]
 
             with st.sidebar.form("sidebar_edit_component_form", clear_on_submit=False):
                 st.markdown("**Edit Component**")
+
+                if is_hidden_project_type(current_type):
+                    st.caption(
+                        "This project uses a hidden project type. It is still valid, "
+                        "but hidden from new project creation."
+                    )
+                elif current_type and not is_known_project_type(current_type):
+                    st.warning(
+                        "This project uses an unknown project type. It will be preserved, "
+                        "but fallback database defaults may be used."
+                    )
 
                 edited_component_name = st.text_input(
                     "Component Name",
@@ -12227,8 +12269,8 @@ def main_app():
 
                 edited_component_type = st.selectbox(
                     "Component Type",
-                    options=project_type_options,
-                    index=project_type_options.index(current_type)
+                    options=edit_project_type_options,
+                    index=edit_project_type_options.index(current_type)
                 )
 
                 c_save, c_cancel = st.columns(2)

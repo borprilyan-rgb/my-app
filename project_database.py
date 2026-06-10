@@ -1,3 +1,7 @@
+HIDDEN_PROJECT_TYPES = {
+    # Add hidden project types here
+}
+
 PROJECT_DATABASE = { #Change only when asked
     "Apartment": {
         #Foundation & Structure
@@ -345,3 +349,23 @@ PROJECT_DATABASE = { #Change only when asked
         "cons": 0.0
     }
 }
+
+def get_project_type_options(include_hidden=False):
+    project_types = list(PROJECT_DATABASE.keys())
+    if include_hidden:
+        return project_types
+    return [pt for pt in project_types if pt not in HIDDEN_PROJECT_TYPES]
+
+
+def is_hidden_project_type(project_type):
+    return project_type in HIDDEN_PROJECT_TYPES
+
+
+def is_known_project_type(project_type):
+    return project_type in PROJECT_DATABASE
+
+
+def get_project_type_data(project_type, fallback_type="Hotel"):
+    if project_type in PROJECT_DATABASE:
+        return PROJECT_DATABASE[project_type]
+    return PROJECT_DATABASE.get(fallback_type, {})
