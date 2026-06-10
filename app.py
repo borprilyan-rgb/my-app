@@ -10241,8 +10241,11 @@ def show_dashboard():
         return
 
     study_name = resolve_current_study_name(projects)
+    st.markdown(f"### {study_name}")
 
     rows = []
+    chart_rows = []
+    area_ratio_rows = []
     warning_rows = []
 
     total_gba = 0.0
@@ -10256,6 +10259,9 @@ def show_dashboard():
 
     def fmt_rp(value):
         return f"Rp {_safe_float(value):,.0f}"
+
+    def fmt_pct(value):
+        return f"{_safe_float(value):.1%}"
 
     def safe_ratio(numerator, denominator):
         denominator = _safe_float(denominator)
@@ -10325,19 +10331,78 @@ def show_dashboard():
             "Status": "OK" if not warnings else "; ".join(warnings),
         })
 
+        chart_rows.append({
+            "Project": project_name,
+            "Budget": _safe_float(budget),
+            "GBA": _safe_float(gba),
+            "GFA": _safe_float(gfa),
+            "SGFA": _safe_float(sgfa),
+            "NFA": _safe_float(nfa),
+        })
+
+        area_ratio_rows.append({
+            "Project": project_name,
+            "GFA / GBA": fmt_pct(safe_ratio(gfa, gba)),
+            "SGFA / GFA": fmt_pct(safe_ratio(sgfa, gfa)),
+            "NFA / SGFA": fmt_pct(safe_ratio(nfa, sgfa)),
+        })
+
     avg_rp_gba = safe_ratio(total_budget, total_gba)
+    warning_count = len(warning_rows)
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Study Name", study_name)
-    c2.metric("Project Count", f"{len(projects):,.0f}")
+    c1.metric("Project Count", f"{len(projects):,.0f}")
+    c2.metric("Total Budget", fmt_rp(total_budget))
     c3.metric("Total GBA", fmt_area(total_gba))
-    c4.metric("Total GFA", fmt_area(total_gfa))
+    c4.metric("Avg Rp/m² GBA", fmt_rp(avg_rp_gba))
 
     c5, c6, c7, c8 = st.columns(4)
-    c5.metric("Total SGFA", fmt_area(total_sgfa))
-    c6.metric("Total NFA", fmt_area(total_nfa))
-    c7.metric("Total Budget", fmt_rp(total_budget))
-    c8.metric("Avg Rp/m² GBA", fmt_rp(avg_rp_gba))
+    c5.metric("Total GFA", fmt_area(total_gfa))
+    c6.metric("Total SGFA", fmt_area(total_sgfa))
+    c7.metric("Total NFA", fmt_area(total_nfa))
+    c8.metric("Warning Count", f"{warning_count:,.0f}")
+
+    st.divider()
+
+    left_col, right_col = st.columns([2, 1])
+
+    with left_col:
+        st.subheader("Budget by Project")
+        chart_df = pd.DataFrame(chart_rows)
+        if not chart_df.empty:
+            chart_df = chart_df[chart_df["Budget"] > 0].copy()
+
+        if chart_df.empty:
+            st.info("No budget data available yet.")
+        else:
+            chart = (
+                alt.Chart(chart_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("Budget:Q", title="Budget"),
+                    y=alt.Y("Project:N", sort="-x", title="Project"),
+                    tooltip=[
+                        alt.Tooltip("Project:N"),
+                        alt.Tooltip("Budget:Q", format=",.0f"),
+                        alt.Tooltip("GBA:Q", format=",.2f"),
+                    ],
+                )
+                .properties(height=max(220, min(520, len(chart_df) * 45)))
+            )
+            st.altair_chart(chart, width="stretch")
+
+    with right_col:
+        st.subheader("Study Health")
+        if not warning_rows:
+            st.success("No dashboard warnings detected.")
+        else:
+            st.warning(f"{warning_count} warning(s) detected.")
+            st.dataframe(
+                pd.DataFrame(warning_rows),
+                width="stretch",
+                height=260,
+                hide_index=True,
+            )
 
     st.divider()
 
@@ -10348,22 +10413,15 @@ def show_dashboard():
         hide_index=True,
     )
 
-    st.subheader("Dashboard Warnings")
-
-    if not warning_rows:
-        st.success("No dashboard warnings detected.")
-    else:
-        affected_project_count = len(set(row["Project"] for row in warning_rows))
-        warning_count = len(warning_rows)
-        st.warning(
-            f"{warning_count} warning(s) detected across "
-            f"{affected_project_count} project(s)."
-        )
+    st.subheader("Area Ratios")
+    if area_ratio_rows:
         st.dataframe(
-            pd.DataFrame(warning_rows),
+            pd.DataFrame(area_ratio_rows),
             width="stretch",
             hide_index=True,
         )
+    else:
+        st.info("No area ratio data available yet.")
 
 
 def show_portfolio_summary():
