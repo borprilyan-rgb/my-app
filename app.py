@@ -227,6 +227,40 @@ UI_TEXT = {
         "summary.fad_title": "Feasibility Analysis Data (FAD)",
         "summary.recap_title": "Comprehensive Recap Matrix (Cost & Ratios)",
         "summary.download_excel": "Download Excel",
+        "area.title": "Area Analysis",
+        "area.save": "Save",
+        "area.save_current_page": "Save current Area page: {page}",
+        "area.no_save_action": "No save action for current Area page: {page}",
+        "area.gba_setup": "GBA Setup",
+        "area.input_mode": "Area Input Mode",
+        "area.manual_input_page": "Manual Input Page",
+        "area.mode.excel": "Excel",
+        "area.mode.manual_input": "Manual Input",
+        "area.page.gba_input": "GBA Input",
+        "area.page.pintu": "Pintu",
+        "area.page.eksternal": "Eksternal",
+        "area.page.facility_misc": "Facility / Misc",
+        "area.page.earthworks": "Earthworks",
+        "area.page.structural": "Structural",
+        "area.page.foundation": "Foundation",
+        "area.page.architectural": "Architectural",
+        "area.page.ffe": "FF&E",
+        "area.page.mep": "MEP",
+        "area.page.utility": "Utility",
+        "area.page.consultancy": "Consultancy",
+        "area.excel_page_title": "Area Analysis (Excel)",
+        "area.manual_input_title": "Manual Input",
+        "area.doors_page_title": "Area Analysis (Doors)",
+        "area.external_page_title": "Area Analysis (External Works)",
+        "area.facility_misc_page_title": "Area Analysis (Facility / Misc)",
+        "area.earthworks_page_title": "Area Analysis (Earthworks)",
+        "area.foundation_page_title": "Area Analysis (Foundation)",
+        "area.structural_page_title": "Area Analysis (Structural)",
+        "area.architectural_page_title": "Area Analysis (Architectural)",
+        "area.consultancy_page_title": "Area Analysis (Consultancy)",
+        "area.ffe_page_title": "Area Analysis (FF&E)",
+        "area.mep_page_title": "Area Analysis (MEP)",
+        "area.utility_page_title": "Area Analysis (Utility)",
         "admin.feasibility_study": "Feasibility Study",
         "admin.loaded_file_ready": "**{name}** is currently loaded (You can start calculating your project)",
         "admin.previous_page": "Previous Page",
@@ -444,6 +478,40 @@ UI_TEXT = {
         "summary.fad_title": "Data Analisis Kelayakan (FAD)",
         "summary.recap_title": "Matriks Recap Komprehensif (Biaya & Rasio)",
         "summary.download_excel": "Unduh Excel",
+        "area.title": "Analisis Area",
+        "area.save": "Simpan",
+        "area.save_current_page": "Simpan halaman Area saat ini: {page}",
+        "area.no_save_action": "Tidak ada aksi simpan untuk halaman Area saat ini: {page}",
+        "area.gba_setup": "Pengaturan GBA",
+        "area.input_mode": "Mode Input Area",
+        "area.manual_input_page": "Halaman Input Manual",
+        "area.mode.excel": "Excel",
+        "area.mode.manual_input": "Input Manual",
+        "area.page.gba_input": "Input GBA",
+        "area.page.pintu": "Pintu",
+        "area.page.eksternal": "Eksternal",
+        "area.page.facility_misc": "Facility / Misc",
+        "area.page.earthworks": "Earthworks",
+        "area.page.structural": "Structural",
+        "area.page.foundation": "Foundation",
+        "area.page.architectural": "Architectural",
+        "area.page.ffe": "FF&E",
+        "area.page.mep": "MEP",
+        "area.page.utility": "Utility",
+        "area.page.consultancy": "Consultancy",
+        "area.excel_page_title": "Analisis Area (Excel)",
+        "area.manual_input_title": "Input Manual",
+        "area.doors_page_title": "Analisis Area (Doors)",
+        "area.external_page_title": "Analisis Area (External Works)",
+        "area.facility_misc_page_title": "Analisis Area (Facility / Misc)",
+        "area.earthworks_page_title": "Analisis Area (Earthworks)",
+        "area.foundation_page_title": "Analisis Area (Foundation)",
+        "area.structural_page_title": "Analisis Area (Structural)",
+        "area.architectural_page_title": "Analisis Area (Architectural)",
+        "area.consultancy_page_title": "Analisis Area (Consultancy)",
+        "area.ffe_page_title": "Analisis Area (FF&E)",
+        "area.mep_page_title": "Analisis Area (MEP)",
+        "area.utility_page_title": "Analisis Area (Utility)",
         "admin.feasibility_study": "Studi Kelayakan",
         "admin.loaded_file_ready": "**{name}** sedang dimuat (Anda dapat mulai menghitung proyek)",
         "admin.previous_page": "Halaman Sebelumnya",
@@ -5943,6 +6011,28 @@ def show_area_calculator():
             "Consultancy",
     ]
 
+    area_main_label_keys = {
+        "Excel": "area.mode.excel",
+        "Manual Input": "area.mode.manual_input",
+    }
+    manual_area_label_keys = {
+        "GBA Input": "area.page.gba_input",
+        "Pintu": "area.page.pintu",
+        "Eksternal": "area.page.eksternal",
+        "Facility / Misc": "area.page.facility_misc",
+        "Earthworks": "area.page.earthworks",
+        "Structural": "area.page.structural",
+        "Foundation": "area.page.foundation",
+        "Architectural": "area.page.architectural",
+        "FF&E": "area.page.ffe",
+        "MEP": "area.page.mep",
+        "Utility": "area.page.utility",
+        "Consultancy": "area.page.consultancy",
+    }
+
+    def area_display_label(value):
+        return t(area_main_label_keys.get(value) or manual_area_label_keys.get(value), value)
+
     area_main_page_key = f"area_main_page_{curr_id}"
     area_manual_page_key = f"area_manual_page_{curr_id}"
 
@@ -5974,27 +6064,28 @@ def show_area_calculator():
         "Consultancy",
     }
     area_save_enabled = current_area_page_label in area_saveable_pages
+    current_area_page_display = area_display_label(current_area_page_label)
 
     header_col, save_col = st.columns([8, 1], vertical_alignment="center")
     with header_col:
-        st.title("Area Analysis")
+        st.title(t("area.title"))
     with save_col:
         area_save_clicked = st.button(
-            "Save",
+            t("area.save"),
             key=f"save_area_current_page_{curr_id}",
             type="primary",
             width="stretch",
             icon=mi("save") if "mi" in globals() else None,
             help=(
-                f"Save current Area page: {current_area_page_label}"
+                t("area.save_current_page").format(page=current_area_page_display)
                 if area_save_enabled
-                else f"No save action for current Area page: {current_area_page_label}"
+                else t("area.no_save_action").format(page=current_area_page_display)
             ),
             disabled=not area_save_enabled,
         )
 
     with st.container(border=True):
-        st.markdown("##### GBA Setup")
+        st.markdown(f"##### {t('area.gba_setup')}")
         c_h, c_b, c_u = st.columns(3)
 
         c_h.number_input(
@@ -6028,17 +6119,19 @@ def show_area_calculator():
 
     if callable(getattr(st, "segmented_control", None)):
         area_main_page = st.segmented_control(
-            "Area Input Mode",
+            t("area.input_mode"),
             options=area_main_options,
             default="Excel",
             key=area_main_page_key,
+            format_func=area_display_label,
         )
     else:
         area_main_page = st.radio(
-            "Area Input Mode",
+            t("area.input_mode"),
             options=area_main_options,
             horizontal=True,
             key=area_main_page_key,
+            format_func=area_display_label,
         )
 
     if area_main_page == "Excel":
@@ -6046,24 +6139,26 @@ def show_area_calculator():
     else:
         if callable(getattr(st, "segmented_control", None)):
             area_page = st.segmented_control(
-                "Manual Input Page",
+                t("area.manual_input_page"),
                 options=manual_area_page_options,
                 default="GBA Input",
                 key=area_manual_page_key,
+                format_func=area_display_label,
             )
         else:
             area_page = st.radio(
-                "Manual Input Page",
+                t("area.manual_input_page"),
                 options=manual_area_page_options,
                 horizontal=True,
                 key=area_manual_page_key,
+                format_func=area_display_label,
             )
 
     # ==================================================
     # TAB 1 - EXCEL FORM
     # ==================================================
     if area_page == "Excel":
-        st.subheader("Area Analysis (Excel)")
+        st.subheader(t("area.excel_page_title"))
 
         st.markdown("##### Excel Form")
 
@@ -6669,7 +6764,7 @@ def show_area_calculator():
     # TAB 2 - GBA INPUT DRAFT ONLY
     # ==================================================
     elif area_page == "GBA Input":
-        st.subheader("Manual Input")
+        st.subheader(t("area.manual_input_title"))
         st.caption(
             "Edit here first. Calculations and cost sync will not update until you click Save."
         )
@@ -7181,7 +7276,7 @@ def show_area_calculator():
     # TAB 3 - DOORS, SEPARATE DRAFT/COMMIT
     # ==================================================
     elif area_page == "Pintu":
-        st.subheader("Area Analysis (Doors)")
+        st.subheader(t("area.doors_page_title"))
 
         DOOR_WOOD_COL = "Pintu Kayu"
         DOOR_STEEL_COL = "Pintu Besi"
@@ -7311,7 +7406,7 @@ def show_area_calculator():
     # kept stable enough; still using editor but isolated from GBA
     # ==================================================
     elif area_page == "Eksternal":
-        st.subheader("Area Analysis (External Works)")
+        st.subheader(t("area.external_page_title"))
 
         external_key = f"external_table_{curr_id}"
         other_external_editor_key = f"other_external_editor_{curr_id}"
@@ -7497,7 +7592,7 @@ def show_area_calculator():
     # TAB 5 - FACILITY / MISC
     # ==================================================
     elif area_page == "Facility / Misc":
-        st.subheader("Area Analysis (Facility / Misc)")
+        st.subheader(t("area.facility_misc_page_title"))
 
         res_fac_key = f"res_fac_table_{curr_id}"
         res_fac_editor_key = f"res_fac_editor_{curr_id}"
@@ -7640,7 +7735,7 @@ def show_area_calculator():
     # TAB 6 - EARTHWORKS
     # ==================================================
     elif area_page == "Earthworks":
-        st.subheader("Area Analysis (Earthworks)")
+        st.subheader(t("area.earthworks_page_title"))
         st.caption("Preview only: this Earthworks breakdown does not control Cost Analysis yet.")
 
         earthwork_detail_enabled = st.checkbox(
@@ -7737,7 +7832,7 @@ def show_area_calculator():
     # TAB 7 - FOUNDATION
     # ==================================================
     elif area_page == "Foundation":
-        st.subheader("Area Analysis (Foundation)")
+        st.subheader(t("area.foundation_page_title"))
         st.caption("Foundation Detail calculates a suggested Foundation Rate only. Cost Analysis is updated only from the explicit Apply button.")
 
         foundation_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
@@ -7835,7 +7930,7 @@ def show_area_calculator():
     # TAB 8 - STRUCTURAL
     # ==================================================
     elif area_page == "Structural":
-        st.subheader("Area Analysis (Structural)")
+        st.subheader(t("area.structural_page_title"))
         st.caption("Structural Detail calculates a suggested Structural Rate only. Cost Analysis is updated only from the explicit Apply button.")
 
         structural_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
@@ -7939,7 +8034,7 @@ def show_area_calculator():
     # TAB 9 - ARCHITECTURAL
     # ==================================================
     elif area_page == "Architectural":
-        st.subheader("Area Analysis (Architectural)")
+        st.subheader(t("area.architectural_page_title"))
         st.caption("Architectural Detail calculates a suggested Architectural Rate only. Cost Analysis is updated only from the explicit Apply button.")
 
         with st.container(border=True):
@@ -8118,7 +8213,7 @@ def show_area_calculator():
     # TAB 10 - CONSULTANCY
     # ==================================================
     elif area_page == "Consultancy":
-        st.subheader("Area Analysis (Consultancy)")
+        st.subheader(t("area.consultancy_page_title"))
         st.caption("Consultancy Detail calculates a suggested Consultancy Rate only. Cost Analysis is updated only from the explicit Apply button.")
 
         consultancy_base_values = get_consultancy_detail_base_values(curr_proj["data"], edited_df)
@@ -8238,7 +8333,7 @@ def show_area_calculator():
     # TAB 11 - FF&E
     # ==================================================
     elif area_page == "FF&E":
-        st.subheader("Area Analysis (FF&E)")
+        st.subheader(t("area.ffe_page_title"))
         st.caption("FF&E Detail calculates a suggested FF&E Rate only. Cost Analysis is updated only from the explicit Apply button.")
 
         ffe_rooms = _safe_float(curr_proj["data"].get("m_rooms", 0.0))
@@ -8346,7 +8441,7 @@ def show_area_calculator():
     # TAB 11 - MEP
     # ==================================================
     elif area_page == "MEP":
-        st.subheader("Area Analysis (MEP)")
+        st.subheader(t("area.mep_page_title"))
         st.caption("MEP Detail calculates a suggested MEP Rate only. Cost Analysis is updated only from the explicit Apply button.")
 
         mep_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
@@ -8452,7 +8547,7 @@ def show_area_calculator():
     # TAB 12 - UTILITY
     # ==================================================
     elif area_page == "Utility":
-        st.subheader("Area Analysis (Utility)")
+        st.subheader(t("area.utility_page_title"))
         st.caption("Utility Detail calculates a suggested Utility Rate only. Cost Analysis is updated only from the explicit Apply button.")
 
         utility_gba = _safe_float(curr_proj["data"].get("m_gba", 0.0))
