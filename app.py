@@ -102,6 +102,16 @@ DEFAULT_REPORT_CONFIG = {
 UI_TEXT = {
     "en": {
         "language_label": "Language / Bahasa",
+        "main_navigation": "Main Navigation",
+        "hello_user": "Hello, **{name}**!",
+        "main_page_label": "Choose Page:",
+        "page.start": "Start",
+        "page.dashboard": "Dashboard",
+        "page.area_analysis": "Area Analysis",
+        "page.cost_analysis": "Cost Analysis",
+        "page.database": "Database",
+        "page.summary": "Summary",
+        "page.archive": "Archive",
         "current_study": "Current study",
         "save_current_study": "Save Current Study",
         "current_linked_study_saved": "Current linked study saved: {name}",
@@ -117,9 +127,55 @@ UI_TEXT = {
         "project_order_save_failed": (
             "Project order changed locally, but cloud save failed. Do not log out yet."
         ),
+        "add": "Add",
+        "edit": "Edit",
+        "delete": "Delete",
+        "add_component": "Add Component",
+        "edit_component": "Edit Component",
+        "component_name": "Component Name",
+        "component_name_placeholder": "e.g. Apartment Tower A",
+        "component_type": "Component Type",
+        "create": "Create",
+        "cancel": "Cancel",
+        "save": "Save",
+        "component_name_empty": "Component name cannot be empty.",
+        "component_name_duplicate": "Project name already exists.",
+        "component_name_duplicate_unique": "Component name already exists. Use a unique name.",
+        "component_added_saved": "Component added and saved to cloud.",
+        "component_added_save_failed": "Component added locally, but cloud save failed. Do not log out yet.",
+        "component_saved": "Component saved to cloud.",
+        "component_save_failed": "Component changed locally, but cloud save failed. Do not log out yet.",
+        "hidden_project_type_note": (
+            "This project uses a hidden project type. It is still valid, but hidden from new project creation."
+        ),
+        "unknown_project_type_note": (
+            "This project uses an unknown project type. It will be preserved, but fallback database defaults may be used."
+        ),
+        "delete_selected_components": "Delete selected components?",
+        "delete_selected_components_caption": "Select one or more components below, then confirm delete.",
+        "one_component_must_remain": "At least one component must remain.",
+        "select_components_to_delete": "Select components to delete:",
+        "selected_components_remaining": "{selected} selected. {remaining} component(s) will remain.",
+        "cannot_delete_all_components": "You cannot delete all components. At least one must remain.",
+        "confirm": "Confirm",
+        "component_deleted_saved": "Component deleted and saved to cloud.",
+        "component_deleted_save_failed": "Component deleted locally, but cloud save failed. Do not log out yet.",
+        "logout": "Logout",
+        "back_to_app": "Back to App",
+        "debug": "Debug",
     },
     "id": {
         "language_label": "Language / Bahasa",
+        "main_navigation": "Navigasi Utama",
+        "hello_user": "Halo, **{name}**!",
+        "main_page_label": "Pilih Halaman:",
+        "page.start": "Mulai",
+        "page.dashboard": "Dashboard",
+        "page.area_analysis": "Analisis Area",
+        "page.cost_analysis": "Analisis Biaya",
+        "page.database": "Database",
+        "page.summary": "Ringkasan",
+        "page.archive": "Arsip",
         "current_study": "Studi saat ini",
         "save_current_study": "Simpan Studi Saat Ini",
         "current_linked_study_saved": "Studi tertaut berhasil disimpan: {name}",
@@ -135,6 +191,42 @@ UI_TEXT = {
         "project_order_save_failed": (
             "Urutan proyek berubah secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu."
         ),
+        "add": "Tambah",
+        "edit": "Edit",
+        "delete": "Hapus",
+        "add_component": "Tambah Komponen",
+        "edit_component": "Edit Komponen",
+        "component_name": "Nama Komponen",
+        "component_name_placeholder": "contoh: Apartment Tower A",
+        "component_type": "Tipe Komponen",
+        "create": "Buat",
+        "cancel": "Batal",
+        "save": "Simpan",
+        "component_name_empty": "Nama komponen tidak boleh kosong.",
+        "component_name_duplicate": "Nama proyek sudah ada.",
+        "component_name_duplicate_unique": "Nama komponen sudah ada. Gunakan nama yang unik.",
+        "component_added_saved": "Komponen berhasil ditambahkan dan disimpan ke cloud.",
+        "component_added_save_failed": "Komponen ditambahkan secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
+        "component_saved": "Komponen berhasil disimpan ke cloud.",
+        "component_save_failed": "Komponen berubah secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
+        "hidden_project_type_note": (
+            "Proyek ini memakai tipe proyek tersembunyi. Nilainya tetap valid, tetapi tersembunyi dari pembuatan proyek baru."
+        ),
+        "unknown_project_type_note": (
+            "Proyek ini memakai tipe proyek tidak dikenal. Nilainya akan dipertahankan, tetapi default database cadangan mungkin dipakai."
+        ),
+        "delete_selected_components": "Hapus komponen yang dipilih?",
+        "delete_selected_components_caption": "Pilih satu atau beberapa komponen di bawah, lalu konfirmasi hapus.",
+        "one_component_must_remain": "Minimal satu komponen harus tersisa.",
+        "select_components_to_delete": "Pilih komponen untuk dihapus:",
+        "selected_components_remaining": "{selected} dipilih. {remaining} komponen akan tersisa.",
+        "cannot_delete_all_components": "Anda tidak dapat menghapus semua komponen. Minimal satu komponen harus tersisa.",
+        "confirm": "Konfirmasi",
+        "component_deleted_saved": "Komponen berhasil dihapus dan disimpan ke cloud.",
+        "component_deleted_save_failed": "Komponen dihapus secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
+        "logout": "Logout",
+        "back_to_app": "Kembali ke App",
+        "debug": "Debug",
     },
 }
 
@@ -12143,13 +12235,13 @@ def main_app():
     curr_id, curr_proj = get_current_project()
 
     #region --- SIDEBAR ----
-    st.sidebar.title("Main Navigation")
+    st.sidebar.title(t("main_navigation"))
 
     user = st.session_state.get("user")
     user_email = getattr(user, "email", "user@example.com")
     username = user_email.split("@")[0]
     clean_name = username.replace('.', ' ').title()
-    st.sidebar.markdown(f"Hello, **{clean_name}**!")
+    st.sidebar.markdown(t("hello_user").format(name=clean_name))
 
     ui_lang_options = ["en", "id"]
     current_ui_lang = st.session_state.get("ui_lang", "en")
@@ -12164,9 +12256,20 @@ def main_app():
         key="ui_lang",
     )
 
+    page_options = ["Start", "Dashboard", "Area Analysis", "Cost Analysis", "Database", "Summary", "Archive"]
+    page_label_keys = {
+        "Start": "page.start",
+        "Dashboard": "page.dashboard",
+        "Area Analysis": "page.area_analysis",
+        "Cost Analysis": "page.cost_analysis",
+        "Database": "page.database",
+        "Summary": "page.summary",
+        "Archive": "page.archive",
+    }
     page_choice = st.sidebar.radio(
-        "Pilih Pekerjaan:",
-        ["Start", "Dashboard", "Area Analysis", "Cost Analysis", "Database", "Summary", "Archive"]
+        t("main_page_label"),
+        page_options,
+        format_func=lambda page: t(page_label_keys.get(page, ""), page)
     )
 
     # Always build sidebar list AFTER project repair
@@ -12274,7 +12377,7 @@ def main_app():
 
             with c1:
                 if st.button(
-                    "Add",
+                    t("add"),
                     key="sidebar_component_add_start",
                     type="primary",
                     width="stretch",
@@ -12285,7 +12388,7 @@ def main_app():
 
             with c2:
                 if st.button(
-                    "Edit",
+                    t("edit"),
                     key="sidebar_component_edit_start",
                     width="stretch",
                     icon=icon_safe("edit")
@@ -12294,7 +12397,7 @@ def main_app():
                     st.rerun()
 
             if st.sidebar.button(
-                "Delete",
+                t("delete"),
                 key="sidebar_component_delete_start",
                 width="stretch",
                 icon=icon_safe("delete")
@@ -12308,15 +12411,15 @@ def main_app():
         # ==================================================
         elif st.session_state.sidebar_component_mode == "add":
             with st.sidebar.form("sidebar_add_component_form", clear_on_submit=False):
-                st.markdown("**Add Component**")
+                st.markdown(f"**{t('add_component')}**")
 
                 new_component_name = st.text_input(
-                    "Component Name",
-                    placeholder="e.g. Apartment Tower A"
+                    t("component_name"),
+                    placeholder=t("component_name_placeholder")
                 )
 
                 new_component_type = st.selectbox(
-                    "Component Type",
+                    t("component_type"),
                     options=project_type_options,
                     index=project_type_options.index("Hotel") if "Hotel" in project_type_options else 0
                 )
@@ -12325,14 +12428,14 @@ def main_app():
 
                 with c_create:
                     create_clicked = st.form_submit_button(
-                        "Create",
+                        t("create"),
                         type="primary",
                         width="stretch"
                     )
 
                 with c_cancel:
                     cancel_clicked = st.form_submit_button(
-                        "Cancel",
+                        t("cancel"),
                         width="stretch"
                     )
 
@@ -12340,10 +12443,10 @@ def main_app():
                     clean_name = new_component_name.strip()
 
                     if clean_name == "":
-                        st.warning("Component name cannot be empty.")
+                        st.warning(t("component_name_empty"))
 
                     elif is_duplicate_project_name(clean_name):
-                        st.error("Project name already exists.")
+                        st.error(t("component_name_duplicate"))
 
                     else:
                         st.session_state.proj_counter += 1
@@ -12359,8 +12462,8 @@ def main_app():
                         st.session_state.sidebar_component_mode = None
 
                         if save_after_user_action(
-                            success_message="Component added and saved to cloud.",
-                            fail_message="Component added locally, but cloud save failed. Do not log out yet."
+                            success_message=t("component_added_saved"),
+                            fail_message=t("component_added_save_failed")
                         ):
                             st.rerun()
 
@@ -12385,26 +12488,20 @@ def main_app():
                 current_type = edit_project_type_options[0]
 
             with st.sidebar.form("sidebar_edit_component_form", clear_on_submit=False):
-                st.markdown("**Edit Component**")
+                st.markdown(f"**{t('edit_component')}**")
 
                 if is_hidden_project_type(current_type):
-                    st.caption(
-                        "This project uses a hidden project type. It is still valid, "
-                        "but hidden from new project creation."
-                    )
+                    st.caption(t("hidden_project_type_note"))
                 elif current_type and not is_known_project_type(current_type):
-                    st.warning(
-                        "This project uses an unknown project type. It will be preserved, "
-                        "but fallback database defaults may be used."
-                    )
+                    st.warning(t("unknown_project_type_note"))
 
                 edited_component_name = st.text_input(
-                    "Component Name",
+                    t("component_name"),
                     value=current_name
                 )
 
                 edited_component_type = st.selectbox(
-                    "Component Type",
+                    t("component_type"),
                     options=edit_project_type_options,
                     index=edit_project_type_options.index(current_type)
                 )
@@ -12413,14 +12510,14 @@ def main_app():
 
                 with c_save:
                     save_clicked = st.form_submit_button(
-                        "Save",
+                        t("save"),
                         type="primary",
                         width="stretch"
                     )
 
                 with c_cancel:
                     cancel_clicked = st.form_submit_button(
-                        "Cancel",
+                        t("cancel"),
                         width="stretch"
                     )
 
@@ -12432,10 +12529,10 @@ def main_app():
                     clean_name = edited_component_name.strip()
 
                     if clean_name == "":
-                        st.warning("Component name cannot be empty.")
+                        st.warning(t("component_name_empty"))
 
                     elif is_duplicate_project_name(clean_name, current_id=curr_id):
-                        st.error("Component name already exists. Use a unique name.")
+                        st.error(t("component_name_duplicate_unique"))
 
                     else:
                         old_type = st.session_state.projects[curr_id].get("type", "Hotel")
@@ -12465,8 +12562,8 @@ def main_app():
                         st.session_state.sidebar_component_mode = None
 
                         if save_after_user_action(
-                            success_message="Component saved to cloud.",
-                            fail_message="Component changed locally, but cloud save failed. Do not log out yet."
+                            success_message=t("component_saved"),
+                            fail_message=t("component_save_failed")
                         ):
                             st.rerun()
 
@@ -12476,14 +12573,14 @@ def main_app():
         elif st.session_state.sidebar_component_mode == "delete":
             projects = st.session_state.get("projects", {})
 
-            st.sidebar.warning("Delete selected components?")
-            st.sidebar.caption("Select one or more components below, then confirm delete.")
+            st.sidebar.warning(t("delete_selected_components"))
+            st.sidebar.caption(t("delete_selected_components_caption"))
 
             if not isinstance(projects, dict) or len(projects) <= 1:
-                st.sidebar.warning("At least one component must remain.")
+                st.sidebar.warning(t("one_component_must_remain"))
 
                 if st.sidebar.button(
-                    "Cancel",
+                    t("cancel"),
                     key="sidebar_component_delete_cancel_single",
                     width="stretch"
                 ):
@@ -12493,7 +12590,7 @@ def main_app():
             else:
                 selected_delete_ids = []
 
-                st.sidebar.markdown("**Select components to delete:**")
+                st.sidebar.markdown(f"**{t('select_components_to_delete')}**")
 
                 for pid, proj in projects.items():
                     proj_name = proj.get("name", pid)
@@ -12511,18 +12608,20 @@ def main_app():
 
                 if selected_delete_ids:
                     st.sidebar.caption(
-                        f"{len(selected_delete_ids)} selected. "
-                        f"{remaining_count} component(s) will remain."
+                        t("selected_components_remaining").format(
+                            selected=len(selected_delete_ids),
+                            remaining=remaining_count,
+                        )
                     )
 
                 if remaining_count < 1:
-                    st.sidebar.error("You cannot delete all components. At least one must remain.")
+                    st.sidebar.error(t("cannot_delete_all_components"))
 
                 c_confirm, c_cancel = st.sidebar.columns(2)
 
                 with c_confirm:
                     if st.button(
-                        "Confirm",
+                        t("confirm"),
                         key="sidebar_component_delete_confirm",
                         type="primary",
                         width="stretch",
@@ -12547,14 +12646,14 @@ def main_app():
                         st.session_state.sidebar_component_mode = None
 
                         if save_after_user_action(
-                            success_message="Component deleted and saved to cloud.",
-                            fail_message="Component deleted locally, but cloud save failed. Do not log out yet."
+                            success_message=t("component_deleted_saved"),
+                            fail_message=t("component_deleted_save_failed")
                         ):
                             st.rerun()
 
                 with c_cancel:
                     if st.button(
-                        "Cancel",
+                        t("cancel"),
                         key="sidebar_component_delete_cancel",
                         width="stretch"
                     ):
@@ -12568,7 +12667,7 @@ def main_app():
 
         st.sidebar.markdown("---")
 
-    if st.sidebar.button("Logout", type="primary", icon=icon_safe("logout")):
+    if st.sidebar.button(t("logout"), type="primary", icon=icon_safe("logout")):
         st.session_state.logged_in = False
         st.session_state.access_token = None
         st.session_state.user = None
@@ -12591,7 +12690,7 @@ def main_app():
     #debugcode
     if st.session_state.get("current_page") == "App Debugger":
         if st.sidebar.button(
-            "Back to App",
+            t("back_to_app"),
             key="close_app_debugger",
             width="stretch",
             icon=mi("arrow_back") if "mi" in globals() else None
@@ -12599,7 +12698,7 @@ def main_app():
             st.session_state.current_page = None
             st.rerun()
     elif st.sidebar.button(
-        "Debug",
+        t("debug"),
         key="open_app_debugger",
         width="stretch",
         icon=mi("bug_report") if "mi" in globals() else None
