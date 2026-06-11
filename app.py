@@ -3738,6 +3738,32 @@ def cb_switch_project():
         st.session_state.current_proj_id = proj_ids[selected_idx]
         save_data()     
 
+def move_current_project(delta):
+    projects = st.session_state.get("projects", {})
+    curr_id = st.session_state.get("current_proj_id")
+
+    if not isinstance(projects, dict) or curr_id not in projects:
+        return False
+
+    items = list(projects.items())
+    current_index = next(
+        (idx for idx, (pid, _pdata) in enumerate(items) if pid == curr_id),
+        None,
+    )
+
+    if current_index is None:
+        return False
+
+    target_index = current_index + delta
+    if target_index < 0 or target_index >= len(items):
+        return False
+
+    items[current_index], items[target_index] = items[target_index], items[current_index]
+    st.session_state.projects = dict(items)
+    st.session_state.current_proj_id = curr_id
+
+    return True
+
 def create_new_feasibility_study(study_name, project_type="Hotel"):
     clean_name = str(study_name).strip()
 
@@ -12136,6 +12162,41 @@ def main_app():
         )
 
         curr_id, curr_proj = get_current_project()
+        curr_order_index = proj_ids.index(curr_id) if curr_id in proj_ids else 0
+        can_move_up = len(proj_ids) > 1 and curr_order_index > 0
+        can_move_down = len(proj_ids) > 1 and curr_order_index < len(proj_ids) - 1
+
+        move_up_col, move_down_col = st.sidebar.columns(2)
+
+        with move_up_col:
+            if st.button(
+                "Move Up",
+                key=f"sidebar_component_move_up_{curr_id}",
+                width="stretch",
+                icon=icon_safe("arrow_upward"),
+                disabled=not can_move_up
+            ):
+                if move_current_project(-1):
+                    if save_after_user_action(
+                        success_message="Project order saved to cloud.",
+                        fail_message="Project order changed locally, but cloud save failed. Do not log out yet."
+                    ):
+                        st.rerun()
+
+        with move_down_col:
+            if st.button(
+                "Move Down",
+                key=f"sidebar_component_move_down_{curr_id}",
+                width="stretch",
+                icon=icon_safe("arrow_downward"),
+                disabled=not can_move_down
+            ):
+                if move_current_project(1):
+                    if save_after_user_action(
+                        success_message="Project order saved to cloud.",
+                        fail_message="Project order changed locally, but cloud save failed. Do not log out yet."
+                    ):
+                        st.rerun()
 
         # ==================================================
         # SIDEBAR COMPONENT ACTION MODE
