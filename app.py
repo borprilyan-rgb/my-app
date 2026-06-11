@@ -195,7 +195,96 @@ UI_TEXT = {
         "dashboard.missing_nfa": "Missing NFA",
         "dashboard.missing_budget": "Missing Budget",
         "dashboard.missing_rooms": "Missing Rooms",
-    },
+        "admin.feasibility_study": "Feasibility Study",
+        "admin.loaded_file_ready": "**{name}** is currently loaded (You can start calculating your project)",
+        "admin.previous_page": "Previous Page",
+        "admin.welcome_start": (
+            "**Welcome to Project Feasibility Study - Agung Sedayu Group**\n\n"
+            "To start calculating, first create a new project by clicking the button below."
+        ),
+        "admin.create_new_study": "Create New Study",
+        "admin.create_new_feasibility_study": "Create New Feasibility Study",
+        "admin.create_study_caption": "Enter a study name. A new default project will be created automatically.",
+        "admin.back": "Back",
+        "admin.feasibility_study_name": "Feasibility Study Name",
+        "admin.study_name_placeholder": "e.g. Project X - Option 1 - Rev 0",
+        "admin.enter_study_name": "Please enter feasibility study name.",
+        "admin.duplicate_study_name": "A study with this name already exists. Use a different name.",
+        "admin.initial_archive_failed": (
+            "Study **{name}** was created in the current session, but the initial archive record could not be created."
+        ),
+        "admin.study_created_saved": "Study **{name}** created and saved to archive.",
+        "admin.study_saved": "Study **{name}** saved to archive.",
+        "admin.save_current_page_first": "Save the current page first if needed.",
+        "admin.no_saved_studies": "No saved feasibility studies yet.",
+        "admin.currently_loaded_file": "Currently loaded file",
+        "admin.saved_at": "Saved: {time}{active}",
+        "admin.saved_file": "Saved file{active}",
+        "admin.load": "Load",
+        "admin.loaded_file": "Loaded **{name}**.",
+        "admin.page_count": "Page {current} of {total}",
+        "admin.archive": "Archive",
+        "admin.online_backup": "Online Backup",
+        "admin.offline_backup": "Offline Backup",
+        "admin.notes": "Notes",
+        "admin.project_history": "Project History",
+        "admin.working_copy": "Working copy: {name}",
+        "admin.legacy_restore_points": "Legacy in-project restore points detected. New restore points are stored externally.",
+        "admin.save_draft": "Save Draft",
+        "admin.draft_saved": "Draft saved to cloud.",
+        "admin.draft_save_failed": "Draft changed locally, but cloud save failed. Do not log out yet.",
+        "admin.create_restore_point": "Create Restore Point",
+        "admin.restore_points_used": "{used} of {limit} restore points used.",
+        "admin.restore_point_note": "Restore point note",
+        "admin.restore_point_note_placeholder": "e.g. QS review before VE changes",
+        "admin.restore_point_limit": "Restore point limit reached. Delete old restore points first to create another one.",
+        "admin.restore_point_created": "Restore point {label} created.",
+        "admin.no_restore_points": "No restore points yet. Create one before making risky changes.",
+        "admin.restore_points": "Restore Points",
+        "admin.restore_selected_restore_point": "Restore Selected Restore Point",
+        "admin.select_restore_point": "Select restore point",
+        "admin.restore_confirm": "I understand this will replace the current working copy.",
+        "admin.restore_saved": "Restore selected restore point saved to working copy.",
+        "admin.restore_save_failed": "Restore point restored locally, but cloud save failed. Do not log out yet.",
+        "admin.restore_failed": "Selected restore point could not be restored.",
+        "admin.compare_current_restore": "Compare Current vs Restore Point",
+        "admin.select_restore_compare": "Select restore point to compare",
+        "admin.no_restorable_snapshot": "Selected restore point has no restorable snapshot.",
+        "admin.delete_restore_point": "Delete Restore Point",
+        "admin.select_restore_delete": "Select restore point to delete",
+        "admin.delete_restore_confirm": "I understand this will permanently delete only this restore point.",
+        "admin.restore_point_deleted": "Restore point deleted.",
+        "admin.label": "Label",
+        "admin.note": "Note",
+        "admin.created_at": "Created At",
+        "admin.created_by": "Created By",
+        "admin.current": "Current",
+        "admin.restore_point": "Restore Point",
+        "admin.change": "Change",
+        "admin.write_note": "Write a note",
+        "admin.note_placeholder": "Example: Check area lanskap and rate later...",
+        "admin.add_note": "Add Note",
+        "admin.write_note_first": "Please write a note first.",
+        "admin.add_simple_note": "Add Simple Note",
+        "admin.saved_notes": "Saved Notes",
+        "admin.no_notes": "No notes yet.",
+        "admin.delete_simple_note": "Delete Simple Note",
+        "admin.name": "Name",
+        "admin.project_name_required": "Please enter Project name.",
+        "admin.save": "Save",
+        "admin.load_file": "Load File",
+        "admin.no_saved_projects": "No saved projects yet.",
+        "admin.showing_saved_files": "Showing {start}-{end} of {total} saved files",
+        "admin.rename": "Rename",
+        "admin.new_file_name": "New file name",
+        "admin.save_name": "Save Name",
+        "admin.file_renamed": "File renamed.",
+        "admin.delete_file_confirm": "Delete **{name}**?",
+        "admin.archived_file_removed": "This archived file will be removed from the library.",
+        "admin.file_deleted": "File deleted.",
+        "admin.previous": "Previous",
+        "admin.next": "Next",
+        },
     "id": {
         "language_label": "Language / Bahasa",
         "main_navigation": "Navigasi Utama",
@@ -291,6 +380,95 @@ UI_TEXT = {
         "dashboard.missing_nfa": "NFA belum diisi",
         "dashboard.missing_budget": "Anggaran belum diisi",
         "dashboard.missing_rooms": "Kamar/unit belum diisi",
+        "admin.feasibility_study": "Studi Kelayakan",
+        "admin.loaded_file_ready": "**{name}** sedang dimuat (Anda dapat mulai menghitung proyek)",
+        "admin.previous_page": "Halaman Sebelumnya",
+        "admin.welcome_start": (
+            "**Selamat datang di Project Feasibility Study - Agung Sedayu Group**\n\n"
+            "Untuk mulai menghitung, buat proyek baru dengan tombol di bawah."
+        ),
+        "admin.create_new_study": "Buat Studi Baru",
+        "admin.create_new_feasibility_study": "Buat Studi Kelayakan Baru",
+        "admin.create_study_caption": "Masukkan nama studi. Proyek default baru akan dibuat otomatis.",
+        "admin.back": "Kembali",
+        "admin.feasibility_study_name": "Nama Studi Kelayakan",
+        "admin.study_name_placeholder": "contoh: Project X - Option 1 - Rev 0",
+        "admin.enter_study_name": "Masukkan nama studi kelayakan.",
+        "admin.duplicate_study_name": "Studi dengan nama ini sudah ada. Gunakan nama lain.",
+        "admin.initial_archive_failed": (
+            "Studi **{name}** dibuat di sesi saat ini, tetapi arsip awal tidak dapat dibuat."
+        ),
+        "admin.study_created_saved": "Studi **{name}** berhasil dibuat dan disimpan ke arsip.",
+        "admin.study_saved": "Studi **{name}** berhasil disimpan ke arsip.",
+        "admin.save_current_page_first": "Simpan halaman saat ini terlebih dahulu jika diperlukan.",
+        "admin.no_saved_studies": "Belum ada studi kelayakan tersimpan.",
+        "admin.currently_loaded_file": "File sedang dimuat",
+        "admin.saved_at": "Disimpan: {time}{active}",
+        "admin.saved_file": "File tersimpan{active}",
+        "admin.load": "Muat",
+        "admin.loaded_file": "**{name}** berhasil dimuat.",
+        "admin.page_count": "Halaman {current} dari {total}",
+        "admin.archive": "Arsip",
+        "admin.online_backup": "Backup Online",
+        "admin.offline_backup": "Backup Offline",
+        "admin.notes": "Catatan",
+        "admin.project_history": "Riwayat Proyek",
+        "admin.working_copy": "Working copy: {name}",
+        "admin.legacy_restore_points": "Restore point lama dalam proyek terdeteksi. Restore point baru disimpan secara eksternal.",
+        "admin.save_draft": "Simpan Draft",
+        "admin.draft_saved": "Draft berhasil disimpan ke cloud.",
+        "admin.draft_save_failed": "Draft berubah secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
+        "admin.create_restore_point": "Buat Restore Point",
+        "admin.restore_points_used": "{used} dari {limit} restore point terpakai.",
+        "admin.restore_point_note": "Catatan restore point",
+        "admin.restore_point_note_placeholder": "contoh: Review QS sebelum perubahan VE",
+        "admin.restore_point_limit": "Batas restore point tercapai. Hapus restore point lama sebelum membuat yang baru.",
+        "admin.restore_point_created": "Restore point {label} berhasil dibuat.",
+        "admin.no_restore_points": "Belum ada restore point. Buat satu sebelum melakukan perubahan berisiko.",
+        "admin.restore_points": "Restore Points",
+        "admin.restore_selected_restore_point": "Pulihkan Restore Point Terpilih",
+        "admin.select_restore_point": "Pilih restore point",
+        "admin.restore_confirm": "Saya memahami bahwa ini akan mengganti working copy saat ini.",
+        "admin.restore_saved": "Restore point terpilih berhasil disimpan ke working copy.",
+        "admin.restore_save_failed": "Restore point dipulihkan secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
+        "admin.restore_failed": "Restore point terpilih tidak dapat dipulihkan.",
+        "admin.compare_current_restore": "Bandingkan Saat Ini vs Restore Point",
+        "admin.select_restore_compare": "Pilih restore point untuk dibandingkan",
+        "admin.no_restorable_snapshot": "Restore point terpilih tidak memiliki snapshot yang dapat dipulihkan.",
+        "admin.delete_restore_point": "Hapus Restore Point",
+        "admin.select_restore_delete": "Pilih restore point untuk dihapus",
+        "admin.delete_restore_confirm": "Saya memahami bahwa ini hanya akan menghapus restore point ini secara permanen.",
+        "admin.restore_point_deleted": "Restore point berhasil dihapus.",
+        "admin.label": "Label",
+        "admin.note": "Catatan",
+        "admin.created_at": "Dibuat Pada",
+        "admin.created_by": "Dibuat Oleh",
+        "admin.current": "Saat Ini",
+        "admin.restore_point": "Restore Point",
+        "admin.change": "Perubahan",
+        "admin.write_note": "Tulis catatan",
+        "admin.note_placeholder": "Contoh: Cek area lanskap dan rate nanti...",
+        "admin.add_note": "Tambah Catatan",
+        "admin.write_note_first": "Tulis catatan terlebih dahulu.",
+        "admin.add_simple_note": "Tambah Catatan Sederhana",
+        "admin.saved_notes": "Catatan Tersimpan",
+        "admin.no_notes": "Belum ada catatan.",
+        "admin.delete_simple_note": "Hapus Catatan Sederhana",
+        "admin.name": "Nama",
+        "admin.project_name_required": "Masukkan nama proyek.",
+        "admin.save": "Simpan",
+        "admin.load_file": "Muat File",
+        "admin.no_saved_projects": "Belum ada proyek tersimpan.",
+        "admin.showing_saved_files": "Menampilkan {start}-{end} dari {total} file tersimpan",
+        "admin.rename": "Ubah Nama",
+        "admin.new_file_name": "Nama file baru",
+        "admin.save_name": "Simpan Nama",
+        "admin.file_renamed": "Nama file berhasil diubah.",
+        "admin.delete_file_confirm": "Hapus **{name}**?",
+        "admin.archived_file_removed": "File arsip ini akan dihapus dari daftar.",
+        "admin.file_deleted": "File berhasil dihapus.",
+        "admin.previous": "Sebelumnya",
+        "admin.next": "Berikutnya",
     },
 }
 
@@ -3973,7 +4151,7 @@ def create_new_feasibility_study(study_name, project_type="Hotel"):
     clean_name = str(study_name).strip()
 
     if clean_name == "":
-        st.error("Please enter feasibility study name.")
+        st.error(t("admin.enter_study_name"))
         return False
 
     st.session_state.current_study_name = clean_name
@@ -4042,11 +4220,11 @@ def create_new_study_and_archive(study_name, project_type="Hotel"):
     clean_name = str(study_name).strip()
 
     if clean_name == "":
-        st.error("Please enter feasibility study name.")
+        st.error(t("admin.enter_study_name"))
         return False
 
     if is_duplicate_study_or_archive_name(clean_name):
-        st.error("A study with this name already exists. Use a different name.")
+        st.error(t("admin.duplicate_study_name"))
         return False
 
     if not create_new_feasibility_study(clean_name, project_type=project_type):
@@ -4055,10 +4233,7 @@ def create_new_study_and_archive(study_name, project_type="Hotel"):
     if save_snapshot(clean_name):
         return True
 
-    st.warning(
-        f"Study **{clean_name}** was created in the current session, "
-        "but the initial archive record could not be created."
-    )
+    st.warning(t("admin.initial_archive_failed").format(name=clean_name))
     return False
 
 def generate_excel_template():
@@ -4126,7 +4301,7 @@ def generate_excel_template():
 #endregion
 
 def render_feasibility_study_landing(): #start page
-    st.title("Feasibility Study")
+    st.title(t("admin.feasibility_study"))
 
     st.divider()
 
@@ -4146,12 +4321,12 @@ def render_feasibility_study_landing(): #start page
     if active_file_id and st.session_state.fs_landing_mode is None:
         
         
-        st.success(f"**{active_file_name}** is currently loaded (You can start calculating your project)", icon=":material/check:")
+        st.success(t("admin.loaded_file_ready").format(name=active_file_name), icon=":material/check:")
 
         col_msg, col_back = st.columns([1, 5])
     
         with col_msg:
-            if st.button("Previous Page", icon=":material/arrow_back:", key="go_back_to_load_list", width="stretch"):
+            if st.button(t("admin.previous_page"), icon=":material/arrow_back:", key="go_back_to_load_list", width="stretch"):
                 st.session_state.fs_landing_mode = "home"
                 st.rerun()
 
@@ -4162,11 +4337,7 @@ def render_feasibility_study_landing(): #start page
     # ==================================================
     if st.session_state.fs_landing_mode is None or st.session_state.fs_landing_mode == "home":
 
-        st.info("""
-
-        **Welcome to Project Feasibility Study - Agung Sedayu Group**
-
-        To start calculating, first create a new project by clicking the button below.""", icon=":material/waving_hand:")
+        st.info(t("admin.welcome_start"), icon=":material/waving_hand:")
 
         st.space(size="small")
 
@@ -4174,7 +4345,7 @@ def render_feasibility_study_landing(): #start page
 
         with col_create_btn:
             if st.button(
-                "Create New Study",
+                t("admin.create_new_study"),
                 key="landing_choose_create_study",
                 type="primary",
                 width="stretch",
@@ -4192,11 +4363,11 @@ def render_feasibility_study_landing(): #start page
         col_title, col_back = st.columns([5, 1])
 
         with col_title:
-            st.subheader("Create New Feasibility Study")
-            st.caption("Enter a study name. A new default project will be created automatically.")
+            st.subheader(t("admin.create_new_feasibility_study"))
+            st.caption(t("admin.create_study_caption"))
 
         with col_back:
-            if st.button("Back", key="landing_create_back", width="stretch"):
+            if st.button(t("admin.back"), key="landing_create_back", width="stretch"):
                 st.session_state.fs_landing_mode = None
                 st.rerun()
 
@@ -4206,32 +4377,32 @@ def render_feasibility_study_landing(): #start page
         with create_col:
             with st.form("create_new_feasibility_study_form", clear_on_submit=False):
                 study_name = st.text_input(
-                    "Feasibility Study Name",
-                    placeholder="e.g. Project X - Option 1 - Rev 0"
+                    t("admin.feasibility_study_name"),
+                    placeholder=t("admin.study_name_placeholder")
                 )
 
                 create_clicked = st.form_submit_button(
-                    "Create New Study",
+                    t("admin.create_new_study"),
                     type="primary",
                     width="stretch"
                 )
 
                 if create_clicked:
                     if study_name.strip() == "":
-                        st.warning("Please enter feasibility study name.")
+                        st.warning(t("admin.enter_study_name"))
                     else:
                         clean_study_name = study_name.strip()
                         if create_new_study_and_archive(clean_study_name):
                             st.session_state.fs_landing_mode = None
-                            st.success(f"Study **{clean_study_name}** created and saved to archive.")
+                            st.success(t("admin.study_created_saved").format(name=clean_study_name))
                             st.rerun()
 
-            st.caption("Save the current page first if needed.")
+            st.caption(t("admin.save_current_page_first"))
     
     snapshots = load_snapshots()
 
     if not snapshots:
-        st.info("No saved feasibility studies yet.")
+        st.info(t("admin.no_saved_studies"))
 
     else:
         # ==================================================
@@ -4277,16 +4448,16 @@ def render_feasibility_study_landing(): #start page
             with col_file:
                 st.markdown(f"**{snap_name}**")
                 if is_active:
-                    st.badge("Currently loaded file", icon=":material/check:", color="green")
+                    st.badge(t("admin.currently_loaded_file"), icon=":material/check:", color="green")
 
                 if saved_time:
-                    st.caption(f"Saved: {saved_time}{active_label}")
+                    st.caption(t("admin.saved_at").format(time=saved_time, active=active_label))
                 else:
-                    st.caption(f"Saved file{active_label}")
+                    st.caption(t("admin.saved_file").format(active=active_label))
 
             with col_action:
                 if st.button(
-                    "Load",
+                    t("admin.load"),
                     key=f"landing_load_file_{snap_id}",
                     type="primary",
                     width="stretch"
@@ -4302,7 +4473,7 @@ def render_feasibility_study_landing(): #start page
                         st.session_state.fs_landing_mode = None
 
                         save_data()
-                        st.success(f"Loaded **{snap_name}**.")
+                        st.success(t("admin.loaded_file").format(name=snap_name))
                         st.rerun()
 
             st.divider()
@@ -4325,7 +4496,7 @@ def render_feasibility_study_landing(): #start page
         with col_page:
             st.markdown(
                 f"<div style='text-align:center; padding-top: 0.45rem;'>"
-                f"Page {st.session_state.fs_load_page + 1} of {total_pages}"
+                f"{t('admin.page_count').format(current=st.session_state.fs_load_page + 1, total=total_pages)}"
                 f"</div>",
                 unsafe_allow_html=True
             )
@@ -11472,15 +11643,15 @@ CREATED &nbsp;: {created}
         st.markdown(html_str, unsafe_allow_html=True)
 
 def show_snapshots():
-    st.title("Archive")
+    st.title(t("admin.archive"))
     curr_id, curr_proj = get_current_project()
 
     atab1, atab2, atab3, atab4 = st.tabs([
-        "Online Backup", "Offline Backup", "Notes", "Project History"
+        t("admin.online_backup"), t("admin.offline_backup"), t("admin.notes"), t("admin.project_history")
     ])
 
     with atab4:
-        st.header("Project History")
+        st.header(t("admin.project_history"))
         curr_id, curr_proj = get_current_project()
         legacy_versions = curr_proj.get("versions", [])
         if not isinstance(legacy_versions, list):
@@ -11488,46 +11659,45 @@ def show_snapshots():
         restore_points = get_restore_points_from_supabase(curr_id, show_error=True)
         restore_point_limit_reached = len(restore_points) >= MAX_RESTORE_POINTS_PER_PROJECT
 
-        st.caption(f"Working copy: {curr_proj.get('name', curr_id)}")
+        st.caption(t("admin.working_copy").format(name=curr_proj.get('name', curr_id)))
         if legacy_versions:
-            st.warning(
-                "Legacy in-project restore points detected. New restore points are stored externally."
-            )
+            st.warning(t("admin.legacy_restore_points"))
 
         save_col, create_col = st.columns([1, 2])
 
         with save_col:
-            st.subheader("Save Draft")
+            st.subheader(t("admin.save_draft"))
             if st.button(
-                "Save Draft",
+                t("admin.save_draft"),
                 key=f"version_save_draft_{curr_id}",
                 type="primary",
                 width="stretch",
                 icon=icon_safe("save")
             ):
                 if save_after_user_action(
-                    success_message="Draft saved to cloud.",
-                    fail_message="Draft changed locally, but cloud save failed. Do not log out yet."
+                    success_message=t("admin.draft_saved"),
+                    fail_message=t("admin.draft_save_failed")
                 ):
                     st.rerun()
 
         with create_col:
-            st.subheader("Create Restore Point")
-            st.caption(f"{len(restore_points)} of {MAX_RESTORE_POINTS_PER_PROJECT} restore points used.")
+            st.subheader(t("admin.create_restore_point"))
+            st.caption(t("admin.restore_points_used").format(
+                used=len(restore_points),
+                limit=MAX_RESTORE_POINTS_PER_PROJECT,
+            ))
             note = st.text_input(
-                "Restore point note",
+                t("admin.restore_point_note"),
                 key=f"version_note_{curr_id}",
-                placeholder="e.g. QS review before VE changes",
+                placeholder=t("admin.restore_point_note_placeholder"),
                 disabled=restore_point_limit_reached
             )
 
             if restore_point_limit_reached:
-                st.info(
-                    "Restore point limit reached. Delete old restore points first to create another one."
-                )
+                st.info(t("admin.restore_point_limit"))
 
             if st.button(
-                "Create Restore Point",
+                t("admin.create_restore_point"),
                 key=f"create_version_{curr_id}",
                 width="stretch",
                 icon=icon_safe("add"),
@@ -11535,20 +11705,20 @@ def show_snapshots():
             ):
                 record = create_restore_point(curr_proj, note)
                 if record:
-                    st.success(f"Restore point {record.get('label', '')} created.")
+                    st.success(t("admin.restore_point_created").format(label=record.get('label', '')))
                     st.rerun()
 
         st.divider()
 
         if not restore_points:
-            st.info("No restore points yet. Create one before making risky changes.")
+            st.info(t("admin.no_restore_points"))
         else:
             version_options = {
                 f"{rp.get('label', 'Restore Point')} - {format_snapshot_time(rp.get('created_at')) or rp.get('created_at', '')}": rp.get("id")
                 for rp in restore_points
             }
 
-            st.subheader("Restore Points")
+            st.subheader(t("admin.restore_points"))
             restore_point_rows = []
             for restore_point in restore_points:
                 restore_point_rows.append({
@@ -11559,25 +11729,30 @@ def show_snapshots():
                 })
 
             st.dataframe(
-                pd.DataFrame(restore_point_rows),
+                pd.DataFrame(restore_point_rows).rename(columns={
+                    "Label": t("admin.label"),
+                    "Note": t("admin.note"),
+                    "Created At": t("admin.created_at"),
+                    "Created By": t("admin.created_by"),
+                }),
                 width="stretch",
                 hide_index=True
             )
 
-            st.subheader("Restore Selected Restore Point")
+            st.subheader(t("admin.restore_selected_restore_point"))
             restore_label = st.selectbox(
-                "Select restore point",
+                t("admin.select_restore_point"),
                 options=list(version_options.keys()),
                 key=f"restore_version_select_{curr_id}"
             )
             restore_id = version_options[restore_label]
             restore_confirm = st.checkbox(
-                "I understand this will replace the current working copy.",
+                t("admin.restore_confirm"),
                 key=f"restore_version_confirm_{curr_id}"
             )
 
             if st.button(
-                "Restore Selected Restore Point",
+                t("admin.restore_selected_restore_point"),
                 key=f"restore_version_btn_{curr_id}",
                 width="stretch",
                 disabled=not restore_confirm,
@@ -11589,17 +11764,17 @@ def show_snapshots():
                 if restore_project_from_restore_point(curr_proj, snapshot):
                     clear_project_ui_cache()
                     if save_after_user_action(
-                        success_message="Restore selected restore point saved to working copy.",
-                        fail_message="Restore point restored locally, but cloud save failed. Do not log out yet."
+                        success_message=t("admin.restore_saved"),
+                        fail_message=t("admin.restore_save_failed")
                     ):
                         st.rerun()
                 else:
-                    st.error("Selected restore point could not be restored.")
+                    st.error(t("admin.restore_failed"))
 
             st.divider()
-            st.subheader("Compare Current vs Restore Point")
+            st.subheader(t("admin.compare_current_restore"))
             compare_label = st.selectbox(
-                "Select restore point to compare",
+                t("admin.select_restore_compare"),
                 options=list(version_options.keys()),
                 key=f"compare_version_select_{curr_id}"
             )
@@ -11618,40 +11793,40 @@ def show_snapshots():
                     width="stretch",
                     hide_index=True,
                     column_config={
-                        "Current": st.column_config.NumberColumn("Current", format="%.2f"),
-                        "Restore Point": st.column_config.NumberColumn("Restore Point", format="%.2f"),
-                        "Change": st.column_config.NumberColumn("Change", format="%.2f"),
+                        "Current": st.column_config.NumberColumn(t("admin.current"), format="%.2f"),
+                        "Restore Point": st.column_config.NumberColumn(t("admin.restore_point"), format="%.2f"),
+                        "Change": st.column_config.NumberColumn(t("admin.change"), format="%.2f"),
                     }
                 )
             else:
-                st.warning("Selected restore point has no restorable snapshot.")
+                st.warning(t("admin.no_restorable_snapshot"))
 
             st.divider()
-            st.subheader("Delete Restore Point")
+            st.subheader(t("admin.delete_restore_point"))
             delete_label = st.selectbox(
-                "Select restore point to delete",
+                t("admin.select_restore_delete"),
                 options=list(version_options.keys()),
                 key=f"delete_restore_point_select_{curr_id}"
             )
             delete_id = version_options[delete_label]
             delete_confirm = st.checkbox(
-                "I understand this will permanently delete only this restore point.",
+                t("admin.delete_restore_confirm"),
                 key=f"delete_restore_point_confirm_{curr_id}"
             )
 
             if st.button(
-                "Delete Restore Point",
+                t("admin.delete_restore_point"),
                 key=f"delete_restore_point_btn_{curr_id}",
                 width="stretch",
                 disabled=not delete_confirm,
                 icon=icon_safe("delete")
             ):
                 if delete_restore_point_from_supabase(delete_id):
-                    st.success("Restore point deleted.")
+                    st.success(t("admin.restore_point_deleted"))
                     st.rerun()
 
     with atab3:
-        st.subheader("Notes")
+        st.subheader(t("admin.notes"))
 
         curr_id, pdata = get_current_project()
         pdata.setdefault("data", {})
@@ -11667,7 +11842,7 @@ def show_snapshots():
             clean_note = str(st.session_state.get(note_key, "")).strip()
 
             if clean_note == "":
-                st.session_state["simple_note_warning"] = "Please write a note first."
+                st.session_state["simple_note_warning"] = t("admin.write_note_first")
                 return
 
             pdata_cb["data"]["simple_notes"].insert(0, {
@@ -11677,17 +11852,17 @@ def show_snapshots():
 
             st.session_state[note_key] = ""
             st.session_state["simple_note_warning"] = ""
-            save_ok = save_after_user_action("Add Simple Note")
+            save_ok = save_after_user_action(t("admin.add_simple_note"))
 
         st.text_area(
-            "Write a note",
-            placeholder="Example: Check area lanskap and rate later...",
+            t("admin.write_note"),
+            placeholder=t("admin.note_placeholder"),
             height=120,
             key=note_key
         )
 
         st.button(
-            "Add Note",
+            t("admin.add_note"),
             type="primary",
             width="stretch",
             key=f"add_simple_note_btn_{curr_id}",
@@ -11698,12 +11873,12 @@ def show_snapshots():
             st.warning(st.session_state["simple_note_warning"])
 
         st.divider()
-        st.markdown("### Saved Notes")
+        st.markdown(f"### {t('admin.saved_notes')}")
 
         notes = pdata["data"].get("simple_notes", [])
 
         if not notes:
-            st.info("No notes yet.")
+            st.info(t("admin.no_notes"))
         else:
             for idx, note in enumerate(notes):
                 created_at = note.get("created_at", "")
@@ -11723,20 +11898,20 @@ def show_snapshots():
 
                     with col_delete:
                         if st.button(
-                            "Delete",
+                            t("delete"),
                             key=f"delete_simple_note_{curr_id}_{idx}",
                             width="stretch"
                         ):
                             pdata["data"]["simple_notes"].pop(idx)
-                            save_ok = save_after_user_action("Delete Simple Note")
+                            save_ok = save_after_user_action(t("admin.delete_simple_note"))
 
                             if save_ok:
                                 st.rerun()
 
     with atab1:
         # --- CREATE LOCAL STUDY / SAVE NEW SNAPSHOT ---
-        st.header("Online Backup")
-        st.subheader("Create New Study")
+        st.header(t("admin.online_backup"))
+        st.subheader(t("admin.create_new_study"))
 
         snapshots = load_snapshots()
 
@@ -11767,42 +11942,42 @@ def show_snapshots():
 
         col1, _ = st.columns([4, 3])
         snapshot_name = col1.text_input(
-            "Name", 
+            t("admin.name"),
             placeholder="e.g. Project X - Opt 1 - Rev 0"
         )
         col_create, col_save, _ = st.columns([2, 2, 3])
 
-        if col_create.button("Create New Study", width="stretch", icon=icon_safe("create_new_folder")):
+        if col_create.button(t("admin.create_new_study"), width="stretch", icon=icon_safe("create_new_folder")):
             if snapshot_name.strip() == "":
-                col_create.warning("Please enter Project name.")
+                col_create.warning(t("admin.project_name_required"))
             else:
                 clean_snapshot_name = snapshot_name.strip()
                 if create_new_study_and_archive(clean_snapshot_name):
-                    st.success(f"Study **{clean_snapshot_name}** created and saved to archive.")
+                    st.success(t("admin.study_created_saved").format(name=clean_snapshot_name))
                     st.rerun()
 
         if col_save.button(
-            "Save",
+            t("admin.save"),
             width="stretch",
             icon=icon_safe("save_as"),
             disabled=not has_active_working_study,
             type="primary"
         ):
             if snapshot_name.strip() == "":
-                col_save.warning("Please enter Project name.")
+                col_save.warning(t("admin.project_name_required"))
             else:
                 save_name = unique_snapshot_name(snapshot_name)
                 if save_snapshot(save_name):
-                    st.success(f"Study **{save_name}** saved to archive.")
+                    st.success(t("admin.study_saved").format(name=save_name))
                     st.rerun()
 
         st.divider()
 
         # --- LIST EXISTING SNAPSHOTS ---
-        st.subheader("Load File")
+        st.subheader(t("admin.load_file"))
 
         if not snapshots:
-            st.info("No saved projects yet.")
+            st.info(t("admin.no_saved_projects"))
         else:
             # ==================================================
             # PAGINATION SETUP
@@ -11826,9 +12001,11 @@ def show_snapshots():
             end_idx = start_idx + PAGE_SIZE
             page_snapshots = snapshots[start_idx:end_idx]
 
-            st.caption(
-                f"Showing {start_idx + 1}-{min(end_idx, total_items)} of {total_items} saved files"
-            )
+            st.caption(t("admin.showing_saved_files").format(
+                start=start_idx + 1,
+                end=min(end_idx, total_items),
+                total=total_items,
+            ))
 
             st.divider()
 
@@ -11864,14 +12041,14 @@ def show_snapshots():
                 if not st.session_state[rename_key] and not st.session_state[delete_key]:
                     with col1:
                         st.markdown(f"**{snap['snapshot_name']}**")
-                        st.caption(f"Saved: {formatted_date} WIB{active_label}")
+                        st.caption(t("admin.saved_at").format(time=f"{formatted_date} WIB", active=active_label))
 
-                    if col2.button("Rename", key=f"rename_start_{snap_id}", width="stretch"):
+                    if col2.button(t("admin.rename"), key=f"rename_start_{snap_id}", width="stretch"):
                         st.session_state[rename_key] = True
                         st.session_state[delete_key] = False
                         st.rerun()
 
-                    if col3.button("Load", key=f"load_{snap_id}", type="primary", width="stretch"):
+                    if col3.button(t("admin.load"), key=f"load_{snap_id}", type="primary", width="stretch"):
                         data = load_snapshot_data(snap_id)
 
                         if data:
@@ -11882,10 +12059,10 @@ def show_snapshots():
                             st.session_state.current_study_name = snap["snapshot_name"]
 
                             save_data()
-                            st.success(f"Loaded **{snap['snapshot_name']}**.")
+                            st.success(t("admin.loaded_file").format(name=snap["snapshot_name"]))
                             st.rerun()
 
-                    if col4.button("Delete", key=f"delete_start_{snap_id}", width="stretch"):
+                    if col4.button(t("delete"), key=f"delete_start_{snap_id}", width="stretch"):
                         st.session_state[delete_key] = True
                         st.session_state[rename_key] = False
                         st.rerun()
@@ -11896,20 +12073,20 @@ def show_snapshots():
                 elif st.session_state[rename_key]:
                     with col1:
                         new_archive_name = st.text_input(
-                            "New file name",
+                            t("admin.new_file_name"),
                             value=snap["snapshot_name"],
                             key=f"rename_input_{snap_id}",
                             label_visibility="collapsed"
                         )
-                        st.caption(f"Saved: {formatted_date} WIB{active_label}")
+                        st.caption(t("admin.saved_at").format(time=f"{formatted_date} WIB", active=active_label))
 
-                    if col2.button("Save Name", key=f"rename_save_{snap_id}", type="primary", width="stretch"):
+                    if col2.button(t("admin.save_name"), key=f"rename_save_{snap_id}", type="primary", width="stretch"):
                         if rename_snapshot(snap_id, new_archive_name):
                             st.session_state[rename_key] = False
-                            st.success("File renamed.")
+                            st.success(t("admin.file_renamed"))
                             st.rerun()
 
-                    if col3.button("Cancel", key=f"rename_cancel_{snap_id}", width="stretch"):
+                    if col3.button(t("cancel"), key=f"rename_cancel_{snap_id}", width="stretch"):
                         st.session_state[rename_key] = False
                         st.rerun()
 
@@ -11921,10 +12098,10 @@ def show_snapshots():
                 # ==================================================
                 elif st.session_state[delete_key]:
                     with col1:
-                        st.warning(f"Delete **{snap['snapshot_name']}**?")
-                        st.caption("This archived file will be removed from the library.")
+                        st.warning(t("admin.delete_file_confirm").format(name=snap["snapshot_name"]))
+                        st.caption(t("admin.archived_file_removed"))
 
-                    if col2.button("Confirm", key=f"delete_confirm_{snap_id}", type="primary", width="stretch"):
+                    if col2.button(t("confirm"), key=f"delete_confirm_{snap_id}", type="primary", width="stretch"):
                         was_active = st.session_state.get("loaded_snapshot_id") == snap_id
 
                         if delete_snapshot(snap_id):
@@ -11934,10 +12111,10 @@ def show_snapshots():
                                 save_data()
 
                             st.session_state[delete_key] = False
-                            st.success("File deleted.")
+                            st.success(t("admin.file_deleted"))
                             st.rerun()
 
-                    if col3.button("Cancel", key=f"delete_cancel_{snap_id}", width="stretch"):
+                    if col3.button(t("cancel"), key=f"delete_cancel_{snap_id}", width="stretch"):
                         st.session_state[delete_key] = False
                         st.rerun()
 
@@ -11953,7 +12130,7 @@ def show_snapshots():
 
             with col_prev:
                 if st.button(
-                    "Previous",
+                    t("admin.previous"),
                     key="archive_prev_page",
                     width="stretch",
                     disabled=st.session_state.archive_page <= 0
@@ -11964,14 +12141,14 @@ def show_snapshots():
             with col_page:
                 st.markdown(
                     f"<div style='text-align:center; padding-top: 0.45rem;'>"
-                    f"Page {st.session_state.archive_page + 1} of {total_pages}"
+                    f"{t('admin.page_count').format(current=st.session_state.archive_page + 1, total=total_pages)}"
                     f"</div>",
                     unsafe_allow_html=True
                 )
 
             with col_next:
                 if st.button(
-                    "Next",
+                    t("admin.next"),
                     key="archive_next_page",
                     width="stretch",
                     disabled=st.session_state.archive_page >= total_pages - 1
@@ -11980,7 +12157,7 @@ def show_snapshots():
                     st.rerun()  
 
     with atab2:
-        st.header("Offline Backup")
+        st.header(t("admin.offline_backup"))
         c1, c2 = st.columns(2)
         with c1:
             st.subheader("Import")
