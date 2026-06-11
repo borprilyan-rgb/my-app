@@ -12103,6 +12103,22 @@ def main_app():
 
     st.sidebar.badge(f"Current study: {current_study_name}")
 
+    if st.sidebar.button(
+        "Save Current Study",
+        key="sidebar_save_current_study",
+        width="stretch",
+        icon=icon_safe("save")
+    ):
+        if active_archive_id:
+            if overwrite_current_snapshot():
+                saved_name = active_archive_name or current_study_name
+                st.sidebar.success(f"Current linked study saved: {saved_name}")
+        else:
+            if save_data_force():
+                st.sidebar.info(
+                    "Working copy saved. To create or link an archive, use Archive > Online Backup > Save."
+                )
+
     on = st.sidebar.toggle("Show detailed control.")
     if on:
         # ==================================================
