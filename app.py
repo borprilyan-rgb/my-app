@@ -163,6 +163,38 @@ UI_TEXT = {
         "logout": "Logout",
         "back_to_app": "Back to App",
         "debug": "Debug",
+        "dashboard.title": "Dashboard",
+        "dashboard.caption": "Read-only study overview. This page does not change saved data.",
+        "dashboard.no_projects": "No projects found in this study.",
+        "dashboard.metric_project_count": "Project Count",
+        "dashboard.metric_total_budget": "Total Budget",
+        "dashboard.metric_total_gba": "Total GBA",
+        "dashboard.metric_avg_rp_gba": "Avg Rp/m2 GBA",
+        "dashboard.metric_total_gfa": "Total GFA",
+        "dashboard.metric_total_sgfa": "Total SGFA",
+        "dashboard.metric_total_nfa": "Total NFA",
+        "dashboard.metric_warning_count": "Warning Count",
+        "dashboard.budget_by_project": "Budget by Project",
+        "dashboard.no_budget_data": "No budget data available yet.",
+        "dashboard.study_health": "Study Health",
+        "dashboard.no_warnings": "No dashboard warnings detected.",
+        "dashboard.warnings_detected": "{count} warning(s) detected.",
+        "dashboard.project_comparison": "Project Comparison",
+        "dashboard.area_ratios": "Area Ratios",
+        "dashboard.no_area_ratio_data": "No area ratio data available yet.",
+        "dashboard.project": "Project",
+        "dashboard.type": "Type",
+        "dashboard.rooms_units": "Rooms / Units",
+        "dashboard.budget": "Budget",
+        "dashboard.status": "Status",
+        "dashboard.warning": "Warning",
+        "dashboard.ok": "OK",
+        "dashboard.missing_gba": "Missing GBA",
+        "dashboard.missing_gfa": "Missing GFA",
+        "dashboard.missing_sgfa": "Missing SGFA",
+        "dashboard.missing_nfa": "Missing NFA",
+        "dashboard.missing_budget": "Missing Budget",
+        "dashboard.missing_rooms": "Missing Rooms",
     },
     "id": {
         "language_label": "Language / Bahasa",
@@ -227,6 +259,38 @@ UI_TEXT = {
         "logout": "Logout",
         "back_to_app": "Kembali ke App",
         "debug": "Debug",
+        "dashboard.title": "Dashboard",
+        "dashboard.caption": "Ringkasan studi hanya-baca. Halaman ini tidak mengubah data tersimpan.",
+        "dashboard.no_projects": "Tidak ada proyek dalam studi ini.",
+        "dashboard.metric_project_count": "Jumlah Proyek",
+        "dashboard.metric_total_budget": "Total Anggaran",
+        "dashboard.metric_total_gba": "Total GBA",
+        "dashboard.metric_avg_rp_gba": "Rata-rata Rp/m2 GBA",
+        "dashboard.metric_total_gfa": "Total GFA",
+        "dashboard.metric_total_sgfa": "Total SGFA",
+        "dashboard.metric_total_nfa": "Total NFA",
+        "dashboard.metric_warning_count": "Jumlah Peringatan",
+        "dashboard.budget_by_project": "Anggaran per Proyek",
+        "dashboard.no_budget_data": "Belum ada data anggaran.",
+        "dashboard.study_health": "Kesehatan Studi",
+        "dashboard.no_warnings": "Tidak ada peringatan dashboard.",
+        "dashboard.warnings_detected": "{count} peringatan terdeteksi.",
+        "dashboard.project_comparison": "Perbandingan Proyek",
+        "dashboard.area_ratios": "Rasio Area",
+        "dashboard.no_area_ratio_data": "Belum ada data rasio area.",
+        "dashboard.project": "Proyek",
+        "dashboard.type": "Tipe",
+        "dashboard.rooms_units": "Kamar / Unit",
+        "dashboard.budget": "Anggaran",
+        "dashboard.status": "Status",
+        "dashboard.warning": "Peringatan",
+        "dashboard.ok": "OK",
+        "dashboard.missing_gba": "GBA belum diisi",
+        "dashboard.missing_gfa": "GFA belum diisi",
+        "dashboard.missing_sgfa": "SGFA belum diisi",
+        "dashboard.missing_nfa": "NFA belum diisi",
+        "dashboard.missing_budget": "Anggaran belum diisi",
+        "dashboard.missing_rooms": "Kamar/unit belum diisi",
     },
 }
 
@@ -10449,14 +10513,14 @@ def _parse_date_safe(value, fallback=None, dayfirst=True):
 #endregion
 
 def show_dashboard():
-    st.title("Dashboard")
-    st.caption("Read-only study overview. This page does not change saved data.")
+    st.title(t("dashboard.title"))
+    st.caption(t("dashboard.caption"))
 
     repair_projects_state(save=False)
 
     projects = st.session_state.get("projects", {})
     if not isinstance(projects, dict) or len(projects) == 0:
-        st.info("No projects found in this study.")
+        st.info(t("dashboard.no_projects"))
         return
 
     study_name = resolve_current_study_name(projects)
@@ -10504,15 +10568,15 @@ def show_dashboard():
         warnings = []
 
         if gba <= 0:
-            warnings.append("Missing GBA")
+            warnings.append(t("dashboard.missing_gba"))
         if gfa <= 0:
-            warnings.append("Missing GFA")
+            warnings.append(t("dashboard.missing_gfa"))
         if sgfa <= 0:
-            warnings.append("Missing SGFA")
+            warnings.append(t("dashboard.missing_sgfa"))
         if nfa <= 0:
-            warnings.append("Missing NFA")
+            warnings.append(t("dashboard.missing_nfa"))
         if budget <= 0:
-            warnings.append("Missing Budget")
+            warnings.append(t("dashboard.missing_budget"))
 
         if gba > 0 and gfa > gba:
             warnings.append("GFA > GBA")
@@ -10522,7 +10586,7 @@ def show_dashboard():
             warnings.append("NFA > SGFA")
 
         if project_type in ["Apartment", "Hotel"] and _safe_float(rooms) <= 0:
-            warnings.append("Missing Rooms")
+            warnings.append(t("dashboard.missing_rooms"))
 
         for warning in warnings:
             warning_rows.append({
@@ -10547,7 +10611,7 @@ def show_dashboard():
             "Budget": fmt_rp(budget),
             "Rp/m² GBA": fmt_rp(safe_ratio(budget, gba)),
             "Rp/m² GFA": fmt_rp(safe_ratio(budget, gfa)),
-            "Status": "OK" if not warnings else "; ".join(warnings),
+            "Status": t("dashboard.ok") if not warnings else "; ".join(warnings),
         })
 
         chart_rows.append({
@@ -10568,41 +10632,49 @@ def show_dashboard():
 
     avg_rp_gba = safe_ratio(total_budget, total_gba)
     warning_count = len(warning_rows)
+    dashboard_table_labels = {
+        "Project": t("dashboard.project"),
+        "Type": t("dashboard.type"),
+        "Rooms / Units": t("dashboard.rooms_units"),
+        "Budget": t("dashboard.budget"),
+        "Status": t("dashboard.status"),
+        "Warning": t("dashboard.warning"),
+    }
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Project Count", f"{len(projects):,.0f}")
-    c2.metric("Total Budget", fmt_rp(total_budget))
-    c3.metric("Total GBA", fmt_area(total_gba))
-    c4.metric("Avg Rp/m² GBA", fmt_rp(avg_rp_gba))
+    c1.metric(t("dashboard.metric_project_count"), f"{len(projects):,.0f}")
+    c2.metric(t("dashboard.metric_total_budget"), fmt_rp(total_budget))
+    c3.metric(t("dashboard.metric_total_gba"), fmt_area(total_gba))
+    c4.metric(t("dashboard.metric_avg_rp_gba"), fmt_rp(avg_rp_gba))
 
     c5, c6, c7, c8 = st.columns(4)
-    c5.metric("Total GFA", fmt_area(total_gfa))
-    c6.metric("Total SGFA", fmt_area(total_sgfa))
-    c7.metric("Total NFA", fmt_area(total_nfa))
-    c8.metric("Warning Count", f"{warning_count:,.0f}")
+    c5.metric(t("dashboard.metric_total_gfa"), fmt_area(total_gfa))
+    c6.metric(t("dashboard.metric_total_sgfa"), fmt_area(total_sgfa))
+    c7.metric(t("dashboard.metric_total_nfa"), fmt_area(total_nfa))
+    c8.metric(t("dashboard.metric_warning_count"), f"{warning_count:,.0f}")
 
     st.divider()
 
     left_col, right_col = st.columns([2, 1])
 
     with left_col:
-        st.subheader("Budget by Project")
+        st.subheader(t("dashboard.budget_by_project"))
         chart_df = pd.DataFrame(chart_rows)
         if not chart_df.empty:
             chart_df = chart_df[chart_df["Budget"] > 0].copy()
 
         if chart_df.empty:
-            st.info("No budget data available yet.")
+            st.info(t("dashboard.no_budget_data"))
         else:
             chart = (
                 alt.Chart(chart_df)
                 .mark_bar()
                 .encode(
-                    x=alt.X("Budget:Q", title="Budget"),
-                    y=alt.Y("Project:N", sort="-x", title="Project"),
+                    x=alt.X("Budget:Q", title=t("dashboard.budget")),
+                    y=alt.Y("Project:N", sort="-x", title=t("dashboard.project")),
                     tooltip=[
-                        alt.Tooltip("Project:N"),
-                        alt.Tooltip("Budget:Q", format=",.0f"),
+                        alt.Tooltip("Project:N", title=t("dashboard.project")),
+                        alt.Tooltip("Budget:Q", title=t("dashboard.budget"), format=",.0f"),
                         alt.Tooltip("GBA:Q", format=",.2f"),
                     ],
                 )
@@ -10611,13 +10683,14 @@ def show_dashboard():
             st.altair_chart(chart, width="stretch")
 
     with right_col:
-        st.subheader("Study Health")
+        st.subheader(t("dashboard.study_health"))
         if not warning_rows:
-            st.success("No dashboard warnings detected.")
+            st.success(t("dashboard.no_warnings"))
         else:
-            st.warning(f"{warning_count} warning(s) detected.")
+            st.warning(t("dashboard.warnings_detected").format(count=warning_count))
+            warning_df = pd.DataFrame(warning_rows).rename(columns=dashboard_table_labels)
             st.dataframe(
-                pd.DataFrame(warning_rows),
+                warning_df,
                 width="stretch",
                 height=260,
                 hide_index=True,
@@ -10625,22 +10698,24 @@ def show_dashboard():
 
     st.divider()
 
-    st.subheader("Project Comparison")
+    st.subheader(t("dashboard.project_comparison"))
+    comparison_df = pd.DataFrame(rows).rename(columns=dashboard_table_labels)
     st.dataframe(
-        pd.DataFrame(rows),
+        comparison_df,
         width="stretch",
         hide_index=True,
     )
 
-    st.subheader("Area Ratios")
+    st.subheader(t("dashboard.area_ratios"))
     if area_ratio_rows:
+        area_ratio_df = pd.DataFrame(area_ratio_rows).rename(columns=dashboard_table_labels)
         st.dataframe(
-            pd.DataFrame(area_ratio_rows),
+            area_ratio_df,
             width="stretch",
             hide_index=True,
         )
     else:
-        st.info("No area ratio data available yet.")
+        st.info(t("dashboard.no_area_ratio_data"))
 
 
 def show_portfolio_summary():
