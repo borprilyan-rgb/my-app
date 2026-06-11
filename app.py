@@ -99,6 +99,55 @@ DEFAULT_REPORT_CONFIG = {
     ],
 }
 
+UI_TEXT = {
+    "en": {
+        "language_label": "Language / Bahasa",
+        "current_study": "Current study",
+        "save_current_study": "Save Current Study",
+        "current_linked_study_saved": "Current linked study saved: {name}",
+        "working_copy_saved_archive_hint": (
+            "Working copy saved. To create or link an archive, use Archive > Online Backup > Save."
+        ),
+        "show_detailed_control": "Show detailed control.",
+        "project_list": "Project List",
+        "active_component": "Active Component:",
+        "move_up": "Move Up",
+        "move_down": "Move Down",
+        "project_order_saved": "Project order saved to cloud.",
+        "project_order_save_failed": (
+            "Project order changed locally, but cloud save failed. Do not log out yet."
+        ),
+    },
+    "id": {
+        "language_label": "Language / Bahasa",
+        "current_study": "Studi saat ini",
+        "save_current_study": "Simpan Studi Saat Ini",
+        "current_linked_study_saved": "Studi tertaut berhasil disimpan: {name}",
+        "working_copy_saved_archive_hint": (
+            "Working copy berhasil disimpan. Untuk membuat atau menautkan arsip, gunakan Archive > Online Backup > Save."
+        ),
+        "show_detailed_control": "Tampilkan kontrol detail.",
+        "project_list": "Daftar Proyek",
+        "active_component": "Komponen Aktif:",
+        "move_up": "Pindah ke Atas",
+        "move_down": "Pindah ke Bawah",
+        "project_order_saved": "Urutan proyek berhasil disimpan ke cloud.",
+        "project_order_save_failed": (
+            "Urutan proyek berubah secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu."
+        ),
+    },
+}
+
+def t(key, default=None):
+    lang = st.session_state.get("ui_lang", "en")
+    english_text = UI_TEXT.get("en", {}).get(key)
+    text = UI_TEXT.get(lang, {}).get(key, english_text)
+
+    if text is None:
+        return default if default is not None else key
+
+    return text
+
 def get_valid_token():
     """Return the current Supabase access token without assuming SDK response shape."""
     stored_token = st.session_state.get("access_token")
@@ -12102,6 +12151,18 @@ def main_app():
     clean_name = username.replace('.', ' ').title()
     st.sidebar.markdown(f"Hello, **{clean_name}**!")
 
+    ui_lang_options = ["en", "id"]
+    current_ui_lang = st.session_state.get("ui_lang", "en")
+    if current_ui_lang not in ui_lang_options:
+        current_ui_lang = "en"
+
+    st.sidebar.selectbox(
+        t("language_label"),
+        options=ui_lang_options,
+        index=ui_lang_options.index(current_ui_lang),
+        format_func=lambda lang: "English" if lang == "en" else "Indonesia",
+        key="ui_lang",
+    )
 
     page_choice = st.sidebar.radio(
         "Pilih Pekerjaan:",
@@ -12127,10 +12188,10 @@ def main_app():
     current_study_name = resolve_current_study_name()
     st.session_state.current_study_name = current_study_name
 
-    st.sidebar.badge(f"Current study: {current_study_name}")
+    st.sidebar.badge(f"{t('current_study')}: {current_study_name}")
 
     if st.sidebar.button(
-        "Save Current Study",
+        t("save_current_study"),
         key="sidebar_save_current_study",
         width="stretch",
         icon=icon_safe("save")
@@ -12138,22 +12199,20 @@ def main_app():
         if active_archive_id:
             if overwrite_current_snapshot():
                 saved_name = active_archive_name or current_study_name
-                st.sidebar.success(f"Current linked study saved: {saved_name}")
+                st.sidebar.success(t("current_linked_study_saved").format(name=saved_name))
         else:
             if save_data_force():
-                st.sidebar.info(
-                    "Working copy saved. To create or link an archive, use Archive > Online Backup > Save."
-                )
+                st.sidebar.info(t("working_copy_saved_archive_hint"))
 
-    on = st.sidebar.toggle("Show detailed control.")
+    on = st.sidebar.toggle(t("show_detailed_control"))
     if on:
         # ==================================================
         # ACTIVE COMPONENT SELECTOR
         # ==================================================
-        st.sidebar.subheader("Project List")
+        st.sidebar.subheader(t("project_list"))
 
         st.sidebar.radio(
-            "Active Component:",
+            t("active_component"),
             options=proj_labels,
             index=current_index,
             key="project_selector",
@@ -12170,7 +12229,7 @@ def main_app():
 
         with move_up_col:
             if st.button(
-                "Move Up",
+                t("move_up"),
                 key=f"sidebar_component_move_up_{curr_id}",
                 width="stretch",
                 icon=icon_safe("arrow_upward"),
@@ -12178,14 +12237,14 @@ def main_app():
             ):
                 if move_current_project(-1):
                     if save_after_user_action(
-                        success_message="Project order saved to cloud.",
-                        fail_message="Project order changed locally, but cloud save failed. Do not log out yet."
+                        success_message=t("project_order_saved"),
+                        fail_message=t("project_order_save_failed")
                     ):
                         st.rerun()
 
         with move_down_col:
             if st.button(
-                "Move Down",
+                t("move_down"),
                 key=f"sidebar_component_move_down_{curr_id}",
                 width="stretch",
                 icon=icon_safe("arrow_downward"),
@@ -12193,8 +12252,8 @@ def main_app():
             ):
                 if move_current_project(1):
                     if save_after_user_action(
-                        success_message="Project order saved to cloud.",
-                        fail_message="Project order changed locally, but cloud save failed. Do not log out yet."
+                        success_message=t("project_order_saved"),
+                        fail_message=t("project_order_save_failed")
                     ):
                         st.rerun()
 
