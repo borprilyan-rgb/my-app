@@ -195,6 +195,38 @@ UI_TEXT = {
         "dashboard.missing_nfa": "Missing NFA",
         "dashboard.missing_budget": "Missing Budget",
         "dashboard.missing_rooms": "Missing Rooms",
+        "summary.title": "Summary",
+        "summary.tab_config": "Config",
+        "summary.tab_fad": "FAD",
+        "summary.tab_recap": "Recap",
+        "summary.approval_export_settings": "Approval / Export Settings",
+        "summary.prepared_by": "Prepared By",
+        "summary.checked_by": "Checked By",
+        "summary.header_configuration": "Header Configuration",
+        "summary.project_location": "Project Location",
+        "summary.project_location_placeholder": "Example: PIK2.D2.",
+        "summary.project_name": "Project Name",
+        "summary.project_name_placeholder": "Example: GINZA.MIDTOWN",
+        "summary.option_number": "Option Number",
+        "summary.option_number_placeholder": "Example: 2",
+        "summary.revision_number": "Revision Number",
+        "summary.revision_number_placeholder": "Example: 0",
+        "summary.drawing_date": "Drawing Date",
+        "summary.updated_date": "Updated Date",
+        "summary.created_date": "Created Date",
+        "summary.header_preview": "Header Preview",
+        "summary.assumptions_configuration": "Assumptions Configuration",
+        "summary.assumptions_caption": (
+            "These assumptions are displayed below the FAD table. Keep the wording aligned with the required report format."
+        ),
+        "summary.assumption_no": "No.",
+        "summary.assumption_description": "Assumption Description",
+        "summary.save_change": "Save Change",
+        "summary.saved_to_cloud": "Saved to cloud.",
+        "summary.cloud_save_failed": "Cloud save failed. Do not log out yet.",
+        "summary.fad_title": "Feasibility Analysis Data (FAD)",
+        "summary.recap_title": "Comprehensive Recap Matrix (Cost & Ratios)",
+        "summary.download_excel": "Download Excel",
         "admin.feasibility_study": "Feasibility Study",
         "admin.loaded_file_ready": "**{name}** is currently loaded (You can start calculating your project)",
         "admin.previous_page": "Previous Page",
@@ -380,6 +412,38 @@ UI_TEXT = {
         "dashboard.missing_nfa": "NFA belum diisi",
         "dashboard.missing_budget": "Anggaran belum diisi",
         "dashboard.missing_rooms": "Kamar/unit belum diisi",
+        "summary.title": "Ringkasan",
+        "summary.tab_config": "Konfigurasi",
+        "summary.tab_fad": "FAD",
+        "summary.tab_recap": "Recap",
+        "summary.approval_export_settings": "Pengaturan Persetujuan / Ekspor",
+        "summary.prepared_by": "Disiapkan Oleh",
+        "summary.checked_by": "Diperiksa Oleh",
+        "summary.header_configuration": "Konfigurasi Header",
+        "summary.project_location": "Lokasi Proyek",
+        "summary.project_location_placeholder": "Contoh: PIK2.D2.",
+        "summary.project_name": "Nama Proyek",
+        "summary.project_name_placeholder": "Contoh: GINZA.MIDTOWN",
+        "summary.option_number": "Nomor Opsi",
+        "summary.option_number_placeholder": "Contoh: 2",
+        "summary.revision_number": "Nomor Revisi",
+        "summary.revision_number_placeholder": "Contoh: 0",
+        "summary.drawing_date": "Tanggal Gambar",
+        "summary.updated_date": "Tanggal Diperbarui",
+        "summary.created_date": "Tanggal Dibuat",
+        "summary.header_preview": "Pratinjau Header",
+        "summary.assumptions_configuration": "Konfigurasi Asumsi",
+        "summary.assumptions_caption": (
+            "Asumsi ini ditampilkan di bawah tabel FAD. Jaga wording tetap sesuai format laporan."
+        ),
+        "summary.assumption_no": "No.",
+        "summary.assumption_description": "Deskripsi Asumsi",
+        "summary.save_change": "Simpan Perubahan",
+        "summary.saved_to_cloud": "Berhasil disimpan ke cloud.",
+        "summary.cloud_save_failed": "Gagal menyimpan ke cloud. Jangan logout dulu.",
+        "summary.fad_title": "Data Analisis Kelayakan (FAD)",
+        "summary.recap_title": "Matriks Recap Komprehensif (Biaya & Rasio)",
+        "summary.download_excel": "Unduh Excel",
         "admin.feasibility_study": "Studi Kelayakan",
         "admin.loaded_file_ready": "**{name}** sedang dimuat (Anda dapat mulai menghitung proyek)",
         "admin.previous_page": "Halaman Sebelumnya",
@@ -10890,7 +10954,7 @@ def show_dashboard():
 
 
 def show_portfolio_summary():
-    st.title("Summary")
+    st.title(t("summary.title"))
     
     # ==========================================
     # 1. INITIALIZE EDITABLE SESSION STATE
@@ -11182,7 +11246,7 @@ CREATED &nbsp;: {created}
     # ==========================================
     # 2. TABS SETUP
     # ==========================================
-    summary_list = ["Config", "FAD", "Rekap"]
+    summary_list = [t("summary.tab_config"), t("summary.tab_fad"), t("summary.tab_recap")]
     summary_tabs = st.tabs(summary_list)
     
     # --- TAB 1: EDITABLE NATIVE COMPONENTS ---
@@ -11209,17 +11273,17 @@ CREATED &nbsp;: {created}
         for key, value in default_header_inputs.items():
             header_inputs.setdefault(key, value)
 
-        st.markdown("##### Approval / Export Settings")
+        st.markdown(f"##### {t('summary.approval_export_settings')}")
 
         c_prepared, c_checked = st.columns(2)
 
         export_settings["prepared_by"] = c_prepared.text_input(
-            "Prepared By",
+            t("summary.prepared_by"),
             value=export_settings.get("prepared_by", "")
         )
 
         export_settings["checked_by"] = c_checked.text_input(
-            "Checked By",
+            t("summary.checked_by"),
             value=export_settings.get("checked_by", "")
         )
 
@@ -11227,46 +11291,46 @@ CREATED &nbsp;: {created}
 
         with col_cfg:
             with st.container(border=True):
-                st.markdown("##### Header Configuration")
+                st.markdown(f"##### {t('summary.header_configuration')}")
 
 
                 c1, c2 = st.columns(2)
 
                 header_inputs["project_location"] = normalize_header_token(
                     c1.text_input(
-                        "Project Location",
+                        t("summary.project_location"),
                         value=header_inputs.get("project_location", ""),
-                        placeholder="Example: PIK2.D2."
+                        placeholder=t("summary.project_location_placeholder")
                     ),
                     trailing_dot=True,
                 )
 
                 header_inputs["project_name"] = normalize_header_token(
                     c2.text_input(
-                        "Project Name",
+                        t("summary.project_name"),
                         value=header_inputs.get("project_name", ""),
-                        placeholder="Example: GINZA.MIDTOWN"
+                        placeholder=t("summary.project_name_placeholder")
                     )
                 )
 
                 c3, c4 = st.columns(2)
 
                 header_inputs["option_number"] = c3.text_input(
-                    "Option Number",
+                    t("summary.option_number"),
                     value=header_inputs.get("option_number", ""),
-                    placeholder="Example: 2"
+                    placeholder=t("summary.option_number_placeholder")
                 )
 
                 header_inputs["revision_number"] = c4.text_input(
-                    "Revision Number",
+                    t("summary.revision_number"),
                     value=header_inputs.get("revision_number", ""),
-                    placeholder="Example: 0"
+                    placeholder=t("summary.revision_number_placeholder")
                 )
 
                 c5, c6, c7 = st.columns(3)
 
                 drawing_date_value = c5.date_input(
-                    "Drawing Date",
+                    t("summary.drawing_date"),
                     value=_parse_date_safe(
                         header_inputs.get("drawing_date", today_iso),
                         fallback=date.today(),
@@ -11279,7 +11343,7 @@ CREATED &nbsp;: {created}
                 
 
                 updated_date_value = c6.date_input(
-                    "Updated Date",
+                    t("summary.updated_date"),
                     value=_parse_date_safe(
                         header_inputs.get("updated_date", date.today().strftime("%d-%m-%Y")),
                         fallback=date.today(),
@@ -11288,7 +11352,7 @@ CREATED &nbsp;: {created}
                 )
 
                 created_date_value = c7.date_input(
-                    "Created Date",
+                    t("summary.created_date"),
                     value=_parse_date_safe(
                         header_inputs.get("created_date", date.today().strftime("%d-%m-%Y")),
                         fallback=date.today(),
@@ -11303,7 +11367,7 @@ CREATED &nbsp;: {created}
                 port_meta.update(generated_meta)
 
         with col_preview:
-            st.markdown("##### Header Preview")
+            st.markdown(f"##### {t('summary.header_preview')}")
 
             st.markdown(
                 f"""
@@ -11316,8 +11380,8 @@ CREATED &nbsp;: {created}
 
         st.divider()
 
-        st.markdown("##### Assumptions Configuration")
-        st.caption("These assumptions are displayed below the FAD table. Keep the wording aligned with the required report format.")
+        st.markdown(f"##### {t('summary.assumptions_configuration')}")
+        st.caption(t("summary.assumptions_caption"))
 
         edited_assumptions = st.data_editor(
             get_port_assumptions_df(),
@@ -11325,8 +11389,8 @@ CREATED &nbsp;: {created}
             width="stretch",
             hide_index=True,
             column_config={
-                "No.": st.column_config.TextColumn("No.", width="small"),
-                "Assumption Description": st.column_config.TextColumn("Assumption Description", width="large"),
+                "No.": st.column_config.TextColumn(t("summary.assumption_no"), width="small"),
+                "Assumption Description": st.column_config.TextColumn(t("summary.assumption_description"), width="large"),
             }
         )
 
@@ -11334,7 +11398,7 @@ CREATED &nbsp;: {created}
 
         with save_c1:
             save_config_clicked = st.button(
-                "Save Change",
+                t("summary.save_change"),
                 key="save_summary_config_to_cloud",
                 type="primary",
                 width="stretch"
@@ -11349,14 +11413,14 @@ CREATED &nbsp;: {created}
             save_ok = save_data_force()
 
             if save_ok:
-                st.success("Saved to cloud.")
+                st.success(t("summary.saved_to_cloud"))
                 st.rerun()
             else:
-                st.error("Cloud save failed. Do not log out yet.")
+                st.error(t("summary.cloud_save_failed"))
 
     # --- TAB 2: EXACT FORMAT MIRROR (HTML/CSS) ---
     with summary_tabs[1]:
-        st.subheader("Feasibility Analysis Data (FAD)")
+        st.subheader(t("summary.fad_title"))
 
         # 1. DATA PREPARATION (Define raw_data BEFORE anything else)
         raw_data = []
@@ -11409,7 +11473,7 @@ CREATED &nbsp;: {created}
             )
             
             st.download_button(
-                label="Download Excel",
+                label=t("summary.download_excel"),
                 data=excel_output,
                 file_name="ASG_Portfolio_Summary.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -11515,7 +11579,7 @@ CREATED &nbsp;: {created}
 
 # --- TAB 3: WIDE RECAP COST ---
     with summary_tabs[2]:
-        st.subheader("Comprehensive Recap Matrix (Cost & Ratios)")
+        st.subheader(t("summary.recap_title"))
 
         recap_excel_data = generate_recap_excel(port_meta, st.session_state.projects)
         st.session_state.recap_math_engine = get_recap_values
@@ -11524,7 +11588,7 @@ CREATED &nbsp;: {created}
         col_btn, col_info = st.columns([1.5, 4.5])
         with col_btn:
             st.download_button(
-                label="Download Excel",
+                label=t("summary.download_excel"),
                 data=recap_excel_data,
                 file_name="ASG_Recap_Cost_Wide.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
