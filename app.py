@@ -371,6 +371,31 @@ UI_TEXT = {
         "cost_section_flooring_ratio": "Flooring Ratio (%)",
         "cost_no_values_available": "No values available.",
         "cost_no_changes_apply": "No changes to apply.",
+        "cost_detail_rate_review_title": "Detail-Derived Rate Review",
+        "cost_detail_rate_review_caption": "Review only. Detail-derived rates are not applied to Cost Analysis automatically.",
+        "cost_detail_col_current_rate": "Current Cost Rate",
+        "cost_detail_col_derived_rate": "Detail-Derived Rate",
+        "cost_detail_col_difference_unit": "Difference / Unit",
+        "cost_detail_col_detail_total": "Detail Total",
+        "cost_detail_col_current_total": "Current Total",
+        "cost_detail_col_difference_total": "Difference Total",
+        "cost_detail_current_rate_label": "Current Rate",
+        "cost_detail_derived_rate_label": "Derived Rate",
+        "cost_detail_difference_label": "Difference",
+        "cost_detail_status_label": "Status",
+        "cost_detail_apply_earthworks": "Apply Earthworks Detail Rate",
+        "cost_detail_apply_foundation": "Apply Foundation Detail Rate",
+        "cost_detail_apply_structural": "Apply Structural Detail Rate",
+        "cost_detail_apply_architectural": "Apply Architectural Detail Rate",
+        "cost_detail_apply_consultancy": "Apply Consultancy Detail Rate",
+        "cost_detail_apply_ffe": "Apply FF&E Detail Rate",
+        "cost_detail_apply_mep": "Apply MEP Detail Rate",
+        "cost_detail_apply_utility": "Apply Utility Detail Rate",
+        "cost_detail_apply_success": "{section} detail rate applied.",
+        "cost_detail_apply_cloud_failed": "{section} detail rate was applied locally, but cloud save failed. Do not log out yet.",
+        "cost_detail_apply_no_rate": "No valid detail-derived rate is available for {section}.",
+        "cost_detail_diff_warning": "{section} detail-derived rate differs from the current Cost Analysis {section} Rate. Cost Analysis has not been updated automatically.",
+        "cost_detail_info_title": "{section} Detail-Derived Rate Review",
         "admin.feasibility_study": "Feasibility Study",
         "admin.loaded_file_ready": "**{name}** is currently loaded (You can start calculating your project)",
         "admin.previous_page": "Previous Page",
@@ -731,6 +756,31 @@ UI_TEXT = {
         "cost_section_flooring_ratio": "Rasio Lantai (%)",
         "cost_no_values_available": "Tidak ada nilai tersedia.",
         "cost_no_changes_apply": "Tidak ada perubahan untuk diterapkan.",
+        "cost_detail_rate_review_title": "Tinjauan Harga dari Detail",
+        "cost_detail_rate_review_caption": "Hanya untuk ditinjau. Harga dari detail tidak otomatis diterapkan ke Analisis Biaya.",
+        "cost_detail_col_current_rate": "Harga Saat Ini",
+        "cost_detail_col_derived_rate": "Harga dari Detail",
+        "cost_detail_col_difference_unit": "Selisih / Unit",
+        "cost_detail_col_detail_total": "Total Detail",
+        "cost_detail_col_current_total": "Total Saat Ini",
+        "cost_detail_col_difference_total": "Total Selisih",
+        "cost_detail_current_rate_label": "Harga Saat Ini",
+        "cost_detail_derived_rate_label": "Harga dari Detail",
+        "cost_detail_difference_label": "Selisih",
+        "cost_detail_status_label": "Status",
+        "cost_detail_apply_earthworks": "Terapkan Harga Detail Earthworks",
+        "cost_detail_apply_foundation": "Terapkan Harga Detail Foundation",
+        "cost_detail_apply_structural": "Terapkan Harga Detail Structural",
+        "cost_detail_apply_architectural": "Terapkan Harga Detail Architectural",
+        "cost_detail_apply_consultancy": "Terapkan Harga Detail Consultancy",
+        "cost_detail_apply_ffe": "Terapkan Harga Detail FF&E",
+        "cost_detail_apply_mep": "Terapkan Harga Detail MEP",
+        "cost_detail_apply_utility": "Terapkan Harga Detail Utility",
+        "cost_detail_apply_success": "Harga detail {section} diterapkan.",
+        "cost_detail_apply_cloud_failed": "Harga detail {section} diterapkan secara lokal, tetapi gagal menyimpan ke cloud. Jangan logout dulu.",
+        "cost_detail_apply_no_rate": "Tidak ada harga detail yang valid untuk {section}.",
+        "cost_detail_diff_warning": "Harga dari detail {section} berbeda dari harga {section} saat ini di Analisis Biaya. Analisis Biaya belum diperbarui otomatis.",
+        "cost_detail_info_title": "Tinjauan Harga dari Detail {section}",
         "admin.feasibility_study": "Studi Kelayakan",
         "admin.loaded_file_ready": "**{name}** sedang dimuat (Anda dapat mulai menghitung proyek)",
         "admin.previous_page": "Halaman Sebelumnya",
@@ -9768,38 +9818,68 @@ def show_cost_estimator(): #cost calculator page
 
     # --- TAB 3: UNIT RATES ---
     with tab4:
-        with st.expander("Detail-Derived Rate Review", expanded=False):
+        with st.expander(t("cost_detail_rate_review_title"), expanded=False):
             detail_rate_review_rows = build_detail_rate_review_rows(curr_proj, gba, gfa, rooms)
             detail_rate_review_df = pd.DataFrame(detail_rate_review_rows)
+            detail_rate_display_columns = {
+                "Current Cost Rate": t("cost_detail_col_current_rate"),
+                "Detail-Derived Rate": t("cost_detail_col_derived_rate"),
+                "Difference / Unit": t("cost_detail_col_difference_unit"),
+                "Detail Total": t("cost_detail_col_detail_total"),
+                "Current Total": t("cost_detail_col_current_total"),
+                "Difference Total": t("cost_detail_col_difference_total"),
+            }
+            detail_rate_display_df = detail_rate_review_df.rename(columns=detail_rate_display_columns)
 
-            st.caption("Review only. Detail-derived rates are not applied to Cost Analysis automatically.")
+            def show_detail_rate_info(section, review_row, unit):
+                st.info(
+                    f"{t('cost_detail_info_title').format(section=section)}\n\n"
+                    f"{t('cost_detail_current_rate_label')}: Rp {_safe_float(review_row.get('Current Cost Rate', 0.0)):,.0f}/{unit}\n\n"
+                    f"{t('cost_detail_derived_rate_label')}: Rp {_safe_float(review_row.get('Detail-Derived Rate', 0.0)):,.0f}/{unit}\n\n"
+                    f"{t('cost_detail_difference_label')}: Rp {_safe_float(review_row.get('Difference / Unit', 0.0)):,.0f}/{unit}\n\n"
+                    f"{t('cost_detail_status_label')}: {review_row.get('Status', '')}"
+                )
+
+            def show_detail_rate_warning(section):
+                st.warning(t("cost_detail_diff_warning").format(section=section))
+
+            def show_detail_no_rate_error(section):
+                st.error(t("cost_detail_apply_no_rate").format(section=section))
+
+            def show_detail_apply_success(section):
+                st.success(t("cost_detail_apply_success").format(section=section))
+
+            def show_detail_apply_cloud_failed(section):
+                st.error(t("cost_detail_apply_cloud_failed").format(section=section))
+
+            st.caption(t("cost_detail_rate_review_caption"))
             st.dataframe(
-                detail_rate_review_df,
+                detail_rate_display_df,
                 hide_index=True,
                 width="stretch",
                 column_config={
-                    "Current Cost Rate": st.column_config.NumberColumn(
-                        "Current Cost Rate",
+                    t("cost_detail_col_current_rate"): st.column_config.NumberColumn(
+                        t("cost_detail_col_current_rate"),
                         format="Rp %.0f",
                     ),
-                    "Detail-Derived Rate": st.column_config.NumberColumn(
-                        "Detail-Derived Rate",
+                    t("cost_detail_col_derived_rate"): st.column_config.NumberColumn(
+                        t("cost_detail_col_derived_rate"),
                         format="Rp %.0f",
                     ),
-                    "Difference / Unit": st.column_config.NumberColumn(
-                        "Difference / Unit",
+                    t("cost_detail_col_difference_unit"): st.column_config.NumberColumn(
+                        t("cost_detail_col_difference_unit"),
                         format="Rp %.0f",
                     ),
-                    "Detail Total": st.column_config.NumberColumn(
-                        "Detail Total",
+                    t("cost_detail_col_detail_total"): st.column_config.NumberColumn(
+                        t("cost_detail_col_detail_total"),
                         format="Rp %.0f",
                     ),
-                    "Current Total": st.column_config.NumberColumn(
-                        "Current Total",
+                    t("cost_detail_col_current_total"): st.column_config.NumberColumn(
+                        t("cost_detail_col_current_total"),
                         format="Rp %.0f",
                     ),
-                    "Difference Total": st.column_config.NumberColumn(
-                        "Difference Total",
+                    t("cost_detail_col_difference_total"): st.column_config.NumberColumn(
+                        t("cost_detail_col_difference_total"),
                         format="Rp %.0f",
                     ),
                 },
@@ -9816,12 +9896,9 @@ def show_cost_estimator(): #cost calculator page
             )
 
             if earthwork_apply_available:
-                st.warning(
-                    "Earthworks detail-derived rate differs from the current Cost Analysis Earthwork Rate. "
-                    "Cost Analysis has not been updated automatically."
-                )
+                show_detail_rate_warning("Earthworks")
                 if st.button(
-                    "Apply Earthworks Detail Rate",
+                    t("cost_detail_apply_earthworks"),
                     key=f"apply_earthwork_detail_rate_{curr_id}",
                     type="primary",
                 ):
@@ -9829,7 +9906,7 @@ def show_cost_estimator(): #cost calculator page
                     detail_total = _safe_float(curr_proj["data"].get("earthwork_detail_total", 0.0))
 
                     if derived_rate <= 0 or detail_total <= 0:
-                        st.error("Earthworks detail rate cannot be applied because the detail total or derived rate is zero.")
+                        show_detail_no_rate_error("Earthworks")
                     else:
                         curr_proj["data"]["u_earth"] = derived_rate
                         st.session_state[f"u_earth_{curr_type_key}"] = derived_rate
@@ -9838,12 +9915,10 @@ def show_cost_estimator(): #cost calculator page
                         save_ok = save_after_user_action("Apply Earthworks Detail Rate")
 
                         if save_ok:
-                            st.success("Earthworks detail rate applied to Cost Analysis.")
+                            show_detail_apply_success("Earthworks")
                             st.rerun()
                         else:
-                            st.error(
-                                "Earthworks detail rate was applied locally, but cloud save failed. Do not log out yet."
-                            )
+                            show_detail_apply_cloud_failed("Earthworks")
 
             foundation_review_row = next(
                 (row for row in detail_rate_review_rows if row.get("Section") == "Foundation"),
@@ -9856,21 +9931,12 @@ def show_cost_estimator(): #cost calculator page
             )
 
             if foundation_review_row:
-                st.info(
-                    "Foundation Detail-Derived Rate Review\n\n"
-                    f"Current Foundation Rate: Rp {_safe_float(foundation_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Derived Foundation Rate: Rp {_safe_float(foundation_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Difference: Rp {_safe_float(foundation_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
-                    f"Status: {foundation_review_row.get('Status', '')}"
-                )
+                show_detail_rate_info("Foundation", foundation_review_row, "m2")
 
             if foundation_apply_available:
-                st.warning(
-                    "Foundation detail-derived rate differs from the current Cost Analysis Foundation Rate. "
-                    "Cost Analysis has not been updated automatically."
-                )
+                show_detail_rate_warning("Foundation")
                 if st.button(
-                    "Apply Foundation Detail Rate",
+                    t("cost_detail_apply_foundation"),
                     key=f"apply_foundation_detail_rate_{curr_id}",
                     type="primary",
                 ):
@@ -9878,7 +9944,7 @@ def show_cost_estimator(): #cost calculator page
                     detail_total = _safe_float(curr_proj["data"].get("foundation_detail_total", 0.0))
 
                     if derived_rate <= 0 or detail_total <= 0:
-                        st.error("Foundation detail rate cannot be applied because the detail total or derived rate is zero.")
+                        show_detail_no_rate_error("Foundation")
                     else:
                         curr_proj["data"]["u_found"] = derived_rate
                         st.session_state[f"u_found_{curr_type_key}"] = derived_rate
@@ -9886,12 +9952,10 @@ def show_cost_estimator(): #cost calculator page
                         save_ok = save_after_user_action("Apply Foundation Detail Rate")
 
                         if save_ok:
-                            st.success("Foundation detail rate applied to Cost Analysis.")
+                            show_detail_apply_success("Foundation")
                             st.rerun()
                         else:
-                            st.error(
-                                "Foundation detail rate was applied locally, but cloud save failed. Do not log out yet."
-                            )
+                            show_detail_apply_cloud_failed("Foundation")
 
             architectural_review_row = next(
                 (row for row in detail_rate_review_rows if row.get("Section") == "Architectural"),
@@ -9904,21 +9968,12 @@ def show_cost_estimator(): #cost calculator page
             )
 
             if architectural_review_row:
-                st.info(
-                    "Architectural Detail-Derived Rate Review\n\n"
-                    f"Current Architectural Rate: Rp {_safe_float(architectural_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Derived Architectural Rate: Rp {_safe_float(architectural_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Difference: Rp {_safe_float(architectural_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
-                    f"Status: {architectural_review_row.get('Status', '')}"
-                )
+                show_detail_rate_info("Architectural", architectural_review_row, "m2")
 
             if architectural_apply_available:
-                st.warning(
-                    "Architectural detail-derived rate differs from the current Cost Analysis Architectural Rate. "
-                    "Cost Analysis has not been updated automatically."
-                )
+                show_detail_rate_warning("Architectural")
                 if st.button(
-                    "Apply Architectural Detail Rate",
+                    t("cost_detail_apply_architectural"),
                     key=f"apply_architectural_detail_rate_{curr_id}",
                     type="primary",
                 ):
@@ -9926,7 +9981,7 @@ def show_cost_estimator(): #cost calculator page
                     detail_total = _safe_float(curr_proj["data"].get("architectural_detail_total", 0.0))
 
                     if derived_rate <= 0 or detail_total <= 0:
-                        st.error("Architectural detail rate cannot be applied because the detail total or derived rate is zero.")
+                        show_detail_no_rate_error("Architectural")
                     else:
                         curr_proj["data"]["u_arch"] = derived_rate
                         st.session_state[f"u_arch_{curr_type_key}"] = derived_rate
@@ -9934,12 +9989,10 @@ def show_cost_estimator(): #cost calculator page
                         save_ok = save_after_user_action("Apply Architectural Detail Rate")
 
                         if save_ok:
-                            st.success("Architectural detail rate applied to Cost Analysis.")
+                            show_detail_apply_success("Architectural")
                             st.rerun()
                         else:
-                            st.error(
-                                "Architectural detail rate was applied locally, but cloud save failed. Do not log out yet."
-                            )
+                            show_detail_apply_cloud_failed("Architectural")
 
             consultancy_review_row = next(
                 (row for row in detail_rate_review_rows if row.get("Section") == "Consultancy"),
@@ -9952,21 +10005,12 @@ def show_cost_estimator(): #cost calculator page
             )
 
             if consultancy_review_row:
-                st.info(
-                    "Consultancy Detail-Derived Rate Review\n\n"
-                    f"Current Consultancy Rate: Rp {_safe_float(consultancy_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Derived Consultancy Rate: Rp {_safe_float(consultancy_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Difference: Rp {_safe_float(consultancy_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
-                    f"Status: {consultancy_review_row.get('Status', '')}"
-                )
+                show_detail_rate_info("Consultancy", consultancy_review_row, "m2")
 
             if consultancy_apply_available:
-                st.warning(
-                    "Consultancy detail-derived rate differs from the current Cost Analysis Consultancy Rate. "
-                    "Cost Analysis has not been updated automatically."
-                )
+                show_detail_rate_warning("Consultancy")
                 if st.button(
-                    "Apply Consultancy Detail Rate",
+                    t("cost_detail_apply_consultancy"),
                     key=f"apply_consultancy_detail_rate_{curr_id}",
                     type="primary",
                 ):
@@ -9974,7 +10018,7 @@ def show_cost_estimator(): #cost calculator page
                     detail_total = _safe_float(curr_proj["data"].get("consultancy_detail_total", 0.0))
 
                     if derived_rate <= 0 or detail_total <= 0:
-                        st.error("Consultancy detail rate cannot be applied because the detail total or derived rate is zero.")
+                        show_detail_no_rate_error("Consultancy")
                     else:
                         curr_proj["data"]["sc_cons"] = derived_rate
                         st.session_state[f"sc_cons_{curr_type_key}"] = derived_rate
@@ -9982,12 +10026,10 @@ def show_cost_estimator(): #cost calculator page
                         save_ok = save_after_user_action("Apply Consultancy Detail Rate")
 
                         if save_ok:
-                            st.success("Consultancy detail rate applied to Cost Analysis.")
+                            show_detail_apply_success("Consultancy")
                             st.rerun()
                         else:
-                            st.error(
-                                "Consultancy detail rate was applied locally, but cloud save failed. Do not log out yet."
-                            )
+                            show_detail_apply_cloud_failed("Consultancy")
 
             ffe_review_row = next(
                 (row for row in detail_rate_review_rows if row.get("Section") == "FF&E"),
@@ -10000,21 +10042,12 @@ def show_cost_estimator(): #cost calculator page
             )
 
             if ffe_review_row:
-                st.info(
-                    "FF&E Detail-Derived Rate Review\n\n"
-                    f"Current FF&E Rate: Rp {_safe_float(ffe_review_row.get('Current Cost Rate', 0.0)):,.0f}/room\n\n"
-                    f"Derived FF&E Rate: Rp {_safe_float(ffe_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/room\n\n"
-                    f"Difference: Rp {_safe_float(ffe_review_row.get('Difference / Unit', 0.0)):,.0f}/room\n\n"
-                    f"Status: {ffe_review_row.get('Status', '')}"
-                )
+                show_detail_rate_info("FF&E", ffe_review_row, "room")
 
             if ffe_apply_available:
-                st.warning(
-                    "FF&E detail-derived rate differs from the current Cost Analysis FF&E Rate. "
-                    "Cost Analysis has not been updated automatically."
-                )
+                show_detail_rate_warning("FF&E")
                 if st.button(
-                    "Apply FF&E Detail Rate",
+                    t("cost_detail_apply_ffe"),
                     key=f"apply_ffe_detail_rate_{curr_id}",
                     type="primary",
                 ):
@@ -10022,7 +10055,7 @@ def show_cost_estimator(): #cost calculator page
                     detail_total = _safe_float(curr_proj["data"].get("ffe_detail_total", 0.0))
 
                     if derived_rate <= 0 or detail_total <= 0:
-                        st.error("FF&E detail rate cannot be applied because the detail total or derived rate is zero.")
+                        show_detail_no_rate_error("FF&E")
                     else:
                         curr_proj["data"]["u_ffe"] = derived_rate
                         st.session_state[f"u_ffe_{curr_type_key}"] = derived_rate
@@ -10030,12 +10063,10 @@ def show_cost_estimator(): #cost calculator page
                         save_ok = save_after_user_action("Apply FF&E Detail Rate")
 
                         if save_ok:
-                            st.success("FF&E detail rate applied to Cost Analysis.")
+                            show_detail_apply_success("FF&E")
                             st.rerun()
                         else:
-                            st.error(
-                                "FF&E detail rate was applied locally, but cloud save failed. Do not log out yet."
-                            )
+                            show_detail_apply_cloud_failed("FF&E")
 
             mep_review_row = next(
                 (row for row in detail_rate_review_rows if row.get("Section") == "MEP"),
@@ -10048,21 +10079,12 @@ def show_cost_estimator(): #cost calculator page
             )
 
             if mep_review_row:
-                st.info(
-                    "MEP Detail-Derived Rate Review\n\n"
-                    f"Current MEP Rate: Rp {_safe_float(mep_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Derived MEP Rate: Rp {_safe_float(mep_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Difference: Rp {_safe_float(mep_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
-                    f"Status: {mep_review_row.get('Status', '')}"
-                )
+                show_detail_rate_info("MEP", mep_review_row, "m2")
 
             if mep_apply_available:
-                st.warning(
-                    "MEP detail-derived rate differs from the current Cost Analysis MEP Rate. "
-                    "Cost Analysis has not been updated automatically."
-                )
+                show_detail_rate_warning("MEP")
                 if st.button(
-                    "Apply MEP Detail Rate",
+                    t("cost_detail_apply_mep"),
                     key=f"apply_mep_detail_rate_{curr_id}",
                     type="primary",
                 ):
@@ -10070,7 +10092,7 @@ def show_cost_estimator(): #cost calculator page
                     detail_total = _safe_float(curr_proj["data"].get("mep_detail_total", 0.0))
 
                     if derived_rate <= 0 or detail_total <= 0:
-                        st.error("MEP detail rate cannot be applied because the detail total or derived rate is zero.")
+                        show_detail_no_rate_error("MEP")
                     else:
                         curr_proj["data"]["u_mep"] = derived_rate
                         st.session_state[f"u_mep_{curr_type_key}"] = derived_rate
@@ -10078,12 +10100,10 @@ def show_cost_estimator(): #cost calculator page
                         save_ok = save_after_user_action("Apply MEP Detail Rate")
 
                         if save_ok:
-                            st.success("MEP detail rate applied to Cost Analysis.")
+                            show_detail_apply_success("MEP")
                             st.rerun()
                         else:
-                            st.error(
-                                "MEP detail rate was applied locally, but cloud save failed. Do not log out yet."
-                            )
+                            show_detail_apply_cloud_failed("MEP")
 
             utility_review_row = next(
                 (row for row in detail_rate_review_rows if row.get("Section") == "Utility"),
@@ -10096,21 +10116,12 @@ def show_cost_estimator(): #cost calculator page
             )
 
             if utility_review_row:
-                st.info(
-                    "Utility Detail-Derived Rate Review\n\n"
-                    f"Current Utility Rate: Rp {_safe_float(utility_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Derived Utility Rate: Rp {_safe_float(utility_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Difference: Rp {_safe_float(utility_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
-                    f"Status: {utility_review_row.get('Status', '')}"
-                )
+                show_detail_rate_info("Utility", utility_review_row, "m2")
 
             if utility_apply_available:
-                st.warning(
-                    "Utility detail-derived rate differs from the current Cost Analysis Utility Rate. "
-                    "Cost Analysis has not been updated automatically."
-                )
+                show_detail_rate_warning("Utility")
                 if st.button(
-                    "Apply Utility Detail Rate",
+                    t("cost_detail_apply_utility"),
                     key=f"apply_utility_detail_rate_{curr_id}",
                     type="primary",
                 ):
@@ -10118,7 +10129,7 @@ def show_cost_estimator(): #cost calculator page
                     detail_total = _safe_float(curr_proj["data"].get("utility_detail_total", 0.0))
 
                     if derived_rate <= 0 or detail_total <= 0:
-                        st.error("Utility detail rate cannot be applied because the detail total or derived rate is zero.")
+                        show_detail_no_rate_error("Utility")
                     else:
                         curr_proj["data"]["u_util"] = derived_rate
                         st.session_state[f"u_util_{curr_type_key}"] = derived_rate
@@ -10126,12 +10137,10 @@ def show_cost_estimator(): #cost calculator page
                         save_ok = save_after_user_action("Apply Utility Detail Rate")
 
                         if save_ok:
-                            st.success("Utility detail rate applied to Cost Analysis.")
+                            show_detail_apply_success("Utility")
                             st.rerun()
                         else:
-                            st.error(
-                                "Utility detail rate was applied locally, but cloud save failed. Do not log out yet."
-                            )
+                            show_detail_apply_cloud_failed("Utility")
 
             structural_review_row = next(
                 (row for row in detail_rate_review_rows if row.get("Section") == "Structural"),
@@ -10144,21 +10153,12 @@ def show_cost_estimator(): #cost calculator page
             )
 
             if structural_review_row:
-                st.info(
-                    "Structural Detail-Derived Rate Review\n\n"
-                    f"Current Structural Rate: Rp {_safe_float(structural_review_row.get('Current Cost Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Derived Structural Rate: Rp {_safe_float(structural_review_row.get('Detail-Derived Rate', 0.0)):,.0f}/m2\n\n"
-                    f"Difference: Rp {_safe_float(structural_review_row.get('Difference / Unit', 0.0)):,.0f}/m2\n\n"
-                    f"Status: {structural_review_row.get('Status', '')}"
-                )
+                show_detail_rate_info("Structural", structural_review_row, "m2")
 
             if structural_apply_available:
-                st.warning(
-                    "Structural detail-derived rate differs from the current Cost Analysis Structural Rate. "
-                    "Cost Analysis has not been updated automatically."
-                )
+                show_detail_rate_warning("Structural")
                 if st.button(
-                    "Apply Structural Detail Rate",
+                    t("cost_detail_apply_structural"),
                     key=f"apply_structural_detail_rate_{curr_id}",
                     type="primary",
                 ):
@@ -10166,7 +10166,7 @@ def show_cost_estimator(): #cost calculator page
                     detail_total = _safe_float(curr_proj["data"].get("structural_detail_total", 0.0))
 
                     if derived_rate <= 0 or detail_total <= 0:
-                        st.error("Structural detail rate cannot be applied because the detail total or derived rate is zero.")
+                        show_detail_no_rate_error("Structural")
                     else:
                         curr_proj["data"]["u_struc"] = derived_rate
                         st.session_state[f"u_struc_{curr_type_key}"] = derived_rate
@@ -10174,12 +10174,10 @@ def show_cost_estimator(): #cost calculator page
                         save_ok = save_after_user_action("Apply Structural Detail Rate")
 
                         if save_ok:
-                            st.success("Structural detail rate applied to Cost Analysis.")
+                            show_detail_apply_success("Structural")
                             st.rerun()
                         else:
-                            st.error(
-                                "Structural detail rate was applied locally, but cloud save failed. Do not log out yet."
-                            )
+                            show_detail_apply_cloud_failed("Structural")
 
         with st.expander("Harga Fondasi & Struktur", expanded=True):
             c1, c2, c3 = st.columns(3)
