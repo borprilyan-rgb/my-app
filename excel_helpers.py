@@ -3039,6 +3039,144 @@ def create_area_excel_form_bytes(
     ws_consultancy.protection.password = "area"
 
     # ==================================================
+    # COST ANALYSIS INPUT SHEET
+    # ==================================================
+    def add_cost_analysis_input_sheet(wb, current_values=None):
+        current_values = current_values if isinstance(current_values, dict) else {}
+        ws_cost = wb.create_sheet("Cost Analysis Input")
+        ws_cost.sheet_view.showGridLines = False
+
+        ws_cost.merge_cells("A1:G1")
+        ws_cost["A1"] = "COST ANALYSIS INPUT"
+        ws_cost["A1"].font = Font(bold=True, color=white, size=14)
+        ws_cost["A1"].fill = PatternFill("solid", fgColor=dark)
+        ws_cost["A1"].alignment = Alignment(horizontal="center", vertical="center")
+        ws_cost.row_dimensions[1].height = 26
+
+        ws_cost.merge_cells("A2:G2")
+        ws_cost["A2"] = (
+            "Fill Proposed Value only for items that should be reviewed and applied "
+            "through Cost Analysis Sync. Blank values will be ignored."
+        )
+        ws_cost["A2"].font = Font(italic=True, color=dark, size=10)
+        ws_cost["A2"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+        headers = [
+            "Section",
+            "Item",
+            "System Key",
+            "Unit",
+            "Current App Value",
+            "Proposed Value",
+            "Notes",
+        ]
+        for c, header in enumerate(headers, start=1):
+            ws_cost.cell(4, c).value = header
+
+        cost_input_rows = {
+            5: ("Ukuran", "Luas Tanah", "m_land", "m²"),
+            6: ("Ukuran", "GBA", "m_gba", "m²"),
+            7: ("Ukuran", "GFA", "m_gfa", "m²"),
+            8: ("Ukuran", "SGFA", "m_sgfa", "m²"),
+            9: ("Ukuran", "NFA", "m_nfa", "m²"),
+            10: ("Ukuran", "Lobby / Koridor", "m_lobby", "m²"),
+            11: ("Ukuran", "Rooms / Units", "m_rooms", "unit"),
+            12: ("Ukuran", "Facade", "m_facade", "m²"),
+            13: ("Ukuran", "Landscape", "m_land_m2", "m²"),
+            14: ("Ukuran", "Railing Length", "r_rail_qty", "m"),
+            15: ("Ukuran", "Wooden Door", "m_door_w", "unit"),
+            16: ("Ukuran", "Steel Door", "m_door_s", "unit"),
+            17: ("Ukuran", "Glass Door", "m_door_g", "unit"),
+            18: ("Ukuran", "Fasilitas Penghuni Area", "m_fac_res", "m²"),
+            19: ("Ukuran", "Fasilitas Publik Area", "m_fac_pub", "m²"),
+            20: ("Ukuran", "Fasilitas Proyek Area", "m_fac_proj", "m²"),
+            23: ("Rasio", "Precast", "r_fac_pre", "%"),
+            24: ("Rasio", "Window Wall", "r_fac_win", "%"),
+            25: ("Rasio", "Double Skin", "r_fac_doub", "%"),
+            26: ("Rasio", "Skirting", "s_floor", "%"),
+            27: ("Rasio", "Floor Waste", "w_floor", "%"),
+            28: ("Rasio", "HT / Ceramic Tile", "r_fl_ht", "%"),
+            29: ("Rasio", "Vinyl", "r_fl_vin", "%"),
+            30: ("Rasio", "Marmer", "r_fl_mar", "%"),
+        }
+        cost_input_rows = {
+            5: ("Project Size", "Luas Tanah", "m_land", "m²"),
+            6: ("Project Size", "GBA", "m_gba", "m²"),
+            7: ("Project Size", "GFA", "m_gfa", "m²"),
+            8: ("Project Size", "SGFA", "m_sgfa", "m²"),
+            9: ("Architecture - Interior", "Rooms / Units", "m_rooms", "unit"),
+            10: ("Architecture - Interior", "Lobby Interior", "m_lobby", "m²"),
+            11: ("Architecture - Interior", "Carpet", "m_carpet", "m²"),
+            12: ("Architecture - Interior", "Glass", "m_glass", "m²"),
+            13: ("Architecture - Exterior", "Facade", "m_facade", "m²"),
+            14: ("Architecture - Exterior", "Gondola", "m_gondola", "unit"),
+            15: ("Architecture - Exterior", "Skylight", "m_skylight", "m²"),
+            16: ("Architecture - Exterior", "Railing Length", "r_rail_qty", "m'/room"),
+            17: ("Doors", "Glass Door", "m_door_g", "unit"),
+            18: ("Doors", "Wooden Door", "m_door_w", "unit"),
+            19: ("Doors", "Steel Door", "m_door_s", "unit"),
+            20: ("Sanitary", "Toilet Private", "r_san_qty", "unit/room"),
+            21: ("Sanitary", "Toilet Umum - Pria", "m_toil_m", "unit"),
+            22: ("Sanitary", "Toilet Umum - Wanita", "m_toil_f", "unit"),
+            23: ("Sanitary", "Toilet Difabel", "m_toil_d", "unit"),
+            24: ("Sanitary", "Mushola", "m_mushola", "unit"),
+            25: ("Facilities", "Fasilitas Penghuni", "m_fac_res", "m²"),
+            26: ("Facilities", "Fasilitas Publik", "m_fac_pub", "m²"),
+            27: ("Facilities", "Fasilitas Proyek", "m_fac_proj", "unit"),
+            28: ("Facilities", "Area Lanskap", "m_land_m2", "m²"),
+            29: ("Facade Ratio", "Precast", "r_fac_pre", "%"),
+            30: ("Facade Ratio", "Window Wall", "r_fac_win", "%"),
+            31: ("Facade Ratio", "Double Skin", "r_fac_doub", "%"),
+            32: ("Floor Ratio", "Skirting", "s_floor", "%"),
+            33: ("Floor Ratio", "Floor Waste", "w_floor", "%"),
+            34: ("Floor Ratio", "HT / Ceramic Tile", "r_fl_ht", "%"),
+            35: ("Floor Ratio", "Vinyl", "r_fl_vin", "%"),
+            36: ("Floor Ratio", "Marmer", "r_fl_mar", "%"),
+        }
+
+        for r, row_values in cost_input_rows.items():
+            section, item, system_key, unit = row_values
+            ws_cost.cell(r, 1).value = section
+            ws_cost.cell(r, 2).value = item
+            ws_cost.cell(r, 3).value = system_key
+            ws_cost.cell(r, 4).value = unit
+            ws_cost.cell(r, 5).value = current_values.get(system_key)
+            ws_cost.cell(r, 6).value = None
+            ws_cost.cell(r, 7).value = None
+
+        style_range(ws_cost, "A4:G4", dark, font_color=white, bold=True)
+        style_range(ws_cost, "A5:G36", None)
+        style_range(ws_cost, "E5:E36", formula_fill)
+
+        lock_range(ws_cost, "A1:G36")
+        unlock_range(ws_cost, "F5:F36")
+        unlock_range(ws_cost, "G5:G36")
+
+        for col, width in {
+            "A": 16,
+            "B": 28,
+            "C": 18,
+            "D": 10,
+            "E": 18,
+            "F": 18,
+            "G": 32,
+        }.items():
+            ws_cost.column_dimensions[col].width = width
+
+        for row in ws_cost.iter_rows(min_row=5, max_row=36, min_col=5, max_col=6):
+            for cell in row:
+                cell.number_format = '#,##0.00'
+
+        ws_cost.freeze_panes = "A5"
+        ws_cost.auto_filter.ref = "A4:G36"
+        ws_cost.protection.sheet = True
+        ws_cost.protection.password = "area"
+
+        return ws_cost
+
+    add_cost_analysis_input_sheet(wb)
+
+    # ==================================================
     # IMPORT GUIDE
     # ==================================================
     ws_guide = wb.create_sheet("Import Guide")
