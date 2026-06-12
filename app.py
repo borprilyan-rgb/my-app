@@ -8958,7 +8958,11 @@ def build_cost_sync_review_rows(sync_groups, curr_proj):
                 current_value = _safe_float(project_data.get(data_key, 0.0))
                 current_found = True
 
-            if source_value <= 0:
+            allow_zero = bool(item.get("allow_zero", False))
+
+            if source_value < 0:
+                status = "Skipped - negative source"
+            elif source_value == 0 and not allow_zero:
                 status = "Skipped - zero source"
             elif not current_found:
                 status = "Missing target"
@@ -8974,6 +8978,7 @@ def build_cost_sync_review_rows(sync_groups, curr_proj):
                 "Source Value": source_value,
                 "Difference": source_value - current_value,
                 "Unit": item.get("unit", ""),
+                "Source Origin": item.get("source_origin", "Area Analysis"),
                 "Status": status,
             })
 
@@ -8991,7 +8996,7 @@ def render_cost_sync_review_panel(curr_id, sync_groups, curr_proj, perform_area_
     with st.container(border=True):
         st.subheader("Review Area Sync")
         st.caption(
-            "Nonzero source values can update Cost Analysis inputs. Zero source values are skipped."
+            "Positive source values can update Cost Analysis inputs. Zero source values are skipped except allowed ratio values."
         )
 
         tab_changed, tab_unchanged, tab_skipped, tab_all = st.tabs([
@@ -9021,7 +9026,7 @@ def render_cost_sync_review_panel(curr_id, sync_groups, curr_proj, perform_area_
             show_review_table(review_df[review_df["Status"] == "Unchanged"])
 
         with tab_skipped:
-            show_review_table(review_df[review_df["Status"].isin(["Skipped - zero source", "Missing target"])])
+            show_review_table(review_df[review_df["Status"].isin(["Skipped - zero source", "Skipped - negative source", "Missing target"])])
 
         with tab_all:
             show_review_table(review_df)
@@ -9047,6 +9052,8 @@ def render_cost_sync_review_panel(curr_id, sync_groups, curr_proj, perform_area_
             save_ok = perform_area_analysis_sync()
 
             if save_ok:
+                st.session_state.pop(f"cost_analysis_input_proposals_{curr_id}", None)
+                st.session_state.pop(f"cost_analysis_input_warnings_{curr_id}", None)
                 st.session_state.pop(review_key, None)
                 st.session_state.pop(f"confirm_use_area_analysis_{curr_id}", None)
                 st.session_state.pop(f"show_area_sync_details_{curr_id}", None)
@@ -9318,14 +9325,99 @@ def show_cost_estimator(): #cost calculator page
             },
         ]
 
-        def sync_area_value(data_key, widget_key, value, session_key=None):
+        cost_input_proposal_meta = {
+            "m_land": {"label": "Luas Tanah", "data_key": "m_land", "widget_key": "m_land", "unit": "m2", "group": "Project Size", "allow_zero": False},
+            "m_gba": {"label": "GBA", "data_key": "m_gba", "widget_key": "m_gba", "unit": "m2", "group": "Project Size", "allow_zero": False},
+            "m_gfa": {"label": "GFA", "data_key": "m_gfa", "widget_key": "m_gfa", "unit": "m2", "group": "Project Size", "allow_zero": False},
+            "m_sgfa": {"label": "SGFA", "data_key": "m_sgfa", "widget_key": "m_sgfa", "unit": "m2", "group": "Project Size", "allow_zero": False},
+            "m_rooms": {"label": "Rooms / Units", "data_key": "m_rooms", "widget_key": "m_rooms", "unit": "unit", "group": "Architecture - Interior", "allow_zero": False},
+            "m_lobby": {"label": "Lobby Interior", "data_key": "m_lobby", "widget_key": "m_lobby", "unit": "m2", "group": "Architecture - Interior", "allow_zero": False},
+            "m_carpet": {"label": "Carpet", "data_key": "m_carpet", "widget_key": "m_carpet", "unit": "m2", "group": "Architecture - Interior", "allow_zero": False},
+            "m_glass": {"label": "Glass", "data_key": "m_glass", "widget_key": "m_glass", "unit": "m2", "group": "Architecture - Interior", "allow_zero": False},
+            "m_facade": {"label": "Facade", "data_key": "m_facade", "widget_key": "m_facade", "unit": "m2", "group": "Architecture - Exterior", "allow_zero": False},
+            "m_gondola": {"label": "Gondola", "data_key": "m_gondola", "widget_key": "m_gondola", "unit": "unit", "group": "Architecture - Exterior", "allow_zero": False},
+            "m_skylight": {"label": "Skylight", "data_key": "m_skylight", "widget_key": "m_skylight", "unit": "m2", "group": "Architecture - Exterior", "allow_zero": False},
+            "r_rail_qty": {"label": "Railing Length", "data_key": "r_rail_qty", "widget_key": "r_rail_qty", "unit": "m'/room", "group": "Architecture - Exterior", "allow_zero": False},
+            "m_door_g": {"label": "Glass Door", "data_key": "m_door_g", "widget_key": "m_door_g", "unit": "unit", "group": "Doors", "allow_zero": False},
+            "m_door_w": {"label": "Wooden Door", "data_key": "m_door_w", "widget_key": "m_door_w", "unit": "unit", "group": "Doors", "allow_zero": False},
+            "m_door_s": {"label": "Steel Door", "data_key": "m_door_s", "widget_key": "m_door_s", "unit": "unit", "group": "Doors", "allow_zero": False},
+            "r_san_qty": {"label": "Toilet Private", "data_key": "r_san_qty", "widget_key": "r_san_qty", "session_key": f"r_san_qty_{curr_type_key}", "unit": "unit/room", "group": "Sanitary", "allow_zero": False},
+            "m_toil_m": {"label": "Toilet Umum - Pria", "data_key": "m_toil_m", "widget_key": "m_toil_m", "unit": "unit", "group": "Sanitary", "allow_zero": False},
+            "m_toil_f": {"label": "Toilet Umum - Wanita", "data_key": "m_toil_f", "widget_key": "m_toil_f", "unit": "unit", "group": "Sanitary", "allow_zero": False},
+            "m_toil_d": {"label": "Toilet Difabel", "data_key": "m_toil_d", "widget_key": "m_toil_d", "unit": "unit", "group": "Sanitary", "allow_zero": False},
+            "m_mushola": {"label": "Mushola", "data_key": "m_mushola", "widget_key": "m_mushola", "unit": "unit", "group": "Sanitary", "allow_zero": False},
+            "m_fac_res": {"label": "Fasilitas Penghuni", "data_key": "m_fac_res", "widget_key": "m_fac_res", "unit": "m2", "group": "Facilities", "allow_zero": False},
+            "m_fac_pub": {"label": "Fasilitas Publik", "data_key": "m_fac_pub", "widget_key": "m_fac_pub", "unit": "m2", "group": "Facilities", "allow_zero": False},
+            "m_fac_proj": {"label": "Fasilitas Proyek", "data_key": "m_fac_proj", "widget_key": "m_fac_proj", "unit": "unit", "group": "Facilities", "allow_zero": False},
+            "m_land_m2": {"label": "Area Lanskap", "data_key": "m_land_m2", "widget_key": "m_land_m2", "unit": "m2", "group": "Facilities", "allow_zero": False},
+            "r_fac_pre": {"label": "Precast", "data_key": "r_fac_pre", "widget_key": "r_fac_pre", "session_key": f"r_fac_pre_{curr_type_key}", "unit": "%", "group": "Facade Ratio", "allow_zero": True},
+            "r_fac_win": {"label": "Window Wall", "data_key": "r_fac_win", "widget_key": "r_fac_win", "session_key": f"r_fac_win_{curr_type_key}", "unit": "%", "group": "Facade Ratio", "allow_zero": True},
+            "r_fac_doub": {"label": "Double Skin", "data_key": "r_fac_doub", "widget_key": "r_fac_doub", "session_key": f"r_fac_doub_{curr_type_key}", "unit": "%", "group": "Facade Ratio", "allow_zero": True},
+            "s_floor": {"label": "Skirting", "data_key": "s_floor", "widget_key": "s_floor", "session_key": f"s_floor{curr_type_key}", "unit": "%", "group": "Floor Ratio", "allow_zero": True},
+            "w_floor": {"label": "Floor Waste", "data_key": "w_floor", "widget_key": "w_floor", "session_key": f"w_floor{curr_type_key}", "unit": "%", "group": "Floor Ratio", "allow_zero": True},
+            "r_fl_ht": {"label": "HT / Ceramic Tile", "data_key": "r_fl_ht", "widget_key": "r_fl_ht", "session_key": f"r_fl_ht_{curr_type_key}", "unit": "%", "group": "Floor Ratio", "allow_zero": True},
+            "r_fl_vin": {"label": "Vinyl", "data_key": "r_fl_vin", "widget_key": "r_fl_vin", "session_key": f"r_fl_vin_{curr_type_key}", "unit": "%", "group": "Floor Ratio", "allow_zero": True},
+            "r_fl_mar": {"label": "Marmer", "data_key": "r_fl_mar", "widget_key": "r_fl_mar", "session_key": f"r_fl_mar_{curr_type_key}", "unit": "%", "group": "Floor Ratio", "allow_zero": True},
+        }
+
+        for group in sync_groups:
+            for item in group.get("items", []):
+                item.setdefault("source_origin", "Area Analysis")
+                item.setdefault("allow_zero", False)
+
+        proposal_key = f"cost_analysis_input_proposals_{curr_id}"
+        cost_input_proposals = st.session_state.get(proposal_key, {})
+
+        if isinstance(cost_input_proposals, dict) and cost_input_proposals:
+            existing_sync_items = {}
+            for group in sync_groups:
+                for item in group.get("items", []):
+                    data_key = item.get("data_key")
+                    if data_key:
+                        existing_sync_items[data_key] = item
+
+            proposal_only_items = []
+
+            for proposal_data_key, proposal_value in cost_input_proposals.items():
+                meta = cost_input_proposal_meta.get(proposal_data_key)
+                if not meta:
+                    continue
+
+                if proposal_data_key in existing_sync_items:
+                    item = existing_sync_items[proposal_data_key]
+                    item["value"] = proposal_value
+                    item["source_origin"] = "Excel Proposed Value"
+                    item["allow_zero"] = bool(meta.get("allow_zero", False))
+                    if meta.get("session_key"):
+                        item["session_key"] = meta["session_key"]
+                else:
+                    proposal_item = {
+                        "label": meta["label"],
+                        "data_key": meta["data_key"],
+                        "widget_key": meta["widget_key"],
+                        "value": proposal_value,
+                        "unit": meta["unit"],
+                        "source_origin": "Excel Proposed Value",
+                        "allow_zero": bool(meta.get("allow_zero", False)),
+                    }
+                    if meta.get("session_key"):
+                        proposal_item["session_key"] = meta["session_key"]
+                    proposal_only_items.append(proposal_item)
+
+            if proposal_only_items:
+                sync_groups.append({
+                    "title": "Cost Analysis Input",
+                    "items": proposal_only_items,
+                })
+
+        def sync_area_value(data_key, widget_key, value, session_key=None, allow_zero=False):
             """
-            Sync Area Analysis value into Cost Analysis only if value > 0.
+            Sync source value into Cost Analysis only when positive, or zero when allowed.
             This prevents empty / unfilled Area Analysis values from overwriting existing Cost Analysis inputs.
             """
             value = _safe_float(value)
 
-            if value > 0:
+            if value > 0 or (allow_zero and value == 0):
                 st.session_state.projects[curr_id]["data"][data_key] = value
                 st.session_state[session_key or f"{widget_key}_{curr_id}"] = value
 
@@ -9339,6 +9431,7 @@ def show_cost_estimator(): #cost calculator page
                         item["widget_key"],
                         item["value"],
                         item.get("session_key"),
+                        item.get("allow_zero", False),
                     )
 
             return save_after_user_action("Sync Area Analysis to Cost Analysis")
