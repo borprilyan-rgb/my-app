@@ -3299,13 +3299,32 @@ def create_area_excel_form_bytes(
             36: ("Floor Ratio", "Marmer", "r_fl_mar", "%"),
         }
 
+        suggested_value_formulas = {
+            "m_gba": f"='Area Input'!M{total_row}",
+            "m_gfa": f"='Area Input'!N{total_row}",
+            "m_sgfa": f"='Area Input'!O{total_row}",
+            "m_rooms": f"='Area Input'!D{total_row}",
+            "m_lobby": f"='Area Input'!I{total_row}",
+            "m_facade": "=Architectural!L23",
+            "r_rail_qty": "=Architectural!L16",
+            "m_door_g": f"=Pintu!G{door_total_row}",
+            "m_door_w": f"=Pintu!E{door_total_row}",
+            "m_door_s": f"=Pintu!F{door_total_row}",
+            "m_fac_pub": "='Facility Misc'!D4",
+            "m_fac_proj": f"='Facility Misc'!D{res_total_row - 1}",
+            "m_land_m2": "=Eksternal!D4",
+        }
+
         for r, row_values in cost_input_rows.items():
             section, item, system_key, unit = row_values
             ws_cost.cell(r, 1).value = section
             ws_cost.cell(r, 2).value = item
             ws_cost.cell(r, 3).value = system_key
             ws_cost.cell(r, 4).value = unit
-            ws_cost.cell(r, 5).value = current_values.get(system_key)
+            ws_cost.cell(r, 5).value = suggested_value_formulas.get(
+                system_key,
+                current_values.get(system_key),
+            )
             ws_cost.cell(r, 6).value = None
             ws_cost.cell(r, 7).value = None
 
@@ -3327,6 +3346,7 @@ def create_area_excel_form_bytes(
             "G": 32,
         }.items():
             ws_cost.column_dimensions[col].width = width
+        ws_cost.column_dimensions["E"].hidden = True
 
         for row in ws_cost.iter_rows(min_row=5, max_row=36, min_col=5, max_col=6):
             for cell in row:
