@@ -336,6 +336,41 @@ UI_TEXT = {
         "sync_cancel_button": "Cancel",
         "sync_apply_success": "Area metrics, opening/external quantities, and detail-derived rates applied to Cost Analysis.",
         "sync_apply_cloud_failed": "Area Analysis values were applied locally, but cloud save failed. Do not log out yet.",
+        "cost_title": "Cost Analysis",
+        "cost_sync_button": "Sync",
+        "cost_sync_help": "Review Area Analysis values before syncing",
+        "cost_save_button": "Save",
+        "cost_save_help": "Save Cost Analysis",
+        "cost_save_success": "Saved to cloud.",
+        "cost_save_cloud_failed": "Cloud save failed. Do not log out yet.",
+        "cost_prelim_label": "Preliminaries %",
+        "cost_prelim_help": "Applied to Construction Subtotal.",
+        "cost_conting_label": "Contingencies %",
+        "cost_conting_help": "Applied to Construction Subtotal + Preliminaries.",
+        "cost_tab_size": "1. Size",
+        "cost_tab_ratio": "2. Ratio",
+        "cost_tab_soft_costs": "3. Soft Costs",
+        "cost_tab_rates": "4. Rates",
+        "cost_tab_custom_items": "5. Additional Items",
+        "cost_tab_results": "6. Results",
+        "cost_tab_proof": "7. Proof / Check",
+        "cost_section_project_size": "Project Size",
+        "cost_section_size": "Size",
+        "cost_section_architecture": "Architecture",
+        "cost_section_interior": "Interior",
+        "cost_section_exterior": "Exterior",
+        "cost_section_doors": "Doors",
+        "cost_section_sanitary": "Sanitary",
+        "cost_section_toilet_unit": "Toilet Unit",
+        "cost_section_public_toilet": "Public Toilet",
+        "cost_section_prayer_room": "Prayer Room",
+        "cost_section_facilities": "Facilities",
+        "cost_section_ffe_others": "FF&E Others",
+        "cost_section_facade_ratio": "Facade Ratio (%)",
+        "cost_section_waste_skirting": "Waste & Skirting (%)",
+        "cost_section_flooring_ratio": "Flooring Ratio (%)",
+        "cost_no_values_available": "No values available.",
+        "cost_no_changes_apply": "No changes to apply.",
         "admin.feasibility_study": "Feasibility Study",
         "admin.loaded_file_ready": "**{name}** is currently loaded (You can start calculating your project)",
         "admin.previous_page": "Previous Page",
@@ -661,6 +696,41 @@ UI_TEXT = {
         "sync_cancel_button": "Batal",
         "sync_apply_success": "Metrik area, kuantitas opening/eksternal, dan rate dari detail berhasil diterapkan ke Cost Analysis.",
         "sync_apply_cloud_failed": "Nilai Area Analysis diterapkan secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
+        "cost_title": "Analisis Biaya",
+        "cost_sync_button": "Sync",
+        "cost_sync_help": "Tinjau nilai Area Analysis sebelum sinkronisasi",
+        "cost_save_button": "Simpan",
+        "cost_save_help": "Simpan Analisis Biaya",
+        "cost_save_success": "Tersimpan ke cloud.",
+        "cost_save_cloud_failed": "Gagal menyimpan ke cloud. Jangan logout dulu.",
+        "cost_prelim_label": "Preliminaries %",
+        "cost_prelim_help": "Diterapkan pada Subtotal Konstruksi.",
+        "cost_conting_label": "Contingencies %",
+        "cost_conting_help": "Diterapkan pada Subtotal Konstruksi + Preliminaries.",
+        "cost_tab_size": "1. Ukuran",
+        "cost_tab_ratio": "2. Rasio",
+        "cost_tab_soft_costs": "3. Soft Costs",
+        "cost_tab_rates": "4. Harga",
+        "cost_tab_custom_items": "5. Item Tambahan",
+        "cost_tab_results": "6. Hasil",
+        "cost_tab_proof": "7. Pembuktian",
+        "cost_section_project_size": "Ukuran Proyek",
+        "cost_section_size": "Ukuran",
+        "cost_section_architecture": "Arsitektur",
+        "cost_section_interior": "Interior",
+        "cost_section_exterior": "Eksterior",
+        "cost_section_doors": "Pintu",
+        "cost_section_sanitary": "Sanitari",
+        "cost_section_toilet_unit": "Unit Toilet",
+        "cost_section_public_toilet": "Toilet Umum",
+        "cost_section_prayer_room": "Mushola",
+        "cost_section_facilities": "Fasilitas",
+        "cost_section_ffe_others": "FF&E Lainnya",
+        "cost_section_facade_ratio": "Rasio Fasad (%)",
+        "cost_section_waste_skirting": "Waste & Skirting (%)",
+        "cost_section_flooring_ratio": "Rasio Lantai (%)",
+        "cost_no_values_available": "Tidak ada nilai tersedia.",
+        "cost_no_changes_apply": "Tidak ada perubahan untuk diterapkan.",
         "admin.feasibility_study": "Studi Kelayakan",
         "admin.loaded_file_ready": "**{name}** sedang dimuat (Anda dapat mulai menghitung proyek)",
         "admin.previous_page": "Halaman Sebelumnya",
@@ -9187,25 +9257,25 @@ def show_cost_estimator(): #cost calculator page
     header_col, sync_col, save_col = st.columns([7, 1, 1], vertical_alignment="center")
 
     with header_col:
-        st.title("Cost Analysis")
+        st.title(t("cost_title"))
 
     with sync_col:
         sync_clicked = st.button(
-            "Sync",
+            t("cost_sync_button"),
             key=f"use_area_analysis_{curr_id}",
             width="stretch",
             icon=mi("sync") if "mi" in globals() else None,
-            help="Review Area Analysis values before syncing",
+            help=t("cost_sync_help"),
         )
 
     with save_col:
         save_cost_clicked = st.button(
-            "Save",
+            t("cost_save_button"),
             key=f"save_cost_analysis_{curr_id}",
             type="primary",
             width="stretch",
             icon=mi("save") if "mi" in globals() else None,
-            help="Save Cost Analysis",
+            help=t("cost_save_help"),
         )
 
     if sync_clicked:
@@ -9281,24 +9351,24 @@ def show_cost_estimator(): #cost calculator page
 
     with assump_col1:
         prelim_pct = st.number_input(
-            "Preliminaries %",
+            t("cost_prelim_label"),
             min_value=0.0,
             max_value=100.0,
             value=float(_safe_float(curr_proj["data"].get("sc_prelim_pct", 5.0))),
             step=0.5,
             key=f"sc_prelim_pct_{curr_id}",
-            help="Applied to Construction Subtotal."
+            help=t("cost_prelim_help")
         )
 
     with assump_col2:
         contingency_pct = st.number_input(
-            "Contingencies %",
+            t("cost_conting_label"),
             min_value=0.0,
             max_value=100.0,
             value=float(_safe_float(curr_proj["data"].get("sc_contingency_pct", 3.0))),
             step=0.5,
             key=f"sc_contingency_pct_{curr_id}",
-            help="Applied to Construction Subtotal + Preliminaries."
+            help=t("cost_conting_help")
         )
 
     # --- PROJECT SETUP ---
@@ -9309,10 +9379,10 @@ def show_cost_estimator(): #cost calculator page
 
     # --- TABS ---
     tab2, tab3, tab5, tab4, tab6, tab7, tab8 = st.tabs([
-        "1. Ukuran", "2. Rasio",
-        "3. Soft Costs", "4. Harga",
-        "5. Item Tambahan", "6. Hasil",
-        "7. Pembuktian",
+        t("cost_tab_size"), t("cost_tab_ratio"),
+        t("cost_tab_soft_costs"), t("cost_tab_rates"),
+        t("cost_tab_custom_items"), t("cost_tab_results"),
+        t("cost_tab_proof"),
     ])
 
     with tab2:
@@ -9558,16 +9628,16 @@ def show_cost_estimator(): #cost calculator page
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
 
         with col_m1:
-            with st.expander("Ukuran Proyek", expanded=True):
-                st.subheader("Ukuran")
+            with st.expander(t("cost_section_project_size"), expanded=True):
+                st.subheader(t("cost_section_size"))
                 land_area = st.number_input("Luas Tanah (m2)", value=get_val("m_land", 0.0), step=100.0, key=f"m_land_{curr_id}")
                 gba = st.number_input("GBA (m2)", value=get_val("m_gba", 0.0), step=100.0, key=f"m_gba_{curr_id}")
                 gfa = st.number_input("GFA (m2)", value=get_val("m_gfa", 0.0), step=100.0, key=f"m_gfa_{curr_id}")
                 sgfa = st.number_input("SGFA (m2)", value=get_val("m_sgfa", 0.0), step=100.0, key=f"m_sgfa_{curr_id}")
 
         with col_m2:
-            with st.expander("Arsitektur", expanded=True):
-                st.subheader("Interior")
+            with st.expander(t("cost_section_architecture"), expanded=True):
+                st.subheader(t("cost_section_interior"))
                 rooms = st.number_input(
                     "Ruang (unit)",
                     help="cth. 500 unit untuk 1 proyek Apartement A",
@@ -9586,7 +9656,7 @@ def show_cost_estimator(): #cost calculator page
 
                 carpet_m2 = st.number_input("Karpet (m2)", value=get_val("m_carpet", 0.0), step=10.0, key=f"m_carpet_{curr_id}")
                 glass_m2 = st.number_input("Kaca (m2)", value=get_val("m_glass", 0.0), step=10.0, key=f"m_glass_{curr_id}")
-                st.subheader("Eksterior")
+                st.subheader(t("cost_section_exterior"))
                 facade = st.number_input("Facade (m2)", value=get_val("m_facade", 0.0), step=100.0, key=f"m_facade_{curr_id}")
                 gondola_unit = st.number_input("Gondola (unit)", value=get_val("m_gondola", 0.0), step=1.0, key=f"m_gondola_{curr_id}")
                 skylight_area = st.number_input("Skylight (m2)", value=get_val("m_skylight", 0.0), step=10.0, key=f"m_skylight_{curr_id}")
@@ -9598,7 +9668,7 @@ def show_cost_estimator(): #cost calculator page
                 help="Can be synced from Area Analysis > Panjang Railing(m) using the Sync button."
                 )
                 st.caption(f"Total Railing: {railing_qty:.2f} m/room * {rooms:.0f} ruang = {railing_qty * rooms:,.2f} m'")    
-                st.subheader("Pintu")
+                st.subheader(t("cost_section_doors"))
                 glass_door = st.number_input(
                     "Glass Door (unit)",
                     value=_safe_float(get_val("m_door_g", suggested_door_glass)),
@@ -9621,19 +9691,19 @@ def show_cost_estimator(): #cost calculator page
                 )
 
         with col_m3:
-            with st.expander("Sanitari", expanded=True):
-                st.subheader("Toilet Unit")
+            with st.expander(t("cost_section_sanitary"), expanded=True):
+                st.subheader(t("cost_section_toilet_unit"))
                 san_qty_room = st.number_input("Toilet Private (unit/ruang)", help="Cth. 3 Toilet/1 Kamar (Apt)", value=get_val("r_san_qty", pt_data["san_room_qty"]), key=f"r_san_qty_{curr_type_key}")
-                st.subheader("Toilet Umum")
+                st.subheader(t("cost_section_public_toilet"))
                 toilet_male = st.number_input("Toilet Umum - Pria (units)", value=get_val("m_toil_m", 0.0), step=1.0, key=f"m_toil_m_{curr_id}")
                 toilet_female = st.number_input("Toilet Umum - Wanita (units)", value=get_val("m_toil_f", 0.0), step=1.0, key=f"m_toil_f_{curr_id}")
                 disabled_toil = st.number_input("Toilet Difabel (units)", value=get_val("m_toil_d", 0.0), step=1.0, key=f"m_toil_d_{curr_id}")
-                st.subheader("Mushola")
+                st.subheader(t("cost_section_prayer_room"))
                 mushola_unit = st.number_input("Mushola (units)", value=get_val("m_mushola", 0.0), step=1.0, key=f"m_mushola_{curr_id}")
 
         with col_m4:
-            with st.expander("Fasilitas", expanded=True):
-                st.subheader("Fasilitas")
+            with st.expander(t("cost_section_facilities"), expanded=True):
+                st.subheader(t("cost_section_facilities"))
                 res_fac_m2 = st.number_input(
                     "Fasilitas Penghuni (m2)",
                     value=_safe_float(get_val("m_fac_res", suggested_res_fac_area)),
@@ -9650,7 +9720,7 @@ def show_cost_estimator(): #cost calculator page
                     key=f"m_land_m2_{curr_id}",
                     help="If synced from Area Analysis, this equals External Works dataframe total divided by the current External Works rate."
                 )
-                st.subheader("FF&E Others")
+                st.subheader(t("cost_section_ffe_others"))
                 m_status = st.radio("Ada Gym/Linen?", ["Tidak", "Ada"],
                                     index=1 if get_val("misc_switch", 0) == 1 else 0,
                                     key=f"misc_sw_{curr_id}", horizontal=True)
@@ -9661,7 +9731,7 @@ def show_cost_estimator(): #cost calculator page
     with tab3:
         col_r1, col_r2, col_r3 = st.columns(3)
         with col_r1:
-            st.subheader("Facade Ratio (%)")
+            st.subheader(t("cost_section_facade_ratio"))
             facade_precast_pct = st.number_input("Precast (%)", value=get_val("r_fac_pre", pt_data["facade_precast_pct"]), step=5.0, key=f"r_fac_pre_{curr_type_key}")
             facade_window_pct = st.number_input("Window Wall (%)", value=get_val("r_fac_win", pt_data["facade_window_pct"]), step=5.0, key=f"r_fac_win_{curr_type_key}")
             facade_double_pct = st.number_input("Double Skin (%)", value=get_val("r_fac_doub", pt_data["facade_double_pct"]), step=5.0, key=f"r_fac_doub_{curr_type_key}")
@@ -9670,7 +9740,7 @@ def show_cost_estimator(): #cost calculator page
             if t_fac_pct != 100:
                 st.warning(f"Warning: Total is **{t_fac_pct}%** (bukan 100%)")
         with col_r3:
-            st.subheader("Waste & Skirting (%)")
+            st.subheader(t("cost_section_waste_skirting"))
             fl_skirt = st.number_input(
                 "Skirting (%)", 
                 value=get_val("s_floor", pt_data.get("fl_skirt", 20)), 
@@ -9687,7 +9757,7 @@ def show_cost_estimator(): #cost calculator page
             f_mult = (1 + (fl_waste/100)) * (1 + (fl_skirt/100))
         
         with col_r2:
-            st.subheader("Flooring Ratio (%)")
+            st.subheader(t("cost_section_flooring_ratio"))
             fl_ht_pct = st.number_input("HT/Ceramic Tile (%)", value=get_val("r_fl_ht", pt_data["fl_ht_pct"]), step=5.0, key=f"r_fl_ht_{curr_type_key}")
             fl_vinyl_pct = st.number_input("Vinyl (%)", value=get_val("r_fl_vin", pt_data["fl_vinyl_pct"]), step=5.0, key=f"r_fl_vin_{curr_type_key}")
             fl_marmer_pct = st.number_input("Marmer (%)", value=get_val("r_fl_mar", pt_data["fl_marmer_pct"]), step=5.0, key=f"r_fl_mar_{curr_type_key}")
@@ -10760,10 +10830,10 @@ def show_cost_estimator(): #cost calculator page
         save_ok = save_after_user_action("Save Cost Analysis")
 
         if save_ok:
-            st.success("Cost Analysis saved to cloud.")
+            st.success(t("cost_save_success"))
             st.rerun()
         else:
-            st.error("Cost Analysis changed locally, but cloud save failed. Do not log out yet.")
+            st.error(t("cost_save_cloud_failed"))
 
     with tab8:
         st.header("Detail")
