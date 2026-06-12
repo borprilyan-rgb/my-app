@@ -660,9 +660,26 @@ def read_facility_misc_inputs(excel_bytes):
 
     found = {}
 
+    def is_blank_like(value):
+        if value is None:
+            return True
+        try:
+            if pd.isna(value):
+                return True
+        except Exception:
+            pass
+        return str(value).strip() in ["", "-", "None", "nan", "NaN"]
+
     for _, row in df.iterrows():
         item = str(row.get(item_col, "")).strip().lower()
-        qty = _excel_safe_float(row.get(qty_col, 0.0)) if qty_col else 0.0
+        raw_qty = row.get(qty_col) if qty_col else None
+        if is_blank_like(raw_qty):
+            continue
+
+        qty = _excel_safe_float(raw_qty, 0.0)
+        if qty <= 0:
+            continue
+
         rate = _excel_safe_float(row.get(rate_col, 0.0)) if rate_col else 0.0
 
         if item in ["fasilitas publik", "public facilities"]:
