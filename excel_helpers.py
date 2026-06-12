@@ -3202,7 +3202,7 @@ def create_area_excel_form_bytes(
     # ==================================================
     def add_cost_analysis_input_sheet(wb, current_values=None):
         current_values = current_values if isinstance(current_values, dict) else {}
-        ws_cost = wb.create_sheet("Cost Analysis Input")
+        ws_cost = wb.create_sheet("Cost Analysis Input", 0)
         ws_cost.sheet_view.showGridLines = False
 
         ws_cost.merge_cells("A1:G1")
@@ -3214,11 +3214,17 @@ def create_area_excel_form_bytes(
 
         ws_cost.merge_cells("A2:G2")
         ws_cost["A2"] = (
-            "Fill Proposed Value only for items that should be reviewed and applied "
-            "through Cost Analysis Sync. Blank values will be ignored."
+            "Harap diperhatikan bahwa jika input angka = 0 atau kosong, maka data tidak akan merubah apapun pada aplikasi"
         )
-        ws_cost["A2"].font = Font(italic=True, color=dark, size=10)
+        ws_cost["A2"].font = Font(italic=True, color="C00000", size=10)
         ws_cost["A2"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+        ws_cost.merge_cells("A3:G3")
+        ws_cost["A3"] = (
+            "Please be warned that if the input number = 0 or blank, then the data will not change anything in the application"
+        )
+        ws_cost["A3"].font = Font(italic=True, color="C00000", size=10)
+        ws_cost["A3"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
         headers = [
             "Section",
@@ -3449,6 +3455,7 @@ def create_area_excel_form_bytes(
 
     # Final override: Pintu TOTAL label should stay white on dark fill
     ws_door.cell(door_total_row, 1).font = Font(bold=True, color=white)
+    wb.active = wb.sheetnames.index("Cost Analysis Input")
     wb.save(output)
     output.seek(0)
 
