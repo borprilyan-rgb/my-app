@@ -291,6 +291,51 @@ UI_TEXT = {
         "area.gba.nfa_help": "Consultant mode: NFA. Converted to Unit Area.",
         "area.gba.saved_to_cloud": "Saved to cloud.",
         "area.gba.cloud_save_failed": "Cloud save failed. Do not log out yet.",
+        "area_excel_form_title": "Excel Form",
+        "area_excel_download_title": "Download Area Calculator Excel Form",
+        "area_excel_download_button": "Download",
+        "area_excel_upload_title": "Upload Area Calculator Excel Form",
+        "area_excel_upload_help": "Upload the Excel form generated from this app.",
+        "area_excel_import_button": "Import Excel to Area Calculator",
+        "area_excel_imported_rows": "Imported area rows: {count}",
+        "area_excel_import_success": "Excel imported successfully. {count} area rows loaded.",
+        "area_excel_import_save_message": "Area Excel Import",
+        "area_excel_import_cloud_failed": "Cloud save failed. Imported area data changed locally, but was not saved. Do not log out yet.",
+        "area_excel_import_failed": "Excel import failed. Please upload a valid .xlsx file generated from this app.",
+        "area_excel_import_failed_detail": "Excel import failed: {error}",
+        "cost_input_proposals_imported": "Cost Analysis Input proposals imported for review. Cost Analysis was not changed.",
+        "cost_input_warnings_title": "Cost Analysis Input warnings",
+        "technical_details": "Technical details",
+        "dismiss": "Dismiss",
+        "summary_key_area_metrics": "Summary of Key Area Metrics",
+        "file_information": "File Information:",
+        "core_area": "Core Area",
+        "opening_external": "Opening / External",
+        "review_area_sync": "Review Area Sync",
+        "sync_review_caption": "Positive source values can update Cost Analysis inputs. Zero source values are skipped except allowed ratio values.",
+        "sync_filter_changed": "Changed",
+        "sync_filter_unchanged": "Unchanged",
+        "sync_filter_skipped_zero": "Skipped / Zero",
+        "sync_filter_all": "All",
+        "sync_no_values_group": "No values in this group.",
+        "sync_col_group": "Group",
+        "sync_col_value": "Value",
+        "sync_col_current_value": "Current Value",
+        "sync_col_source_value": "Source Value",
+        "sync_col_difference": "Difference",
+        "sync_col_source_origin": "Source Origin",
+        "sync_col_status": "Status",
+        "sync_source_area_analysis": "Area Analysis",
+        "sync_source_excel_proposed": "Excel Proposed Value",
+        "sync_status_changed": "Changed",
+        "sync_status_unchanged": "Unchanged",
+        "sync_status_skipped_zero": "Skipped - zero source",
+        "sync_status_skipped_negative": "Skipped - negative source",
+        "sync_status_missing_target": "Missing target",
+        "sync_apply_button": "Apply Sync",
+        "sync_cancel_button": "Cancel",
+        "sync_apply_success": "Area metrics, opening/external quantities, and detail-derived rates applied to Cost Analysis.",
+        "sync_apply_cloud_failed": "Area Analysis values were applied locally, but cloud save failed. Do not log out yet.",
         "admin.feasibility_study": "Feasibility Study",
         "admin.loaded_file_ready": "**{name}** is currently loaded (You can start calculating your project)",
         "admin.previous_page": "Previous Page",
@@ -571,6 +616,51 @@ UI_TEXT = {
         "area.gba.nfa_help": "Mode konsultan: NFA. Dikonversi ke Unit Area.",
         "area.gba.saved_to_cloud": "Berhasil disimpan ke cloud.",
         "area.gba.cloud_save_failed": "Gagal menyimpan ke cloud. Jangan logout dulu.",
+        "area_excel_form_title": "Form Excel",
+        "area_excel_download_title": "Unduh Form Excel Kalkulator Area",
+        "area_excel_download_button": "Unduh",
+        "area_excel_upload_title": "Unggah Form Excel Kalkulator Area",
+        "area_excel_upload_help": "Unggah form Excel yang dibuat dari aplikasi ini.",
+        "area_excel_import_button": "Impor Excel ke Kalkulator Area",
+        "area_excel_imported_rows": "Baris area yang diimpor: {count}",
+        "area_excel_import_success": "Excel berhasil diimpor. {count} baris area dimuat.",
+        "area_excel_import_save_message": "Impor Excel Area",
+        "area_excel_import_cloud_failed": "Gagal menyimpan ke cloud. Data area yang diimpor berubah secara lokal, tetapi belum tersimpan. Jangan logout dulu.",
+        "area_excel_import_failed": "Impor Excel gagal. Unggah file .xlsx valid yang dibuat dari aplikasi ini.",
+        "area_excel_import_failed_detail": "Impor Excel gagal: {error}",
+        "cost_input_proposals_imported": "Proposal Cost Analysis Input berhasil diimpor untuk ditinjau. Cost Analysis belum berubah.",
+        "cost_input_warnings_title": "Peringatan Cost Analysis Input",
+        "technical_details": "Detail teknis",
+        "dismiss": "Tutup",
+        "summary_key_area_metrics": "Ringkasan Metrik Area Utama",
+        "file_information": "Informasi File:",
+        "core_area": "Area Inti",
+        "opening_external": "Opening / Eksternal",
+        "review_area_sync": "Tinjau Sinkron Area",
+        "sync_review_caption": "Nilai sumber positif dapat memperbarui input Cost Analysis. Nilai nol dilewati kecuali nilai rasio yang diizinkan.",
+        "sync_filter_changed": "Berubah",
+        "sync_filter_unchanged": "Tidak Berubah",
+        "sync_filter_skipped_zero": "Dilewati / Nol",
+        "sync_filter_all": "Semua",
+        "sync_no_values_group": "Tidak ada nilai dalam grup ini.",
+        "sync_col_group": "Grup",
+        "sync_col_value": "Nilai",
+        "sync_col_current_value": "Nilai Saat Ini",
+        "sync_col_source_value": "Nilai Sumber",
+        "sync_col_difference": "Selisih",
+        "sync_col_source_origin": "Asal Sumber",
+        "sync_col_status": "Status",
+        "sync_source_area_analysis": "Analisis Area",
+        "sync_source_excel_proposed": "Proposal Excel",
+        "sync_status_changed": "Berubah",
+        "sync_status_unchanged": "Tidak Berubah",
+        "sync_status_skipped_zero": "Dilewati - sumber nol",
+        "sync_status_skipped_negative": "Dilewati - sumber negatif",
+        "sync_status_missing_target": "Target tidak ditemukan",
+        "sync_apply_button": "Terapkan Sinkron",
+        "sync_cancel_button": "Batal",
+        "sync_apply_success": "Metrik area, kuantitas opening/eksternal, dan rate dari detail berhasil diterapkan ke Cost Analysis.",
+        "sync_apply_cloud_failed": "Nilai Area Analysis diterapkan secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
         "admin.feasibility_study": "Studi Kelayakan",
         "admin.loaded_file_ready": "**{name}** sedang dimuat (Anda dapat mulai menghitung proyek)",
         "admin.previous_page": "Halaman Sebelumnya",
@@ -6219,7 +6309,7 @@ def show_area_calculator():
     if area_page == "Excel":
         st.subheader(t("area.excel_page_title"))
 
-        st.markdown("##### Excel Form")
+        st.markdown(f"##### {t('area_excel_form_title')}")
 
         with st.container():
             include_roof_machine = True
@@ -6318,9 +6408,9 @@ def show_area_calculator():
             s1, s2 = st.columns(2)
 
             with s2:
-                st.markdown("Download Area Calculator Excel Form")
+                st.markdown(t("area_excel_download_title"))
                 st.download_button(
-                    label="Download",
+                    label=t("area_excel_download_button"),
                     type="primary",
                     data=excel_form_bytes,
                     file_name=excel_download_filename,
@@ -6329,15 +6419,15 @@ def show_area_calculator():
                 )
             with s1:
                 uploaded_excel = st.file_uploader(
-                    "Upload Area Calculator Excel Form",
+                    t("area_excel_upload_title"),
                     type=["xlsx"],
                     key=f"area_excel_upload_{curr_id}",
-                    help="Upload the Excel form generated from this app.",
+                    help=t("area_excel_upload_help"),
                 )
 
                 if uploaded_excel is not None:
                     import_clicked = st.button(
-                        "Import Excel to Area Calculator",
+                        t("area_excel_import_button"),
                         type="primary",
                         key=f"import_area_excel_{curr_id}",
                         width="stretch",
@@ -6348,11 +6438,11 @@ def show_area_calculator():
 
                         try:
                             imported_area_records = read_area_input_sheet(excel_bytes)
-                            st.write("Imported area rows:", len(imported_area_records))
+                            st.write(t("area_excel_imported_rows").format(count=len(imported_area_records)))
                             st.dataframe(pd.DataFrame(imported_area_records).head(10), width="stretch")
 
                             if not imported_area_records:
-                                st.error("Excel import failed: no area rows found in Area Input.")
+                                st.error(t("area_excel_import_failed_detail").format(error="no area rows found in Area Input."))
                                 st.stop()
 
                             imported_area_df = calculate_area_dataframe(imported_area_records)
@@ -6699,22 +6789,21 @@ def show_area_calculator():
                                 if stale_key in st.session_state:
                                     del st.session_state[stale_key]
 
-                            save_ok = save_after_user_action("Area Excel Import")
+                            save_ok = save_after_user_action(t("area_excel_import_save_message"))
 
                             if save_ok:
                                 st.success(
-                                    f"Excel imported successfully. "
-                                    f"{len(imported_area_records)} area rows loaded."
+                                    t("area_excel_import_success").format(count=len(imported_area_records))
                                 )
                                 st.rerun()
                             else:
-                                st.error("Cloud save failed. Imported area data changed locally, but was not saved. Do not log out yet.")
+                                st.error(t("area_excel_import_cloud_failed"))
 
                         except ExcelImportError as e:
-                            st.error(f"Excel import failed: {e}")
+                            st.error(t("area_excel_import_failed_detail").format(error=e))
                         except Exception as e:
-                            st.error("Excel import failed. Please upload a valid .xlsx file generated from this app.")
-                            with st.expander("Technical details"):
+                            st.error(t("area_excel_import_failed"))
+                            with st.expander(t("technical_details")):
                                 st.code(str(e))
 
             cost_input_values_for_review = st.session_state.get(
@@ -6727,10 +6816,10 @@ def show_area_calculator():
             )
 
             if isinstance(cost_input_values_for_review, dict) and cost_input_values_for_review:
-                st.info("Cost Analysis Input proposals imported for review. Cost Analysis was not changed.")
+                st.info(t("cost_input_proposals_imported"))
 
             if isinstance(cost_input_warnings_for_review, list) and cost_input_warnings_for_review:
-                with st.expander("Cost Analysis Input warnings"):
+                with st.expander(t("cost_input_warnings_title")):
                     for warning in cost_input_warnings_for_review:
                         st.warning(warning)
 
@@ -6761,7 +6850,7 @@ def show_area_calculator():
 
                 with dismiss_col:
                     if st.button(
-                        "Dismiss",
+                        t("dismiss"),
                         key=f"dismiss_earthwork_import_warning_{curr_id}",
                         use_container_width=True,
                     ):
@@ -6815,11 +6904,11 @@ def show_area_calculator():
             ]
         )
 
-        with st.expander("Summary of Key Area Metrics", expanded=False):
-            st.subheader("File Information:")
+        with st.expander(t("summary_key_area_metrics"), expanded=False):
+            st.subheader(t("file_information"))
             s1, s2 = st.columns(2)
             with s1:
-                st.markdown("##### Core Area")
+                st.markdown(f"##### {t('core_area')}")
                 st.dataframe(
                     core_summary_df,
                     width="stretch",
@@ -6829,7 +6918,7 @@ def show_area_calculator():
                     },
                 )
             with s2:
-                st.markdown("##### Opening / External")
+                st.markdown(f"##### {t('opening_external')}")
                 st.dataframe(
                     opening_summary_df,
                     width="stretch",
@@ -8961,15 +9050,26 @@ def build_cost_sync_review_rows(sync_groups, curr_proj):
             allow_zero = bool(item.get("allow_zero", False))
 
             if source_value < 0:
-                status = "Skipped - negative source"
+                status_key = "skipped_negative"
+                status = t("sync_status_skipped_negative")
             elif source_value == 0 and not allow_zero:
-                status = "Skipped - zero source"
+                status_key = "skipped_zero"
+                status = t("sync_status_skipped_zero")
             elif not current_found:
-                status = "Missing target"
+                status_key = "missing_target"
+                status = t("sync_status_missing_target")
             elif abs(source_value - current_value) > 0.000001:
-                status = "Changed"
+                status_key = "changed"
+                status = t("sync_status_changed")
             else:
-                status = "Unchanged"
+                status_key = "unchanged"
+                status = t("sync_status_unchanged")
+
+            source_origin_key = (
+                "sync_source_excel_proposed"
+                if item.get("source_origin") == "Excel Proposed Value"
+                else "sync_source_area_analysis"
+            )
 
             rows.append({
                 "Group": group_title,
@@ -8978,8 +9078,9 @@ def build_cost_sync_review_rows(sync_groups, curr_proj):
                 "Source Value": source_value,
                 "Difference": source_value - current_value,
                 "Unit": item.get("unit", ""),
-                "Source Origin": item.get("source_origin", "Area Analysis"),
+                "Source Origin": t(source_origin_key),
                 "Status": status,
+                "Status Key": status_key,
             })
 
     return rows
@@ -8994,39 +9095,50 @@ def render_cost_sync_review_panel(curr_id, sync_groups, curr_proj, perform_area_
     review_df = pd.DataFrame(rows)
 
     with st.container(border=True):
-        st.subheader("Review Area Sync")
-        st.caption(
-            "Positive source values can update Cost Analysis inputs. Zero source values are skipped except allowed ratio values."
-        )
+        st.subheader(t("review_area_sync"))
+        st.caption(t("sync_review_caption"))
 
         tab_changed, tab_unchanged, tab_skipped, tab_all = st.tabs([
-            "Changed", "Unchanged", "Skipped / Zero", "All"
+            t("sync_filter_changed"),
+            t("sync_filter_unchanged"),
+            t("sync_filter_skipped_zero"),
+            t("sync_filter_all"),
         ])
 
         def show_review_table(df):
             if df.empty:
-                st.info("No values in this group.")
+                st.info(t("sync_no_values_group"))
                 return
 
+            display_df = df.drop(columns=["Status Key"], errors="ignore").rename(columns={
+                "Group": t("sync_col_group"),
+                "Value": t("sync_col_value"),
+                "Current Value": t("sync_col_current_value"),
+                "Source Value": t("sync_col_source_value"),
+                "Difference": t("sync_col_difference"),
+                "Source Origin": t("sync_col_source_origin"),
+                "Status": t("sync_col_status"),
+            })
+
             st.dataframe(
-                df,
+                display_df,
                 width="stretch",
                 hide_index=True,
                 column_config={
-                    "Current Value": st.column_config.NumberColumn("Current Value", format="%.2f"),
-                    "Source Value": st.column_config.NumberColumn("Source Value", format="%.2f"),
-                    "Difference": st.column_config.NumberColumn("Difference", format="%.2f"),
+                    t("sync_col_current_value"): st.column_config.NumberColumn(t("sync_col_current_value"), format="%.2f"),
+                    t("sync_col_source_value"): st.column_config.NumberColumn(t("sync_col_source_value"), format="%.2f"),
+                    t("sync_col_difference"): st.column_config.NumberColumn(t("sync_col_difference"), format="%.2f"),
                 },
             )
 
         with tab_changed:
-            show_review_table(review_df[review_df["Status"] == "Changed"])
+            show_review_table(review_df[review_df["Status Key"] == "changed"])
 
         with tab_unchanged:
-            show_review_table(review_df[review_df["Status"] == "Unchanged"])
+            show_review_table(review_df[review_df["Status Key"] == "unchanged"])
 
         with tab_skipped:
-            show_review_table(review_df[review_df["Status"].isin(["Skipped - zero source", "Skipped - negative source", "Missing target"])])
+            show_review_table(review_df[review_df["Status Key"].isin(["skipped_zero", "skipped_negative", "missing_target"])])
 
         with tab_all:
             show_review_table(review_df)
@@ -9035,7 +9147,7 @@ def render_cost_sync_review_panel(curr_id, sync_groups, curr_proj, perform_area_
 
         with apply_col:
             apply_clicked = st.button(
-                "Apply Sync",
+                t("sync_apply_button"),
                 key=f"apply_area_analysis_sync_{curr_id}",
                 type="primary",
                 width="stretch",
@@ -9043,7 +9155,7 @@ def render_cost_sync_review_panel(curr_id, sync_groups, curr_proj, perform_area_
 
         with cancel_col:
             cancel_clicked = st.button(
-                "Cancel",
+                t("sync_cancel_button"),
                 key=f"cancel_area_analysis_sync_{curr_id}",
                 width="stretch",
             )
@@ -9057,10 +9169,10 @@ def render_cost_sync_review_panel(curr_id, sync_groups, curr_proj, perform_area_
                 st.session_state.pop(review_key, None)
                 st.session_state.pop(f"confirm_use_area_analysis_{curr_id}", None)
                 st.session_state.pop(f"show_area_sync_details_{curr_id}", None)
-                st.success("Area metrics, opening/external quantities, and detail-derived rates applied to Cost Analysis.")
+                st.success(t("sync_apply_success"))
                 st.rerun()
             else:
-                st.error("Area Analysis values were applied locally, but cloud save failed. Do not log out yet.")
+                st.error(t("sync_apply_cloud_failed"))
 
         if cancel_clicked:
             st.session_state.pop(review_key, None)
@@ -12831,13 +12943,15 @@ def main_app():
     if current_ui_lang not in ui_lang_options:
         current_ui_lang = "en"
 
-    st.sidebar.selectbox(
-        t("language_label"),
-        options=ui_lang_options,
-        index=ui_lang_options.index(current_ui_lang),
-        format_func=lambda lang: "English" if lang == "en" else "Indonesia",
-        key="ui_lang",
+    lang_display = "ID" if current_ui_lang == "id" else "EN"
+    selected_lang_display = st.sidebar.segmented_control(
+        "Language",
+        options=["EN", "ID"],
+        default=lang_display,
+        selection_mode="single",
+        key="ui_lang_segmented",
     )
+    st.session_state["ui_lang"] = "id" if selected_lang_display == "ID" else "en"
 
     page_options = ["Start", "Dashboard", "Area Analysis", "Cost Analysis", "Database", "Summary", "Archive"]
     page_label_keys = {
