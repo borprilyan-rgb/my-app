@@ -161,6 +161,148 @@ def _read_excel_sheet_with_header(excel_bytes, sheet_name, header_candidates):
 
     return df
 
+def read_cost_analysis_input_sheet(excel_bytes):
+    accepted_keys = {
+        "m_land",
+        "m_gba",
+        "m_gfa",
+        "m_sgfa",
+        "m_rooms",
+        "m_lobby",
+        "m_carpet",
+        "m_glass",
+        "m_facade",
+        "m_gondola",
+        "m_skylight",
+        "r_rail_qty",
+        "m_door_g",
+        "m_door_w",
+        "m_door_s",
+        "r_san_qty",
+        "m_toil_m",
+        "m_toil_f",
+        "m_toil_d",
+        "m_mushola",
+        "m_fac_res",
+        "m_fac_pub",
+        "m_fac_proj",
+        "m_land_m2",
+        "r_fac_pre",
+        "r_fac_win",
+        "r_fac_doub",
+        "s_floor",
+        "w_floor",
+        "r_fl_ht",
+        "r_fl_vin",
+        "r_fl_mar",
+    }
+    ratio_keys = {
+        "r_fac_pre",
+        "r_fac_win",
+        "r_fac_doub",
+        "s_floor",
+        "w_floor",
+        "r_fl_ht",
+        "r_fl_vin",
+        "r_fl_mar",
+    }
+
+    def is_blank(value):
+        if value is None:
+            return True
+        try:
+            if pd.isna(value):
+                return True
+        except Exception:
+            pass
+        return str(value).strip() in ["", "-", "None", "nan", "NaN"]
+
+    def parse_proposed_float(value):
+        if is_blank(value):
+            return None, False
+
+        text = str(value).strip().replace(",", "").replace("%", "")
+
+        try:
+            return float(text), True
+        except Exception:
+            return None, False
+
+    try:
+        raw = pd.read_excel(
+            io.BytesIO(excel_bytes),
+            sheet_name="Cost Analysis Input",
+            header=None,
+            engine="openpyxl",
+        )
+    except ValueError as e:
+        if "Cost Analysis Input" in str(e):
+            return {}, []
+        return {}, ["Cost Analysis Input sheet could not be read and was ignored."]
+    except Exception:
+        return {}, ["Cost Analysis Input sheet could not be read and was ignored."]
+
+    header_row_idx = None
+
+    for i in range(min(12, len(raw))):
+        row_norm = [_excel_norm_col(v) for v in raw.iloc[i].tolist()]
+        if "system key" in row_norm and "proposed value" in row_norm:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        return {}, ["Cost Analysis Input sheet found, but header row was not recognized."]
+
+    df = raw.iloc[header_row_idx + 1:].copy()
+    df.columns = raw.iloc[header_row_idx].tolist()
+    df = df.loc[:, [str(c).strip() not in ["", "nan", "None"] for c in df.columns]]
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    system_key_col = _excel_find_col(df, ["System Key"])
+    proposed_value_col = _excel_find_col(df, ["Proposed Value"])
+
+    if not system_key_col or not proposed_value_col:
+        return {}, ["Cost Analysis Input sheet is missing System Key or Proposed Value columns."]
+
+    values = {}
+    warnings = []
+
+    for idx, row in df.iterrows():
+        excel_row = header_row_idx + idx + 2
+        system_key = str(row.get(system_key_col, "")).strip()
+        proposed_value = row.get(proposed_value_col)
+
+        if is_blank(system_key) and is_blank(proposed_value):
+            continue
+        if is_blank(proposed_value):
+            continue
+        if system_key not in accepted_keys:
+            warnings.append(
+                f"Cost Analysis Input row {excel_row}: unknown System Key '{system_key}' was ignored."
+            )
+            continue
+        if system_key in values:
+            warnings.append(
+                f"Cost Analysis Input row {excel_row}: duplicate System Key '{system_key}' was ignored."
+            )
+            continue
+
+        parsed_value, is_valid = parse_proposed_float(proposed_value)
+        if not is_valid:
+            warnings.append(
+                f"Cost Analysis Input row {excel_row}: Proposed Value for '{system_key}' is not a valid number."
+            )
+            continue
+
+        values[system_key] = parsed_value
+
+        if parsed_value == 0 and system_key not in ratio_keys:
+            warnings.append(
+                f"Cost Analysis Input row {excel_row}: zero Proposed Value for '{system_key}' was imported for review."
+            )
+
+    return values, warnings
+
 def read_area_input_sheet(excel_bytes):
     df = _read_excel_sheet_with_header(
         excel_bytes,

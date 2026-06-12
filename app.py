@@ -21,6 +21,7 @@ from excel_helpers import (
     read_area_input_sheet,
     read_architectural_facade_inputs,
     read_architectural_sheet,
+    read_cost_analysis_input_sheet,
     read_consultancy_sheet,
     read_earthworks_sheet,
     read_external_sheet,
@@ -261,6 +262,35 @@ UI_TEXT = {
         "area.ffe_page_title": "Area Analysis (FF&E)",
         "area.mep_page_title": "Area Analysis (MEP)",
         "area.utility_page_title": "Area Analysis (Utility)",
+        "area.gba.basements_lg": "Basements / LG",
+        "area.gba.basements_lg_help": "1 = LG, 2 = B1, 3 = B2, etc",
+        "area.gba.floors": "Floors",
+        "area.gba.land_area": "Luas Tanah (m2)",
+        "area.gba.caption": "Edit here first. Calculations and cost sync will not update until you click Save.",
+        "area.gba.generate_table": "Generate Table",
+        "area.gba.reset_draft": "Reset Draft",
+        "area.gba.generated": "New area table generated and committed.",
+        "area.gba.generate_save_failed": (
+            "Cloud save failed. Generated area table changed locally, but was not saved. Do not log out yet."
+        ),
+        "area.gba.draft_reset": "Draft reset to last applied table.",
+        "area.gba.input_mode": "Area Input Mode",
+        "area.gba.input_mode_detailed": "Detailed Category",
+        "area.gba.input_mode_consultant": "Consultant Summary",
+        "area.gba.input_mode_help": (
+            "Detailed Category = input each physical category. "
+            "Consultant Summary = input cumulative NFA, SGFA, and GFA per floor."
+        ),
+        "area.gba.space_type": "Space Type",
+        "area.gba.height": "Height (m)",
+        "area.gba.height_help": "Vertical height from one finished floor level to the next.",
+        "area.gba.typical_unit": "Typical Unit",
+        "area.gba.typical_unit_help": "Number of typical units on this floor. This is a count, not an area.",
+        "area.gba.gfa_help": "Consultant mode: cumulative GFA. Converted to Stair, MEP, Etc = GFA - SGFA.",
+        "area.gba.sgfa_help": "Consultant mode: cumulative SGFA. Converted to Koridor/Lobby = SGFA - NFA.",
+        "area.gba.nfa_help": "Consultant mode: NFA. Converted to Unit Area.",
+        "area.gba.saved_to_cloud": "Saved to cloud.",
+        "area.gba.cloud_save_failed": "Cloud save failed. Do not log out yet.",
         "admin.feasibility_study": "Feasibility Study",
         "admin.loaded_file_ready": "**{name}** is currently loaded (You can start calculating your project)",
         "admin.previous_page": "Previous Page",
@@ -512,6 +542,35 @@ UI_TEXT = {
         "area.ffe_page_title": "Analisis Area (FF&E)",
         "area.mep_page_title": "Analisis Area (MEP)",
         "area.utility_page_title": "Analisis Area (Utility)",
+        "area.gba.basements_lg": "Basement / LG",
+        "area.gba.basements_lg_help": "1 = LG, 2 = B1, 3 = B2, dst.",
+        "area.gba.floors": "Jumlah Lantai",
+        "area.gba.land_area": "Luas Tanah (m2)",
+        "area.gba.caption": "Edit di sini terlebih dahulu. Kalkulasi dan sinkron biaya belum berubah sampai Anda klik Simpan.",
+        "area.gba.generate_table": "Buat Tabel",
+        "area.gba.reset_draft": "Reset Draft",
+        "area.gba.generated": "Tabel area baru berhasil dibuat dan diterapkan.",
+        "area.gba.generate_save_failed": (
+            "Gagal menyimpan ke cloud. Tabel area baru berubah secara lokal, tetapi belum tersimpan. Jangan logout dulu."
+        ),
+        "area.gba.draft_reset": "Draft dikembalikan ke tabel terakhir yang diterapkan.",
+        "area.gba.input_mode": "Mode Input Area",
+        "area.gba.input_mode_detailed": "Kategori Detail",
+        "area.gba.input_mode_consultant": "Ringkasan Konsultan",
+        "area.gba.input_mode_help": (
+            "Kategori Detail = input setiap kategori fisik. "
+            "Ringkasan Konsultan = input kumulatif NFA, SGFA, dan GFA per lantai."
+        ),
+        "area.gba.space_type": "Tipe Ruang",
+        "area.gba.height": "Tinggi (m)",
+        "area.gba.height_help": "Tinggi vertikal dari satu level lantai jadi ke level lantai berikutnya.",
+        "area.gba.typical_unit": "Unit Tipikal",
+        "area.gba.typical_unit_help": "Jumlah unit tipikal pada lantai ini. Ini adalah jumlah unit, bukan luas.",
+        "area.gba.gfa_help": "Mode konsultan: GFA kumulatif. Dikonversi ke Stair, MEP, Etc = GFA - SGFA.",
+        "area.gba.sgfa_help": "Mode konsultan: SGFA kumulatif. Dikonversi ke Koridor/Lobby = SGFA - NFA.",
+        "area.gba.nfa_help": "Mode konsultan: NFA. Dikonversi ke Unit Area.",
+        "area.gba.saved_to_cloud": "Berhasil disimpan ke cloud.",
+        "area.gba.cloud_save_failed": "Gagal menyimpan ke cloud. Jangan logout dulu.",
         "admin.feasibility_study": "Studi Kelayakan",
         "admin.loaded_file_ready": "**{name}** sedang dimuat (Anda dapat mulai menghitung proyek)",
         "admin.previous_page": "Halaman Sebelumnya",
@@ -6089,16 +6148,16 @@ def show_area_calculator():
         c_h, c_b, c_u = st.columns(3)
 
         c_h.number_input(
-            "Basements / LG",
+            t("area.gba.basements_lg"),
             min_value=0,
             value=int(get_area_val("base_in", 1)),
             step=1,
             key=base_key,
-            help="1 = LG, 2 = B1, 3 = B2, etc",
+            help=t("area.gba.basements_lg_help"),
         )
 
         c_b.number_input(
-            "Floors",
+            t("area.gba.floors"),
             min_value=1,
             value=int(get_area_val("up_in", 5)),
             step=1,
@@ -6106,7 +6165,7 @@ def show_area_calculator():
         )
 
         c_u.number_input(
-            "Luas Tanah (m2)",
+            t("area.gba.land_area"),
             min_value=0.0,
             value=_safe_float(get_area_val("m_land", 0.0)),
             step=100.0,
@@ -6359,6 +6418,10 @@ def show_area_calculator():
                                 imported_structural_rows = read_structural_sheet(excel_bytes)
                             except ExcelImportError as e:
                                 st.warning(str(e))
+
+                            cost_input_values, cost_input_warnings = read_cost_analysis_input_sheet(excel_bytes)
+                            st.session_state[f"cost_analysis_input_proposals_{curr_id}"] = cost_input_values
+                            st.session_state[f"cost_analysis_input_warnings_{curr_id}"] = cost_input_warnings
 
                             st.session_state[area_draft_key] = copy.deepcopy(imported_area_records)
                             st.session_state[area_committed_key] = copy.deepcopy(imported_area_records)
@@ -6654,6 +6717,23 @@ def show_area_calculator():
                             with st.expander("Technical details"):
                                 st.code(str(e))
 
+            cost_input_values_for_review = st.session_state.get(
+                f"cost_analysis_input_proposals_{curr_id}",
+                {},
+            )
+            cost_input_warnings_for_review = st.session_state.get(
+                f"cost_analysis_input_warnings_{curr_id}",
+                [],
+            )
+
+            if isinstance(cost_input_values_for_review, dict) and cost_input_values_for_review:
+                st.info("Cost Analysis Input proposals imported for review. Cost Analysis was not changed.")
+
+            if isinstance(cost_input_warnings_for_review, list) and cost_input_warnings_for_review:
+                with st.expander("Cost Analysis Input warnings"):
+                    for warning in cost_input_warnings_for_review:
+                        st.warning(warning)
+
             earthwork_import_warning = st.session_state.get("earthwork_import_warning")
             if isinstance(earthwork_import_warning, dict):
                 warning_derived_rate = _safe_float(
@@ -6765,9 +6845,7 @@ def show_area_calculator():
     # ==================================================
     elif area_page == "GBA Input":
         st.subheader(t("area.manual_input_title"))
-        st.caption(
-            "Edit here first. Calculations and cost sync will not update until you click Save."
-        )
+        st.caption(t("area.gba.caption"))
 
         def store_gba_setup_table_outputs(records):
             clean_records = clean_area_records(records)
@@ -6817,7 +6895,7 @@ def show_area_calculator():
 
         with c_gen:
             generate_clicked = st.button(
-                "Generate Table",
+                t("area.gba.generate_table"),
                 type="secondary",
                 key=f"generate_area_table_{curr_id}",
                 width="stretch",
@@ -6825,7 +6903,7 @@ def show_area_calculator():
 
         with c_reset:
             reset_clicked = st.button(
-                "Reset Draft",
+                t("area.gba.reset_draft"),
                 key=f"reset_area_draft_{curr_id}",
                 width="stretch",
             )
@@ -6845,10 +6923,10 @@ def show_area_calculator():
             save_ok = save_after_user_action("Generate Area Table")
 
             if save_ok:
-                st.success("New area table generated and committed.")
+                st.success(t("area.gba.generated"))
                 st.rerun()
             else:
-                st.error("Cloud save failed. Generated area table changed locally, but was not saved. Do not log out yet.")
+                st.error(t("area.gba.generate_save_failed"))
 
         if reset_clicked:
             st.session_state[area_draft_key] = copy.deepcopy(
@@ -6857,7 +6935,7 @@ def show_area_calculator():
 
             clear_area_editor_state()
 
-            st.warning("Draft reset to last applied table.")
+            st.warning(t("area.gba.draft_reset"))
             st.rerun()
 
         # Clean draft before showing it in editor, so deleted cells do not display as None
@@ -6866,19 +6944,21 @@ def show_area_calculator():
         )
 
         area_input_mode_key = f"area_input_mode_{curr_id}"
+        area_input_mode_label_keys = {
+            "Detailed Category": "area.gba.input_mode_detailed",
+            "Consultant Summary": "area.gba.input_mode_consultant",
+        }
 
         area_input_mode = st.radio(
-            "Area Input Mode",
+            t("area.gba.input_mode"),
             options=[
                 "Detailed Category",
                 "Consultant Summary",
             ],
             horizontal=True,
             key=area_input_mode_key,
-            help=(
-                "Detailed Category = input each physical category. "
-                "Consultant Summary = input cumulative NFA, SGFA, and GFA per floor."
-            ),
+            help=t("area.gba.input_mode_help"),
+            format_func=lambda option: t(area_input_mode_label_keys.get(option), option),
         )
 
         draft_df = area_records_to_input_view(
@@ -6895,7 +6975,7 @@ def show_area_calculator():
             column_order=list(draft_df.columns),
             column_config={
                 "Space Type": st.column_config.SelectboxColumn(
-                    "Space Type",
+                    t("area.gba.space_type"),
                     options=[
                         "Roof",
                         "Unit",
@@ -6908,18 +6988,18 @@ def show_area_calculator():
                     required=True,
                 ),
                 F2F_COL: st.column_config.NumberColumn(
-                    "Height (m)",
+                    t("area.gba.height"),
                     min_value=0.0,
                     step=0.1,
                     format="%.2f m",
-                    help="Vertical height from one finished floor level to the next.",
+                    help=t("area.gba.height_help"),
                 ),
                 TYPICAL_UNIT_COL: st.column_config.NumberColumn(
-                    "Typical Unit",
+                    t("area.gba.typical_unit"),
                     min_value=0,
                     step=1,
                     format="%d",
-                    help="Number of typical units on this floor. This is a count, not an area.",
+                    help=t("area.gba.typical_unit_help"),
                 ),
                 UNIT_AREA_COL: st.column_config.NumberColumn(
                     "Unit Area",
@@ -6969,21 +7049,21 @@ def show_area_calculator():
                     min_value=0.0,
                     step=10.0,
                     format="%.2f m2",
-                    help="Consultant mode: cumulative GFA. Converted to Stair, MEP, Etc = GFA - SGFA.",
+                    help=t("area.gba.gfa_help"),
                 ),
                 "SGFA Input": st.column_config.NumberColumn(
                     "SGFA",
                     min_value=0.0,
                     step=10.0,
                     format="%.2f m2",
-                    help="Consultant mode: cumulative SGFA. Converted to Koridor/Lobby = SGFA - NFA.",
+                    help=t("area.gba.sgfa_help"),
                 ),
                 "NFA Input": st.column_config.NumberColumn(
                     "NFA",
                     min_value=0.0,
                     step=10.0,
                     format="%.2f m2",
-                    help="Consultant mode: NFA. Converted to Unit Area.",
+                    help=t("area.gba.nfa_help"),
                 ),
             },
         )
@@ -7010,10 +7090,10 @@ def show_area_calculator():
             save_ok = save_data_force()
 
             if save_ok:
-                st.success("Saved to cloud.")
+                st.success(t("area.gba.saved_to_cloud"))
                 st.rerun()
             else:
-                st.error("Cloud save failed. Do not log out yet.")
+                st.error(t("area.gba.cloud_save_failed"))
 
 
     # ==================================================
@@ -11046,7 +11126,6 @@ def show_dashboard():
         )
     else:
         st.info(t("dashboard.no_area_ratio_data"))
-
 
 def show_portfolio_summary():
     st.title(t("summary.title"))
