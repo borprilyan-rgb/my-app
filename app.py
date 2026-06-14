@@ -491,7 +491,7 @@ UI_TEXT = {
         "main_navigation": "Navigasi Utama",
         "hello_user": "Halo, **{name}**!",
         "main_page_label": "Pilih Halaman:",
-        "page.start": "Mulai",
+        "page.start": "Start",
         "page.dashboard": "Dashboard",
         "page.area_analysis": "Analisis Area",
         "page.cost_analysis": "Analisis Biaya",
@@ -783,7 +783,7 @@ UI_TEXT = {
         "cost_detail_info_title": "Tinjauan Harga dari Detail {section}",
         "admin.feasibility_study": "Studi Kelayakan",
         "admin.loaded_file_ready": "**{name}** sedang dimuat (Anda dapat mulai menghitung proyek)",
-        "admin.previous_page": "Halaman Sebelumnya",
+        "admin.previous_page": "Kembali",
         "admin.welcome_start": (
             "**Selamat datang di Project Feasibility Study - Agung Sedayu Group**\n\n"
             "Untuk mulai menghitung, buat proyek baru dengan tombol di bawah."
@@ -10392,8 +10392,6 @@ def show_cost_estimator(): #cost calculator page
                 for detail in breakdown_details:
                     st.markdown(detail)
 
-        st.caption("Edit the table, then click Save Change to apply and store the changes.")
-
         save_c1, save_c2, save_c3 = st.columns([1, 2, 1])
 
         with save_c1:
@@ -11197,7 +11195,6 @@ def _parse_date_safe(value, fallback=None, dayfirst=True):
 
 def show_dashboard():
     st.title(t("dashboard.title"))
-    st.caption(t("dashboard.caption"))
 
     repair_projects_state(save=False)
 
@@ -11828,7 +11825,6 @@ CREATED &nbsp;: {created}
         st.divider()
 
         st.markdown(f"##### {t('summary.assumptions_configuration')}")
-        st.caption(t("summary.assumptions_caption"))
 
         edited_assumptions = st.data_editor(
             get_port_assumptions_df(),
