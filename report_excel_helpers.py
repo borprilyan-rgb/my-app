@@ -5,6 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter
 
+from cost_calculation_helpers import calculate_live_costs
 from project_database import get_project_type_data
 
 
@@ -287,52 +288,93 @@ def get_recap_values(pdata):
     contingency_pct = _safe_float(d.get("sc_contingency_pct", 3.0))
     smart_custom_costs = sum(_safe_float(i.get("Rate (Rp)", 0)) * _safe_float(i.get("Quantity", 1)) for i in d.get("smart_custom_costs", []) if isinstance(i, dict))
 
-    t_earth = gba * struc_earth; t_found = gba * struc_found; t_struc = gba * struc_work; t_arch_base = gfa * arch_base
-    t_precast = facade * (facade_precast_pct / 100) * facade_precast_rate; t_window = facade * (facade_window_pct / 100) * facade_window_rate
-    t_double = facade * (facade_double_pct / 100) * facade_double_rate; t_w_door = wooden_door * door_wood
-    t_g_door = glass_door * door_glass; t_s_door = steel_door * door_steel; t_lobby = lobby_interior * lobby_rate
-    t_gondola = gondola_unit * gondola_rate; t_unit_san = rooms * san_qty_room * san_room_rate
-    t_t_male = toilet_male * san_pub_m; t_t_female = toilet_female * san_pub_f; t_t_dis = disabled_toil * san_dis
-    t_mushola = mushola_unit * san_mushola; t_kitchen = rooms * kitchen_rate; t_hw_w = wooden_door * hw_wood
-    t_hw_s = steel_door * hw_steel; f_mult = (1 + (fl_waste/100)) * (1 + (fl_skirt/100))
-    t_ht = gfa * (fl_ht_pct / 100) * fl_ht_rate * f_mult; t_vinyl = gfa * (fl_vinyl_pct / 100) * fl_vinyl_rate * f_mult
-    t_marmer = gfa * (fl_marmer_pct / 100) * fl_marmer_rate * f_mult; t_carpet = carpet_m2 * carpet_rate
-    t_glass_work = glass_m2 * glass_rate; t_ffe = rooms * ffe_rate; t_misc = misc_rate * misc_switch
-    t_mep = gba * mep_rate; t_utility = gba * utility_rate; t_railing = (rooms * railing_qty) * railing_rate
-    t_skylight = skylight_area * skylight_rate; t_external = land_m2 * ext_land_rate
-    t_pub_fac = pub_fac_m2 * fac_pub_rate; t_res_fac = res_fac_m2 * fac_res_rate; t_proj_fac = proj_fac_u * fac_proj_rate
-
-    construction_subtotal = sum([
-        t_earth, t_found, t_struc, t_arch_base, t_precast, t_window, t_double, t_w_door, t_g_door, t_s_door, 
-        t_lobby, t_gondola, t_unit_san, t_t_male, t_t_female, t_t_dis, t_mushola, t_kitchen, t_hw_w, t_hw_s, 
-        t_ht, t_vinyl, t_marmer, t_carpet, t_glass_work, t_ffe, t_misc, t_mep, t_utility, t_railing, t_skylight, 
-        t_external, t_pub_fac, t_res_fac, t_proj_fac, smart_custom_costs
-    ])
-
-    t_preliminary = construction_subtotal * (prelim_pct / 100.0)
-    t_contingency = (construction_subtotal + t_preliminary) * (contingency_pct / 100.0)
-    grand_total_hc = construction_subtotal + t_preliminary + t_contingency
-
-    t_consultancy = gfa * consultancy_rate
-    t_qs = qs_months * qs_rate
-    t_pm = pm_months * pm_rate
-    t_insurance = grand_total_hc * (insurance_pct / 100.0)
-
-    total_soft_cost = t_consultancy + t_qs + t_pm + t_insurance
-    grand_total_project = grand_total_hc + total_soft_cost
-
-    group_arch = (t_arch_base + t_lobby + t_carpet + t_gondola + t_glass_work + t_kitchen + t_railing + t_skylight + 
-                  (t_precast + t_window + t_double) + (t_unit_san + t_t_male + t_t_female + t_t_dis + t_mushola) + 
-                  (t_ht + t_vinyl + t_marmer) + (t_w_door + t_g_door + t_s_door + t_hw_w + t_hw_s) + smart_custom_costs)
+    raw = {
+        "gba": gba,
+        "gfa": gfa,
+        "struc_earth": struc_earth,
+        "struc_found": struc_found,
+        "struc_work": struc_work,
+        "arch_base": arch_base,
+        "facade": facade,
+        "facade_precast_pct": facade_precast_pct,
+        "fac_precast_rate": facade_precast_rate,
+        "facade_window_pct": facade_window_pct,
+        "fac_window_rate": facade_window_rate,
+        "facade_double_pct": facade_double_pct,
+        "fac_double_rate": facade_double_rate,
+        "wooden_door": wooden_door,
+        "door_wood": door_wood,
+        "glass_door": glass_door,
+        "door_glass": door_glass,
+        "steel_door": steel_door,
+        "door_steel": door_steel,
+        "lobby_interior": lobby_interior,
+        "lobby_rate": lobby_rate,
+        "gondola_unit": gondola_unit,
+        "gondola_rate": gondola_rate,
+        "rooms": rooms,
+        "san_qty_room": san_qty_room,
+        "san_room_rate": san_room_rate,
+        "toilet_male": toilet_male,
+        "san_pub_m": san_pub_m,
+        "toilet_female": toilet_female,
+        "san_pub_f": san_pub_f,
+        "disabled_toil": disabled_toil,
+        "san_dis": san_dis,
+        "mushola_unit": mushola_unit,
+        "san_mushola": san_mushola,
+        "kitchen_rate": kitchen_rate,
+        "hw_wood": hw_wood,
+        "hw_steel": hw_steel,
+        "fl_waste": fl_waste,
+        "fl_skirt": fl_skirt,
+        "fl_ht_pct": fl_ht_pct,
+        "fl_ht_rate": fl_ht_rate,
+        "fl_vinyl_pct": fl_vinyl_pct,
+        "fl_vinyl_rate": fl_vinyl_rate,
+        "fl_marmer_pct": fl_marmer_pct,
+        "fl_marmer_rate": fl_marmer_rate,
+        "carpet_m2": carpet_m2,
+        "carpet_rate": carpet_rate,
+        "glass_m2": glass_m2,
+        "glass_rate": glass_rate,
+        "ffe_rate": ffe_rate,
+        "misc_rate": misc_rate,
+        "misc_switch": misc_switch,
+        "mep_rate": mep_rate,
+        "utility_rate": utility_rate,
+        "railing_qty": railing_qty,
+        "railing_rate": railing_rate,
+        "skylight_area": skylight_area,
+        "skylight_rate": skylight_rate,
+        "land_m2": land_m2,
+        "ext_land_rate": ext_land_rate,
+        "pub_fac_m2": pub_fac_m2,
+        "fac_pub_rate": fac_pub_rate,
+        "res_fac_m2": res_fac_m2,
+        "fac_res_rate": fac_res_rate,
+        "proj_fac_u": proj_fac_u,
+        "fac_proj_rate": fac_proj_rate,
+        "consultancy_rate": consultancy_rate,
+        "qs_months": qs_months,
+        "qs_rate": qs_rate,
+        "pm_months": pm_months,
+        "pm_rate": pm_rate,
+        "insurance_pct": insurance_pct,
+        "prelim_pct": prelim_pct,
+        "contingency_pct": contingency_pct,
+        "smart_custom_costs": smart_custom_costs,
+    }
+    costs = calculate_live_costs(raw)
     
     return {
-        "EARTHWORKS": t_earth, "FOUNDATIONS": t_found, "STRUCTURAL WORKS": t_struc,
-        "ARCHITECTURAL WORKS": group_arch, "FF & E": t_ffe + t_misc, "M.E.P WORKS": t_mep,
-        "UTILITY CONNECTION": t_utility, "EXTERNAL WORKS": t_external, "FACILITY": t_pub_fac + t_res_fac + t_proj_fac,
-        "PRELIMINARIES WORKS": t_preliminary, "CONTINGENCIES": t_contingency, "HARDCOST": grand_total_hc,
-        "CONSULTANCY SERVICES FEE": t_consultancy, "QS SERVICES": t_qs, 
-        "PROJECT MANAGEMENT SERVICES": t_pm, "INSURANCE COVERAGE": t_insurance,
-        "SOFTCOST": total_soft_cost, "TOTAL, EXCLD PPN": grand_total_project
+        "EARTHWORKS": costs["t_earth"], "FOUNDATIONS": costs["t_found"], "STRUCTURAL WORKS": costs["t_struc"],
+        "ARCHITECTURAL WORKS": costs["group_arch"], "FF & E": costs["group_ffe"], "M.E.P WORKS": costs["t_mep"],
+        "UTILITY CONNECTION": costs["t_utility"], "EXTERNAL WORKS": costs["t_external"], "FACILITY": costs["group_misc"],
+        "PRELIMINARIES WORKS": costs["t_preliminary"], "CONTINGENCIES": costs["t_contingency"], "HARDCOST": costs["grand_total_hc"],
+        "CONSULTANCY SERVICES FEE": costs["t_consultancy"], "QS SERVICES": costs["t_qs"],
+        "PROJECT MANAGEMENT SERVICES": costs["t_pm"], "INSURANCE COVERAGE": costs["t_insurance"],
+        "SOFTCOST": costs["total_soft_cost"], "TOTAL, EXCLD PPN": costs["grand_total_project"]
     }
 
 def generate_recap_excel(port_meta, projects):

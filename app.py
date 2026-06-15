@@ -14,6 +14,7 @@ from area_helpers import (
     validate_consultant_summary_input,
 )
 from area_helpers import safe_float as _safe_float
+from cost_calculation_helpers import calculate_live_costs
 
 from excel_helpers import (
     ExcelImportError,
@@ -10414,90 +10415,73 @@ def show_cost_estimator(): #cost calculator page
                 st.error("Cloud save failed. Do not log out yet.")
 
     # --- LIVE AUTO-CALCULATIONS ---
-    t_earth = gba * struc_earth
-    t_found = gba * struc_found
-    t_struc = gba * struc_work
-    t_arch_base = gfa * arch_base
-    t_precast = facade * (facade_precast_pct / 100) * fac_precast_rate
-    t_window  = facade * (facade_window_pct / 100) * fac_window_rate
-    t_double  = facade * (facade_double_pct / 100) * fac_double_rate
-    t_w_door = wooden_door * door_wood
-    t_g_door = glass_door * door_glass
-    t_s_door = steel_door * door_steel
-    t_lobby  = lobby_interior * lobby_rate
-    t_gondola = gondola_unit * gondola_rate
-    t_unit_san = rooms * san_qty_room * san_room_rate
-    t_t_male   = toilet_male * san_pub_m
-    t_t_female = toilet_female * san_pub_f
-    t_t_dis    = disabled_toil * san_dis
-    t_mushola  = mushola_unit * san_mushola
-    t_kitchen = rooms * kitchen_rate
-    t_hw_w    = wooden_door * hw_wood
-    t_hw_s    = steel_door * hw_steel
-    f_mult = (1 + (fl_waste/100)) * (1 + (fl_skirt/100))
-    t_ht      = gfa * (fl_ht_pct / 100) * fl_ht_rate * f_mult
-    t_vinyl   = gfa * (fl_vinyl_pct / 100) * fl_vinyl_rate * f_mult
-    t_marmer  = gfa * (fl_marmer_pct / 100) * fl_marmer_rate * f_mult
-    t_carpet     = carpet_m2 * carpet_rate
-    t_glass_work = glass_m2 * glass_rate
-    t_ffe        = rooms * ffe_rate
-    t_misc       = misc_rate * misc_switch
-    t_mep        = gba * mep_rate
-    t_utility    = gba * utility_rate
-    t_railing    = (rooms * railing_qty) * railing_rate
-    t_skylight   = skylight_area * skylight_rate
-    t_external = land_m2 * ext_land_rate
-    t_pub_fac  = pub_fac_m2 * fac_pub_rate
-    t_res_fac  = res_fac_m2 * fac_res_rate
-    t_proj_fac = proj_fac_u * fac_proj_rate
-    group_misc = t_pub_fac + t_res_fac + t_proj_fac
-
-    construction_subtotal = sum([
-        t_earth, t_found, t_struc, t_arch_base, t_precast, t_window, t_double,
-        t_w_door, t_g_door, t_s_door, t_lobby, t_gondola, t_unit_san, t_t_male,
-        t_t_female, t_t_dis, t_mushola, t_kitchen, t_hw_w, t_hw_s, t_ht, t_vinyl,
-        t_marmer, t_carpet, t_glass_work, t_ffe, t_misc, t_mep, t_utility,
-        t_railing, t_skylight, t_external, group_misc,
-        smart_custom_costs
-    ])
-
-    prelim_pct = _safe_float(prelim_pct, 5.0)
-    contingency_pct = _safe_float(contingency_pct, 3.0)
-
-    t_preliminary = construction_subtotal * (prelim_pct / 100.0)
-    t_contingency = (construction_subtotal + t_preliminary) * (contingency_pct / 100.0)
-    grand_total_hc = construction_subtotal + t_preliminary + t_contingency
-
-    t_consultancy = gfa * consultancy_rate
-    t_qs = qs_months * qs_rate
-    t_pm = pm_months * pm_rate
-    t_insurance = (grand_total_hc) * (insurance_pct / 100.0)
-
-    total_soft_cost = t_consultancy + t_qs + t_pm + t_insurance
-    grand_total_project = grand_total_hc + total_soft_cost
-
-    group_earth = t_earth 
-    group_found = t_found 
-    group_struc = t_struc
-    
-    group_facade = t_precast + t_window + t_double
-    group_sanitary = t_unit_san + t_t_male + t_t_female + t_t_dis + t_mushola
-    group_floor =  t_ht + t_vinyl + t_marmer 
-    group_door = t_w_door + t_g_door + t_s_door + t_hw_w + t_hw_s
-    group_arch = (t_arch_base + + t_lobby + t_carpet + t_gondola 
-                  + t_glass_work + t_kitchen  + t_railing + t_skylight 
-                  + group_facade + group_sanitary + group_floor + group_door
-                  + smart_custom_costs)
-    
-    group_ffe = t_ffe + t_misc 
-    group_mep = t_mep 
-    group_utility = t_utility
-    group_ext = t_external
-    group_prelim = t_preliminary
-    group_conting = t_contingency
-    group_soft_cost = total_soft_cost
-    group_hard_cost = grand_total_hc
-    group_total = total_soft_cost + grand_total_hc
+    costs = calculate_live_costs(locals())
+    t_earth = costs["t_earth"]
+    t_found = costs["t_found"]
+    t_struc = costs["t_struc"]
+    t_arch_base = costs["t_arch_base"]
+    t_precast = costs["t_precast"]
+    t_window = costs["t_window"]
+    t_double = costs["t_double"]
+    t_w_door = costs["t_w_door"]
+    t_g_door = costs["t_g_door"]
+    t_s_door = costs["t_s_door"]
+    t_lobby = costs["t_lobby"]
+    t_gondola = costs["t_gondola"]
+    t_unit_san = costs["t_unit_san"]
+    t_t_male = costs["t_t_male"]
+    t_t_female = costs["t_t_female"]
+    t_t_dis = costs["t_t_dis"]
+    t_mushola = costs["t_mushola"]
+    t_kitchen = costs["t_kitchen"]
+    t_hw_w = costs["t_hw_w"]
+    t_hw_s = costs["t_hw_s"]
+    f_mult = costs["f_mult"]
+    t_ht = costs["t_ht"]
+    t_vinyl = costs["t_vinyl"]
+    t_marmer = costs["t_marmer"]
+    t_carpet = costs["t_carpet"]
+    t_glass_work = costs["t_glass_work"]
+    t_ffe = costs["t_ffe"]
+    t_misc = costs["t_misc"]
+    t_mep = costs["t_mep"]
+    t_utility = costs["t_utility"]
+    t_railing = costs["t_railing"]
+    t_skylight = costs["t_skylight"]
+    t_external = costs["t_external"]
+    t_pub_fac = costs["t_pub_fac"]
+    t_res_fac = costs["t_res_fac"]
+    t_proj_fac = costs["t_proj_fac"]
+    group_misc = costs["group_misc"]
+    construction_subtotal = costs["construction_subtotal"]
+    prelim_pct = costs["prelim_pct"]
+    contingency_pct = costs["contingency_pct"]
+    t_preliminary = costs["t_preliminary"]
+    t_contingency = costs["t_contingency"]
+    grand_total_hc = costs["grand_total_hc"]
+    t_consultancy = costs["t_consultancy"]
+    t_qs = costs["t_qs"]
+    t_pm = costs["t_pm"]
+    t_insurance = costs["t_insurance"]
+    total_soft_cost = costs["total_soft_cost"]
+    grand_total_project = costs["grand_total_project"]
+    group_earth = costs["group_earth"]
+    group_found = costs["group_found"]
+    group_struc = costs["group_struc"]
+    group_facade = costs["group_facade"]
+    group_sanitary = costs["group_sanitary"]
+    group_floor = costs["group_floor"]
+    group_door = costs["group_door"]
+    group_arch = costs["group_arch"]
+    group_ffe = costs["group_ffe"]
+    group_mep = costs["group_mep"]
+    group_utility = costs["group_utility"]
+    group_ext = costs["group_ext"]
+    group_prelim = costs["group_prelim"]
+    group_conting = costs["group_conting"]
+    group_soft_cost = costs["group_soft_cost"]
+    group_hard_cost = costs["group_hard_cost"]
+    group_total = costs["group_total"]
 
     with tab7:
         tab1, tab2, tab3 = st.tabs([
