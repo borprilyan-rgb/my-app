@@ -11226,7 +11226,9 @@ def show_dashboard():
         if not isinstance(data, dict):
             data = {}
 
-        gba, gfa, sgfa, budget, rooms = calculate_project_totals(pdata, project_type)
+        gba, gfa, sgfa, calculated_budget, rooms = calculate_project_totals(pdata, project_type)
+        saved_budget = _safe_float(data.get("grand_total_project", 0.0))
+        budget = saved_budget if saved_budget > 0 else _safe_float(calculated_budget, 0.0)
         nfa = _safe_float(data.get("m_nfa", 0.0))
 
         warnings = []
