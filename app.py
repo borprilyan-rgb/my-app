@@ -234,7 +234,7 @@ UI_TEXT = {
         "area.save": "Save",
         "area.save_current_page": "Save current Area page: {page}",
         "area.no_save_action": "No save action for current Area page: {page}",
-        "area.gba_setup": "GBA Setup",
+        "area.gba_setup": "GBA Setting",
         "area.input_mode": "Area Input Mode",
         "area.manual_input_page": "Manual Input Page",
         "area.mode.excel": "Excel",
@@ -6229,7 +6229,6 @@ def show_area_calculator():
     curr_proj["data"]["tname"] = tower_name
     base_key = f"wid_base_{curr_id}"
     up_key = f"wid_up_{curr_id}"
-    land_key = f"wid_m_land_{curr_id}"
 
     # ==================================================
     # FACADE INPUTS - STORED VALUES USED BY PAGE CALCULATIONS
@@ -6371,7 +6370,7 @@ def show_area_calculator():
 
     with st.container(border=True):
         st.markdown(f"##### {t('area.gba_setup')}")
-        c_h, c_b, c_u = st.columns(3)
+        c_h, c_b = st.columns(2)
 
         c_h.number_input(
             t("area.gba.basements_lg"),
@@ -6390,17 +6389,8 @@ def show_area_calculator():
             key=up_key,
         )
 
-        c_u.number_input(
-            t("area.gba.land_area"),
-            min_value=0.0,
-            value=_safe_float(get_area_val("m_land", 0.0)),
-            step=100.0,
-            key=land_key,
-        )
-
         curr_proj["data"]["base_in"] = int(st.session_state[base_key])
         curr_proj["data"]["up_in"] = int(st.session_state[up_key])
-        curr_proj["data"]["m_land"] = _safe_float(st.session_state[land_key])
 
     if callable(getattr(st, "segmented_control", None)):
         area_main_page = st.segmented_control(
@@ -7079,7 +7069,6 @@ def show_area_calculator():
             set_data("area_table", copy.deepcopy(clean_records))
             curr_proj["data"]["base_in"] = int(st.session_state[base_key])
             curr_proj["data"]["up_in"] = int(st.session_state[up_key])
-            curr_proj["data"]["m_land"] = _safe_float(st.session_state[land_key])
 
             saved_total_floor_height = safe_sum(calc_records_df, F2F_COL)
             saved_total_typical_units = (

@@ -1,9 +1,125 @@
 HIDDEN_PROJECT_TYPES = {
-    # Add hidden project types here
+    "Apartment3",
+    "Apartment2",
+    "Parking2",
+    "Parking3",
+    "Retail2"
 }
 
 PROJECT_DATABASE = { #Change only when asked
     "Apartment": {
+        # Foundation & Structure
+        "struc_earth": 25000.0,
+        "struc_found": 400000.0,
+        "struc_work": 1933000.0,
+
+        # Architecture
+        "arch_base": 1058000.0,
+        "lobby": 1500000.0,
+        "facade_precast_rate": 800000.0,
+        "facade_window_rate": 1250000.0,
+        "facade_double_rate": 2500000.0,
+
+        # Pintu & Hardware
+        "door_wood": 3500000.0,
+        "door_steel": 7000000.0,
+        "hw_wood": 750000.0,
+        "hw_steel": 1850000.0,
+        "door_glass": 1000000.0,
+
+        # Sanitari
+        "san_room_rate": 26875000.0,
+        "san_pub_f": 98075000.0,
+        "san_pub_m": 77050000.0,
+        "san_dis": 30275000.0,
+        "san_mushola": 36500000.0,
+
+        # Lantai, Finishing & Interior
+        "fl_waste": 10.0,
+        "fl_ht_rate": {"Type1": 150000.0, "Type2": 0.0},
+        "fl_vinyl_rate": {"Type1": 0.0, "Type2": 750000.0},
+        "fl_marmer_rate": {"Type1": 750000.0, "Type2": 0.0},
+
+        "gondola": 600000000.0,
+        "carpet": 1200000.0,
+        "glass": 700000.0,
+
+        "ffe": 32000000.0,
+        "misc": 32000000.0,
+        "kitchen": 0.0,
+
+        # Calculation defaults / percentages from database
+        "facade_precast_pct": 10.0,
+        "facade_window_pct": 80.0,
+        "facade_double_pct": 10.0,
+        "fl_ht_pct": 90.0,
+        "fl_vinyl_pct": 0.0,
+        "fl_marmer_pct": 10.0,
+        "san_room_qty": 1.0,
+        "railing_qty": 0.0,
+
+        "mep": 2810941.0,
+        "utility": 93058.0,
+
+        "railing_rate": 2200000.0,
+        "skylight_rate": 4500000.0,
+
+        "ext_land": 1563000.0,
+        "fac_pub": 31000000.0,
+        "fac_res": 10000000.0,
+        "fac_proj": 2000000000.0,
+
+        "cons": 174000.0,
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
+    },
+    "Parking": {
+        "arch_base": 668000.0,
+        "mep": 928384.0,
+        "utility": 0.0,
+        "door_wood": 0.0, "door_steel": 0.0, "door_glass": 0.0,
+        "hw_wood": 0.0, "hw_steel": 0.0, "lobby": 0.0, "gondola": 0.0,
+        "carpet": 0.0, "glass": 0.0, "ffe": 0.0, "misc": 0.0, "kitchen": 0.0,
+        "san_room_rate": 0.0, "san_pub_f": 0.0, "san_pub_m": 0.0,
+        "fl_ht_rate": {"Type1": 0.0, "Type2": 0.0},
+        "fl_vinyl_rate": {"Type1": 0.0, "Type2": 0.0},
+        "fl_marmer_rate": {"Type1": 0.0, "Type2": 0.0},
+        "facade_precast_pct": 10.0, "facade_window_pct": 80.0, "facade_double_pct": 10.0,
+        "fl_ht_pct": 90.0, "fl_vinyl_pct": 0.0, "fl_marmer_pct": 10.0,
+        "san_room_qty": 0.0, "railing_qty": 0.0,
+        "struc_earth": 25000.0, "struc_found": 400000.0, "struc_work": 1933000.0,
+        "facade_precast_rate": 800000.0, "facade_window_rate": 1250000.0, "facade_double_rate": 2500000.0,
+        "railing_rate": 2200000.0, "skylight_rate": 4500000.0,
+        "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
+        "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
+        "cons": 53000.0,
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
+    },
+    "Ampitheatre": {
+        "arch_base": 0.0,
+        "mep": 0.0,
+        "utility": 0.0,
+        "door_wood": 0.0, "door_steel": 0.0, "door_glass": 0.0,
+        "hw_wood": 0.0, "hw_steel": 0.0, "lobby": 0.0, "gondola": 0.0,
+        "carpet": 0.0, "glass": 0.0, "ffe": 0.0, "misc": 0.0, "kitchen": 0.0,
+        "san_room_rate": 0.0, "san_pub_f": 0.0, "san_pub_m": 0.0,
+        "fl_ht_rate": {"Type1": 0.0, "Type2": 0.0},
+        "fl_vinyl_rate": {"Type1": 0.0, "Type2": 0.0},
+        "fl_marmer_rate": {"Type1": 0.0, "Type2": 0.0},
+        "facade_precast_pct": 0.0, "facade_window_pct": 0.0, "facade_double_pct": 0.0,
+        "fl_ht_pct": 0.0, "fl_vinyl_pct": 0.0, "fl_marmer_pct": 0.0,
+        "san_room_qty": 0.0, "railing_qty": 0.0,
+        "struc_earth": 0.0, "struc_found": 0.0, "struc_work": 17500000.0,
+        "facade_precast_rate": 0.0, "facade_window_rate": 0.0, "facade_double_rate": 0.0,
+        "railing_rate": 0.0, "skylight_rate": 0.0,
+        "san_dis": 0.0, "san_mushola": 0.0, "ext_land": 0.0,
+        "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 0.0,
+        "cons": 0.0,
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
+    },
+    "Apartment3": { 
         #Foundation & Structure
         "struc_earth": 25000.0, "struc_found": 400000.0, "struc_work": 1933000.0,
         #Architecture
@@ -33,8 +149,8 @@ PROJECT_DATABASE = { #Change only when asked
          "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
         "cons": 174000.0,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
     "Hotel": {
         "arch_base": 1079000.0, "door_wood": 4750000.0, "door_steel": 8000000.0,
@@ -55,8 +171,8 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
         "cons": 199000.0,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
     "Retail": {
         "arch_base": 1084000.0, "door_wood": 6000000.0, "door_steel": 8000000.0,
@@ -77,10 +193,10 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
         "cons": 174000.0,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
-    "Parking": {
+    "Parking2": {
         "arch_base": 668000.0,
         "mep": 4000000.0,
         "utility": 150000.0,
@@ -100,8 +216,8 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
         "cons": 53000.0,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
     "Luxury Apartment": {
         "arch_base": 1517450.0,
@@ -123,8 +239,8 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 24481500.0, "san_mushola": 36500000.0, "ext_land": 632077.0,
         "fac_pub": 0.0, "fac_res": 221432.0, "fac_proj": 2000000000.0,
         "cons": 172813.093,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
     "Apartment2": {
         "arch_base": 1614800.0,
@@ -146,8 +262,8 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 24481500.0, "san_mushola": 36500000.0, "ext_land": 459538.0,
         "fac_pub": 0.0, "fac_res": 72243.0, "fac_proj": 2000000000.0,
         "cons": 171378.327,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
     "Hotel 3 Star": {
         "arch_base": 1517450.0,
@@ -169,8 +285,8 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 62050000.0, "san_mushola": 0.0, "ext_land": 213198.0,
         "fac_pub": 0.0, "fac_res": 108200.0, "fac_proj": 2000000000.0,
         "cons": 173906.6059,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
     "Retail2": {
         "arch_base": 984500.0,
@@ -192,8 +308,8 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 62050000.0, "san_mushola": 36500000.0, "ext_land": 559277.0,
         "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 2000000000.0,
         "cons": 181035.685,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
     "Terrace Villa": {
         "arch_base": 1517450.0,
@@ -215,8 +331,8 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 24481500.0, "san_mushola": 36500000.0, "ext_land": 1024897.0,
         "fac_pub": 0.0, "fac_res": 1715946.0, "fac_proj": 2000000000.0,
         "cons": 168148.6486,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
     "Podium Villa": {
         "arch_base": 1517450.0,
@@ -238,10 +354,10 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 62050000.0, "san_mushola": 0.0, "ext_land": 416735.0,
         "fac_pub": 0.0, "fac_res": 100897.0, "fac_proj": 2000000000.0,
         "cons": 173505.7655,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     },
-    "Parking2": {
+    "Parking3": {
         "arch_base": 1040000.0,
         "mep": 900000.0,
         "utility": 0.0,
@@ -261,120 +377,8 @@ PROJECT_DATABASE = { #Change only when asked
         "san_dis": 0.0, "san_mushola": 0.0, "ext_land": 0.0,
         "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 0.0,
         "cons": 52500.0,
-        "qs_rate": 0,
-        "pm_rate": 0
-    },
-    "Apartment 3": {
-    # Foundation & Structure
-    "struc_earth": 25000.0,
-    "struc_found": 400000.0,
-    "struc_work": 1933000.0,
-
-    # Architecture
-    "arch_base": 1058000.0,
-    "lobby": 1500000.0,
-    "facade_precast_rate": 800000.0,
-    "facade_window_rate": 1250000.0,
-    "facade_double_rate": 2500000.0,
-
-    # Pintu & Hardware
-    "door_wood": 3500000.0,
-    "door_steel": 7000000.0,
-    "hw_wood": 750000.0,
-    "hw_steel": 1850000.0,
-    "door_glass": 1000000.0,
-
-    # Sanitari
-    "san_room_rate": 26875000.0,
-    "san_pub_f": 98075000.0,
-    "san_pub_m": 77050000.0,
-    "san_dis": 30275000.0,
-    "san_mushola": 36500000.0,
-
-    # Lantai, Finishing & Interior
-    "fl_waste": 10.0,
-    "fl_ht_rate": {"Type1": 150000.0, "Type2": 0.0},
-    "fl_vinyl_rate": {"Type1": 0.0, "Type2": 750000.0},
-    "fl_marmer_rate": {"Type1": 750000.0, "Type2": 0.0},
-
-    "gondola": 600000000.0,
-    "carpet": 1200000.0,
-    "glass": 700000.0,
-
-    "ffe": 32000000.0,
-    "misc": 32000000.0,
-    "kitchen": 0.0,
-
-    # Calculation defaults / percentages from database
-    "facade_precast_pct": 10.0,
-    "facade_window_pct": 80.0,
-    "facade_double_pct": 10.0,
-    "fl_ht_pct": 90.0,
-    "fl_vinyl_pct": 0.0,
-    "fl_marmer_pct": 10.0,
-    "san_room_qty": 1.0,
-    "railing_qty": 0.0,
-
-    "mep": 2810941.0,
-    "utility": 93058.0,
-
-    "railing_rate": 2200000.0,
-    "skylight_rate": 4500000.0,
-
-    "ext_land": 1563000.0,
-    "fac_pub": 31000000.0,
-    "fac_res": 10000000.0,
-    "fac_proj": 2000000000.0,
-
-    "cons": 174000.0,
-    "qs_rate": 0,
-    "pm_rate": 0
-    },
-        "Parking2": {
-        "arch_base": 668000.0,
-        "mep": 928384.0,
-        "utility": 0.0,
-        "door_wood": 0.0, "door_steel": 0.0, "door_glass": 0.0,
-        "hw_wood": 0.0, "hw_steel": 0.0, "lobby": 0.0, "gondola": 0.0,
-        "carpet": 0.0, "glass": 0.0, "ffe": 0.0, "misc": 0.0, "kitchen": 0.0,
-        "san_room_rate": 0.0, "san_pub_f": 0.0, "san_pub_m": 0.0,
-        "fl_ht_rate": {"Type1": 0.0, "Type2": 0.0},
-        "fl_vinyl_rate": {"Type1": 0.0, "Type2": 0.0},
-        "fl_marmer_rate": {"Type1": 0.0, "Type2": 0.0},
-        "facade_precast_pct": 10.0, "facade_window_pct": 80.0, "facade_double_pct": 10.0,
-        "fl_ht_pct": 90.0, "fl_vinyl_pct": 0.0, "fl_marmer_pct": 10.0,
-        "san_room_qty": 0.0, "railing_qty": 0.0,
-        "struc_earth": 25000.0, "struc_found": 400000.0, "struc_work": 1933000.0,
-        "facade_precast_rate": 800000.0, "facade_window_rate": 1250000.0, "facade_double_rate": 2500000.0,
-        "railing_rate": 2200000.0, "skylight_rate": 4500000.0,
-        "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
-        "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
-        "cons": 53000.0,
-        "qs_rate": 0,
-        "pm_rate": 0
-    },
-        "Ampitheatre": {
-        "arch_base": 0.0,
-        "mep": 0.0,
-        "utility": 0.0,
-        "door_wood": 0.0, "door_steel": 0.0, "door_glass": 0.0,
-        "hw_wood": 0.0, "hw_steel": 0.0, "lobby": 0.0, "gondola": 0.0,
-        "carpet": 0.0, "glass": 0.0, "ffe": 0.0, "misc": 0.0, "kitchen": 0.0,
-        "san_room_rate": 0.0, "san_pub_f": 0.0, "san_pub_m": 0.0,
-        "fl_ht_rate": {"Type1": 0.0, "Type2": 0.0},
-        "fl_vinyl_rate": {"Type1": 0.0, "Type2": 0.0},
-        "fl_marmer_rate": {"Type1": 0.0, "Type2": 0.0},
-        "facade_precast_pct": 0.0, "facade_window_pct": 0.0, "facade_double_pct": 0.0,
-        "fl_ht_pct": 0.0, "fl_vinyl_pct": 0.0, "fl_marmer_pct": 0.0,
-        "san_room_qty": 0.0, "railing_qty": 0.0,
-        "struc_earth": 0.0, "struc_found": 0.0, "struc_work": 17500000.0,
-        "facade_precast_rate": 0.0, "facade_window_rate": 0.0, "facade_double_rate": 0.0,
-        "railing_rate": 0.0, "skylight_rate": 0.0,
-        "san_dis": 0.0, "san_mushola": 0.0, "ext_land": 0.0,
-        "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 0.0,
-        "cons": 0.0,
-        "qs_rate": 0,
-        "pm_rate": 0
+        "qs_rate": 75000000.0,
+        "pm_rate": 250000000.0
     }
 }
 
