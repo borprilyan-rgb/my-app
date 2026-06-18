@@ -13023,7 +13023,7 @@ def main_app():
         "Summary": "page.summary",
         "Archive": "page.archive",
     }
-    fallback_page = "Area Analysis" if "Area Analysis" in page_options else page_options[0]
+    fallback_page = "Start" if "Start" in page_options else page_options[0]
     stored_page = st.session_state.get("current_page")
     if stored_page in page_options:
         page_index = page_options.index(stored_page)
