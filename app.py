@@ -1063,10 +1063,16 @@ def build_app_payload():
     init_report_config()
 
     curr_id, _ = repair_projects_state(save=False)
+    projects = st.session_state.get("projects")
+    if not isinstance(projects, dict) or len(projects) == 0:
+        projects = make_default_projects()
+        mark_project_setup_required()
+    elif is_default_repair_projects(projects):
+        mark_project_setup_required()
 
     payload = {
         "app_version": APP_VERSION,
-        "projects": st.session_state.get("projects", make_default_projects()),
+        "projects": projects,
         "current_proj_id": curr_id,
         "proj_counter": st.session_state.get("proj_counter", 1),
         "current_study_name": st.session_state.get("current_study_name"),
@@ -1112,6 +1118,7 @@ APP_KEYS = {
     # UI mode
     "sidebar_component_mode": "sidebar_component_mode",
     "current_page": "current_page",
+    "project_setup_required": "project_setup_required",
 }
 
 
@@ -1247,6 +1254,32 @@ def make_default_projects():
         }
     }
 
+def is_default_repair_projects(projects):
+    return projects == make_default_projects()
+
+def mark_project_setup_required():
+    st.session_state.project_setup_required = True
+
+def clear_project_setup_required():
+    st.session_state.project_setup_required = False
+
+def is_project_setup_required():
+    return bool(st.session_state.get("project_setup_required", False))
+
+def warn_project_setup_required():
+    st.warning(
+        "Project setup is incomplete. Create a new study with an explicit "
+        "component name and project type before saving."
+    )
+
+def block_if_project_setup_required(show_warning=True):
+    if not is_project_setup_required():
+        return False
+
+    if show_warning:
+        warn_project_setup_required()
+    return True
+
 def resolve_current_study_name(projects=None, fallback="Untitled Study"):
     name = st.session_state.get("current_study_name")
     if isinstance(name, str) and name.strip():
@@ -1274,11 +1307,15 @@ def repair_projects_state(save=False):
     # Guard 1: projects must be a non-empty dict
     if not isinstance(projects, dict) or len(projects) == 0:
         st.session_state.projects = make_default_projects()
+        mark_project_setup_required()
         st.session_state.current_proj_id = "proj_1"
         st.session_state.proj_counter = 1
         if save:
             save_data()
         return "proj_1", st.session_state.projects["proj_1"]
+
+    if is_default_repair_projects(projects):
+        mark_project_setup_required()
 
     # Guard 2: remove any corrupt project entries (non-dict values)
     corrupt_keys = [k for k, v in projects.items() if not isinstance(v, dict)]
@@ -1288,6 +1325,7 @@ def repair_projects_state(save=False):
     # If all entries were corrupt, rebuild from scratch
     if len(projects) == 0:
         st.session_state.projects = make_default_projects()
+        mark_project_setup_required()
         st.session_state.current_proj_id = "proj_1"
         st.session_state.proj_counter = 1
         if save:
@@ -1513,11 +1551,16 @@ def restore_app_payload(data):
     if not data:
         data = {}
 
-    projects = data.get("projects", make_default_projects())
+    projects = data.get("projects") if isinstance(data, dict) else None
 
     # Critical guard: prevent empty project dictionary
     if not isinstance(projects, dict) or len(projects) == 0:
         projects = make_default_projects()
+        mark_project_setup_required()
+    elif is_default_repair_projects(projects):
+        mark_project_setup_required()
+    else:
+        clear_project_setup_required()
 
     st.session_state.projects = projects
 
@@ -1813,6 +1856,9 @@ def format_snapshot_time(created_at):
         return ""
 
 def save_snapshot(snapshot_name):
+    if block_if_project_setup_required():
+        return False
+
     if not enforce_single_device():
         return False
 
@@ -1850,6 +1896,9 @@ def save_snapshot(snapshot_name):
         return False
 
 def overwrite_current_snapshot():
+    if block_if_project_setup_required():
+        return False
+
     if not enforce_single_device():
         return False
 
@@ -1937,6 +1986,9 @@ def rename_snapshot(snapshot_id, new_name):
         return False
 
 def overwrite_snapshot(snapshot_id, snapshot_name=None):
+    if block_if_project_setup_required():
+        return False
+
     authed_client, user_id = _get_authed_snapshot_client()
 
     if not authed_client or not user_id:
@@ -2057,6 +2109,9 @@ def save_data_force():
     Save current app state to project_storage even if storage_loaded is not set yet.
     Use only after explicit user actions like create/edit/delete component.
     """
+    if block_if_project_setup_required():
+        return False
+
     if not st.session_state.get("logged_in", False):
         st.error("Cloud Save Error: not logged in.")
         return False
@@ -2097,6 +2152,9 @@ def save_data_force():
         return False
 
 def save_data():
+    if block_if_project_setup_required(show_warning=False):
+        return False
+
     if not st.session_state.get("storage_loaded", False):
         return False
     if not st.session_state.get("logged_in", False):
@@ -3536,6 +3594,7 @@ def ensure_app_state_loaded():
         "proj_counter": 1,
         "report_config": copy.deepcopy(DEFAULT_REPORT_CONFIG)
     })
+    mark_project_setup_required()
 
     repair_projects_state(save=False)
     st.session_state.storage_loaded = True
@@ -4552,25 +4611,36 @@ def move_current_project(delta):
 
     return True
 
-def create_new_feasibility_study(study_name, project_type="Hotel"):
+def create_new_feasibility_study(study_name, component_name=None, project_type=None):
     clean_name = str(study_name).strip()
+    clean_component_name = str(component_name or "").strip()
+    clean_project_type = str(project_type or "").strip()
 
     if clean_name == "":
         st.error(t("admin.enter_study_name"))
+        return False
+
+    if clean_component_name == "":
+        st.error(t("component_name_empty"))
+        return False
+
+    if clean_project_type not in get_project_type_options(include_hidden=False):
+        st.error("Please select project type.")
         return False
 
     st.session_state.current_study_name = clean_name
 
     st.session_state.projects = {
         "proj_1": {
-            "name": clean_name,
-            "type": project_type,
+            "name": clean_component_name,
+            "type": clean_project_type,
             "data": {}
         }
     }
 
     st.session_state.current_proj_id = "proj_1"
     st.session_state.proj_counter = 1
+    clear_project_setup_required()
 
     st.session_state.loaded_snapshot_id = None
     st.session_state.loaded_snapshot_name = None
@@ -4621,7 +4691,7 @@ def is_duplicate_study_or_archive_name(clean_name, current_id=None):
 
     return False
 
-def create_new_study_and_archive(study_name, project_type="Hotel"):
+def create_new_study_and_archive(study_name, component_name=None, project_type=None):
     clean_name = str(study_name).strip()
 
     if clean_name == "":
@@ -4632,7 +4702,11 @@ def create_new_study_and_archive(study_name, project_type="Hotel"):
         st.error(t("admin.duplicate_study_name"))
         return False
 
-    if not create_new_feasibility_study(clean_name, project_type=project_type):
+    if not create_new_feasibility_study(
+        clean_name,
+        component_name=component_name,
+        project_type=project_type,
+    ):
         return False
 
     if save_snapshot(clean_name):
@@ -4781,23 +4855,52 @@ def render_feasibility_study_landing(): #start page
 
         with create_col:
             with st.form("create_new_feasibility_study_form", clear_on_submit=False):
+                project_type_options = get_project_type_options(include_hidden=False)
+                project_type_placeholder = "Select project type..."
+                project_type_select_options = [project_type_placeholder] + project_type_options
+
                 study_name = st.text_input(
                     t("admin.feasibility_study_name"),
                     placeholder=t("admin.study_name_placeholder")
                 )
 
+                component_name = st.text_input(
+                    t("component_name"),
+                    placeholder=t("component_name_placeholder")
+                )
+
+                selected_project_type = st.selectbox(
+                    t("component_type"),
+                    options=project_type_select_options,
+                    index=0,
+                )
+
+                can_create_study = (
+                    study_name.strip() != ""
+                    and component_name.strip() != ""
+                    and selected_project_type != project_type_placeholder
+                )
+
                 create_clicked = st.form_submit_button(
                     t("admin.create_new_study"),
                     type="primary",
-                    width="stretch"
+                    width="stretch",
                 )
 
                 if create_clicked:
                     if study_name.strip() == "":
                         st.warning(t("admin.enter_study_name"))
+                    elif component_name.strip() == "":
+                        st.warning(t("component_name_empty"))
+                    elif selected_project_type == project_type_placeholder:
+                        st.warning("Please select project type.")
                     else:
                         clean_study_name = study_name.strip()
-                        if create_new_study_and_archive(clean_study_name):
+                        if create_new_study_and_archive(
+                            clean_study_name,
+                            component_name=component_name.strip(),
+                            project_type=selected_project_type,
+                        ):
                             st.session_state.fs_landing_mode = None
                             st.success(t("admin.study_created_saved").format(name=clean_study_name))
                             st.rerun()
@@ -12445,19 +12548,52 @@ def show_snapshots():
             and curr_id in projects
         )
 
-        col1, _ = st.columns([4, 3])
+        project_type_options = get_project_type_options(include_hidden=False)
+        project_type_placeholder = "Select project type..."
+        project_type_select_options = [project_type_placeholder] + project_type_options
+
+        col1, col2, col3 = st.columns([3, 3, 2])
         snapshot_name = col1.text_input(
-            t("admin.name"),
+            t("admin.feasibility_study_name"),
             placeholder="e.g. Project X - Opt 1 - Rev 0"
         )
+        initial_component_name = col2.text_input(
+            t("component_name"),
+            placeholder=t("component_name_placeholder"),
+            key="archive_create_component_name",
+        )
+        initial_project_type = col3.selectbox(
+            t("component_type"),
+            options=project_type_select_options,
+            index=0,
+            key="archive_create_project_type",
+        )
         col_create, col_save, _ = st.columns([2, 2, 3])
+        can_create_study = (
+            snapshot_name.strip() != ""
+            and initial_component_name.strip() != ""
+            and initial_project_type != project_type_placeholder
+        )
 
-        if col_create.button(t("admin.create_new_study"), width="stretch", icon=icon_safe("create_new_folder")):
+        if col_create.button(
+            t("admin.create_new_study"),
+            width="stretch",
+            icon=icon_safe("create_new_folder"),
+            disabled=not can_create_study,
+        ):
             if snapshot_name.strip() == "":
-                col_create.warning(t("admin.project_name_required"))
+                col_create.warning(t("admin.enter_study_name"))
+            elif initial_component_name.strip() == "":
+                col_create.warning(t("component_name_empty"))
+            elif initial_project_type == project_type_placeholder:
+                col_create.warning("Please select project type.")
             else:
                 clean_snapshot_name = snapshot_name.strip()
-                if create_new_study_and_archive(clean_snapshot_name):
+                if create_new_study_and_archive(
+                    clean_snapshot_name,
+                    component_name=initial_component_name.strip(),
+                    project_type=initial_project_type,
+                ):
                     st.success(t("admin.study_created_saved").format(name=clean_snapshot_name))
                     st.rerun()
 
@@ -12990,6 +13126,9 @@ def main_app():
     enforce_single_device()
 
     curr_id, curr_proj = get_current_project()
+
+    if is_project_setup_required():
+        warn_project_setup_required()
 
     #region --- SIDEBAR ----
     st.sidebar.title(t("main_navigation"))
