@@ -6207,7 +6207,7 @@ def show_area_calculator():
             st.session_state[area_committed_key] = clean_area_records(saved_area)
         else:
             default_area = generate_area_rows(
-                int(get_area_val("up_in", 5)),
+                int(get_area_val("up_in", 0)),
                 int(get_area_val("base_in", 1)),
             )
             st.session_state[area_committed_key] = clean_area_records(default_area)
@@ -6383,8 +6383,8 @@ def show_area_calculator():
 
         c_b.number_input(
             t("area.gba.floors"),
-            min_value=1,
-            value=int(get_area_val("up_in", 5)),
+            min_value=0,
+            value=int(get_area_val("up_in", 0)),
             step=1,
             key=up_key,
         )
@@ -6440,7 +6440,7 @@ def show_area_calculator():
         with st.container():
             include_roof_machine = True
             include_roof = True
-            excel_upper_floors = int(get_area_val("up_in", 5))
+            excel_upper_floors = int(get_area_val("up_in", 0))
             excel_basements = int(get_area_val("base_in", 1))
 
             excel_form_bytes = create_area_excel_form_bytes(
@@ -6535,6 +6535,8 @@ def show_area_calculator():
 
             with s2:
                 st.markdown(t("area_excel_download_title"))
+                if excel_upper_floors == 0:
+                    st.warning("Floor count is still 0. Please review GBA Setup before using this Excel form.")
                 st.download_button(
                     label=t("area_excel_download_button"),
                     type="primary",
