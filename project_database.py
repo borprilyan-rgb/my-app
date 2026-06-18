@@ -32,7 +32,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 2200000.0, "skylight_rate": 4500000.0,
          "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
-        "cons": 174000.0
+        "cons": 174000.0,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Hotel": {
         "arch_base": 1079000.0, "door_wood": 4750000.0, "door_steel": 8000000.0,
@@ -52,7 +54,9 @@ PROJECT_DATABASE = { #Change only when asked
         "door_glass": 1000000.0, "railing_rate": 2200000.0, "skylight_rate": 4500000.0,
         "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
-        "cons": 199000.0
+        "cons": 199000.0,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Retail": {
         "arch_base": 1084000.0, "door_wood": 6000000.0, "door_steel": 8000000.0,
@@ -72,7 +76,9 @@ PROJECT_DATABASE = { #Change only when asked
         "door_glass": 1000000.0, "railing_rate": 2200000.0, "skylight_rate": 4500000.0,
         "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
-        "cons": 174000.0
+        "cons": 174000.0,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Parking": {
         "arch_base": 668000.0,
@@ -93,7 +99,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 2200000.0, "skylight_rate": 4500000.0,
         "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
-        "cons": 53000.0
+        "cons": 53000.0,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Luxury Apartment": {
         "arch_base": 1517450.0,
@@ -114,7 +122,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 1100000.0, "skylight_rate": 4500000.0,
         "san_dis": 24481500.0, "san_mushola": 36500000.0, "ext_land": 632077.0,
         "fac_pub": 0.0, "fac_res": 221432.0, "fac_proj": 2000000000.0,
-        "cons": 172813.093
+        "cons": 172813.093,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Apartment2": {
         "arch_base": 1614800.0,
@@ -135,7 +145,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 1100000.0, "skylight_rate": 4500000.0,
         "san_dis": 24481500.0, "san_mushola": 36500000.0, "ext_land": 459538.0,
         "fac_pub": 0.0, "fac_res": 72243.0, "fac_proj": 2000000000.0,
-        "cons": 171378.327
+        "cons": 171378.327,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Hotel 3 Star": {
         "arch_base": 1517450.0,
@@ -156,7 +168,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 1100000.0, "skylight_rate": 4500000.0,
         "san_dis": 62050000.0, "san_mushola": 0.0, "ext_land": 213198.0,
         "fac_pub": 0.0, "fac_res": 108200.0, "fac_proj": 2000000000.0,
-        "cons": 173906.6059
+        "cons": 173906.6059,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Retail2": {
         "arch_base": 984500.0,
@@ -177,7 +191,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 2000000.0, "skylight_rate": 4500000.0,
         "san_dis": 62050000.0, "san_mushola": 36500000.0, "ext_land": 559277.0,
         "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 2000000000.0,
-        "cons": 181035.685
+        "cons": 181035.685,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Terrace Villa": {
         "arch_base": 1517450.0,
@@ -198,7 +214,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 2000000.0, "skylight_rate": 4500000.0,
         "san_dis": 24481500.0, "san_mushola": 36500000.0, "ext_land": 1024897.0,
         "fac_pub": 0.0, "fac_res": 1715946.0, "fac_proj": 2000000000.0,
-        "cons": 168148.6486
+        "cons": 168148.6486,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Podium Villa": {
         "arch_base": 1517450.0,
@@ -219,7 +237,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 1100000.0, "skylight_rate": 4500000.0,
         "san_dis": 62050000.0, "san_mushola": 0.0, "ext_land": 416735.0,
         "fac_pub": 0.0, "fac_res": 100897.0, "fac_proj": 2000000000.0,
-        "cons": 173505.7655
+        "cons": 173505.7655,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Parking2": {
         "arch_base": 1040000.0,
@@ -240,7 +260,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 0.0, "skylight_rate": 0.0,
         "san_dis": 0.0, "san_mushola": 0.0, "ext_land": 0.0,
         "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 0.0,
-        "cons": 52500.0
+        "cons": 52500.0,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
     "Apartment 3": {
     # Foundation & Structure
@@ -304,7 +326,9 @@ PROJECT_DATABASE = { #Change only when asked
     "fac_res": 10000000.0,
     "fac_proj": 2000000000.0,
 
-    "cons": 174000.0
+    "cons": 174000.0,
+    "qs_rate": 0,
+    "pm_rate": 0
     },
         "Parking2": {
         "arch_base": 668000.0,
@@ -325,7 +349,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 2200000.0, "skylight_rate": 4500000.0,
         "san_dis": 30275000.0, "san_mushola": 36500000.0, "ext_land": 1563000.0,
         "fac_pub": 31000000.0, "fac_res": 10000000.0, "fac_proj": 2000000000.0,
-        "cons": 53000.0
+        "cons": 53000.0,
+        "qs_rate": 0,
+        "pm_rate": 0
     },
         "Ampitheatre": {
         "arch_base": 0.0,
@@ -346,7 +372,9 @@ PROJECT_DATABASE = { #Change only when asked
         "railing_rate": 0.0, "skylight_rate": 0.0,
         "san_dis": 0.0, "san_mushola": 0.0, "ext_land": 0.0,
         "fac_pub": 0.0, "fac_res": 0.0, "fac_proj": 0.0,
-        "cons": 0.0
+        "cons": 0.0,
+        "qs_rate": 0,
+        "pm_rate": 0
     }
 }
 

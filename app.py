@@ -5241,6 +5241,20 @@ def show_project_database():  # database page
             "Type": "currency",
             "Note": "Consultant / professional fee allowance."
         },
+        "qs_rate": {
+            "Group": "Soft Cost",
+            "Item": "QS Monthly Rate",
+            "Basis": "Rp / month",
+            "Type": "currency",
+            "Note": "Quantity surveyor monthly fee allowance."
+        },
+        "pm_rate": {
+            "Group": "Soft Cost",
+            "Item": "Project Management Monthly Rate",
+            "Basis": "Rp / month",
+            "Type": "currency",
+            "Note": "Project management monthly fee allowance."
+        },
     }
 
     GROUP_ORDER = [
@@ -10314,12 +10328,12 @@ def show_cost_estimator(): #cost calculator page
         with sc_col1:
             with st.expander("QS", expanded=True):
                 qs_months = st.number_input("Durasi QS (Bulan)", value=get_val("sc_qs_m", 0.0), step=1.0, key=f"sc_qs_m_{curr_id}")
-                qs_rate = st.number_input("Harga QS (per Bulan) (Rp)", value=get_val("sc_qs_r", 0.0), step=1000000.0, key=f"sc_qs_r_{curr_id}")
+                qs_rate = st.number_input("Harga QS (per Bulan) (Rp)", value=get_val("sc_qs_r", pt_data["qs_rate"]), step=1000000.0, key=f"sc_qs_r_{curr_id}")
                 st.caption(f"""Hitungan: {qs_months} Months x Rp {qs_rate:,.0f}/Mo  \n  Total QS Services: Rp {qs_months * qs_rate:,.0f}  \n  Terbilang: {n2w(qs_months * qs_rate)}""")
         with sc_col2:
             with st.expander("PM", expanded=True):
                 pm_months = st.number_input("Durasi PM (Bulan)", value=get_val("sc_pm_m", 0.0), step=1.0, key=f"sc_pm_m_{curr_id}")
-                pm_rate = st.number_input("Harga PM (per Bulan) (Rp)", value=get_val("sc_pm_r", 0.0), step=1000000.0, key=f"sc_pm_r_{curr_id}")
+                pm_rate = st.number_input("Harga PM (per Bulan) (Rp)", value=get_val("sc_pm_r", pt_data["pm_rate"]), step=1000000.0, key=f"sc_pm_r_{curr_id}")
                 st.caption(f"""Hitungan: {pm_months} Months x Rp {pm_rate:,.0f}/Mo  \n  Total PM Services: Rp {pm_months * pm_rate:,.0f}  \n  Terbilang: {n2w(pm_months * pm_rate)}""")                
         with sc_col3:
             with st.expander("Lainnya", expanded=True):
