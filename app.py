@@ -12957,9 +12957,9 @@ def login_screen():
                             # Catch generic invalid credential messages and make them user-friendly
                             error_msg = str(e)
                             if "Invalid login credentials" in error_msg or "400" in error_msg:
-                                st.error("Invalid email or password. Please try again.", icon="Error:")
+                                st.error("Invalid email or password. Please try again.", icon=icon_safe("error"))
                             else:
-                                st.error(f"Authentication error: {error_msg}", icon="Error")
+                                st.error(f"Authentication error: {error_msg}", icon=icon_safe("person_check"))
 
     # 5. Professional Footer
     st.markdown(f"""
