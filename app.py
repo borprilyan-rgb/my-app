@@ -107,7 +107,7 @@ UI_TEXT = {
         "language_label": "Language / Bahasa",
         "main_navigation": "Main Navigation",
         "hello_user": "Hello, **{name}**!",
-        "main_page_label": "Choose Page:",
+        "main_page_label": "Page:",
         "page.start": "Start",
         "page.dashboard": "Dashboard",
         "page.area_analysis": "Area Analysis",
@@ -121,7 +121,7 @@ UI_TEXT = {
         "working_copy_saved_archive_hint": (
             "Working copy saved. To create or link an archive, use Archive > Online Backup > Save."
         ),
-        "show_detailed_control": "Show detailed control.",
+        "show_detailed_control": "Project Control",
         "project_list": "Project List",
         "active_component": "Active Component:",
         "move_up": "Move Up",
@@ -492,7 +492,7 @@ UI_TEXT = {
         "language_label": "Language / Bahasa",
         "main_navigation": "Navigasi Utama",
         "hello_user": "Halo, **{name}**!",
-        "main_page_label": "Pilih Halaman:",
+        "main_page_label": "Halaman:",
         "page.start": "Start",
         "page.dashboard": "Dashboard",
         "page.area_analysis": "Analisis Area",
@@ -506,7 +506,7 @@ UI_TEXT = {
         "working_copy_saved_archive_hint": (
             "Working copy berhasil disimpan. Untuk membuat atau menautkan arsip, gunakan Archive > Online Backup > Save."
         ),
-        "show_detailed_control": "Tampilkan kontrol detail.",
+        "show_detailed_control": "Kontrol Project",
         "project_list": "Daftar Proyek",
         "active_component": "Komponen Aktif:",
         "move_up": "Pindah ke Atas",
@@ -13001,6 +13001,7 @@ def main_app():
         default=lang_display,
         selection_mode="single",
         key="ui_lang_segmented",
+        label_visibility="collapsed"
     )
     st.session_state["ui_lang"] = "id" if selected_lang_display == "ID" else "en"
 
