@@ -294,8 +294,9 @@ UI_TEXT = {
         "area.gba.saved_to_cloud": "Saved to cloud.",
         "area.gba.cloud_save_failed": "Cloud save failed. Do not log out yet.",
         "area_excel_form_title": "Excel Form",
-        "area_excel_download_title": "Download Area Calculator Excel Form",
+        "area_excel_download_title": "Download Excel",
         "area_excel_download_button": "Download",
+        "area_excel_download_warning": "Please Review the GBA Setting (Floor = 0)",
         "area_excel_upload_title": "Upload Area Calculator Excel Form",
         "area_excel_upload_help": "Upload the Excel form generated from this app.",
         "area_excel_import_button": "Import Excel to Area Calculator",
@@ -679,7 +680,8 @@ UI_TEXT = {
         "area.gba.saved_to_cloud": "Berhasil disimpan ke cloud.",
         "area.gba.cloud_save_failed": "Gagal menyimpan ke cloud. Jangan logout dulu.",
         "area_excel_form_title": "Form Excel",
-        "area_excel_download_title": "Unduh Form Excel Kalkulator Area",
+        "area_excel_download_title": "Unduh Excel",
+        "area_excel_download_warning": "Mohon cek kembali pengaturan GBA (Lantai = 0)",
         "area_excel_download_button": "Unduh",
         "area_excel_upload_title": "Unggah Form Excel Kalkulator Area",
         "area_excel_upload_help": "Unggah form Excel yang dibuat dari aplikasi ini.",
@@ -6534,9 +6536,8 @@ def show_area_calculator():
             s1, s2 = st.columns(2)
 
             with s2:
+                floor_count_is_zero = excel_upper_floors == 0
                 st.markdown(t("area_excel_download_title"))
-                if excel_upper_floors == 0:
-                    st.warning("Floor count is still 0. Please review GBA Setup before using this Excel form.")
                 st.download_button(
                     label=t("area_excel_download_button"),
                     type="primary",
@@ -6544,7 +6545,12 @@ def show_area_calculator():
                     file_name=excel_download_filename,
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     width="stretch",
+                    disabled=floor_count_is_zero,
                 )
+
+                if floor_count_is_zero:
+                    st.warning(t("area_excel_download_warning"))
+
             with s1:
                 uploaded_excel = st.file_uploader(
                     t("area_excel_upload_title"),
