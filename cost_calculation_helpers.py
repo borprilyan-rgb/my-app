@@ -26,6 +26,104 @@ def _safe_float(value, default=0.0):
         return default
 
 
+def build_cost_raw_from_project_data(project_data, project_type_data):
+    """Map saved project data keys into calculate_live_costs(raw) inputs."""
+    data = project_data if isinstance(project_data, dict) else {}
+    type_data = project_type_data if isinstance(project_type_data, dict) else {}
+
+    def get_val(key, default_db_key=None, default_val=0.0):
+        value = data.get(key)
+        if value is not None and value != "":
+            return _safe_float(value)
+        if default_db_key and default_db_key in type_data:
+            return _safe_float(type_data.get(default_db_key))
+        return _safe_float(default_val)
+
+    smart_custom_costs = sum(
+        _safe_float(item.get("Rate (Rp)", 0)) * _safe_float(item.get("Quantity", 1))
+        for item in data.get("smart_custom_costs", [])
+        if isinstance(item, dict)
+    )
+
+    return {
+        "gba": get_val("m_gba"),
+        "gfa": get_val("m_gfa"),
+        "struc_earth": get_val("u_earth", "struc_earth"),
+        "struc_found": get_val("u_found", "struc_found"),
+        "struc_work": get_val("u_struc", "struc_work"),
+        "arch_base": get_val("u_arch", "arch_base"),
+        "facade": get_val("m_facade"),
+        "facade_precast_pct": get_val("r_fac_pre", "facade_precast_pct"),
+        "fac_precast_rate": get_val("u_f_pre", "facade_precast_rate"),
+        "facade_window_pct": get_val("r_fac_win", "facade_window_pct"),
+        "fac_window_rate": get_val("u_f_win", "facade_window_rate"),
+        "facade_double_pct": get_val("r_fac_doub", "facade_double_pct"),
+        "fac_double_rate": get_val("u_f_doub", "facade_double_rate"),
+        "wooden_door": get_val("m_door_w"),
+        "door_wood": get_val("u_d_wood", "door_wood"),
+        "glass_door": get_val("m_door_g"),
+        "door_glass": get_val("u_d_glass", "door_glass"),
+        "steel_door": get_val("m_door_s"),
+        "door_steel": get_val("u_d_steel", "door_steel"),
+        "lobby_interior": get_val("m_lobby"),
+        "lobby_rate": get_val("u_lobby", "lobby"),
+        "gondola_unit": get_val("m_gondola"),
+        "gondola_rate": get_val("u_gondola", "gondola"),
+        "rooms": get_val("m_rooms"),
+        "san_qty_room": get_val("r_san_qty", "san_room_qty"),
+        "san_room_rate": get_val("u_s_room", "san_room_rate"),
+        "toilet_male": get_val("m_toil_m"),
+        "san_pub_m": get_val("u_s_pub_m", "san_pub_m"),
+        "toilet_female": get_val("m_toil_f"),
+        "san_pub_f": get_val("u_s_pub_f", "san_pub_f"),
+        "disabled_toil": get_val("m_toil_d"),
+        "san_dis": get_val("u_s_dis", "san_dis"),
+        "mushola_unit": get_val("m_mushola"),
+        "san_mushola": get_val("u_s_mushola", "san_mushola"),
+        "kitchen_rate": get_val("u_kit", "kitchen"),
+        "hw_wood": get_val("u_hw_wood", "hw_wood"),
+        "hw_steel": get_val("u_hw_steel", "hw_steel"),
+        "fl_waste": get_val("w_floor", "fl_waste", 10),
+        "fl_skirt": get_val("s_floor", "fl_skirt", 20),
+        "fl_ht_pct": get_val("r_fl_ht", "fl_ht_pct"),
+        "fl_ht_rate": get_val("u_fl_ht"),
+        "fl_vinyl_pct": get_val("r_fl_vin", "fl_vinyl_pct"),
+        "fl_vinyl_rate": get_val("u_fl_vin"),
+        "fl_marmer_pct": get_val("r_fl_mar", "fl_marmer_pct"),
+        "fl_marmer_rate": get_val("u_fl_mar"),
+        "carpet_m2": get_val("m_carpet"),
+        "carpet_rate": get_val("u_carpet", "carpet"),
+        "glass_m2": get_val("m_glass"),
+        "glass_rate": get_val("u_glass", "glass"),
+        "ffe_rate": get_val("u_ffe", "ffe"),
+        "misc_rate": get_val("u_misc", "misc"),
+        "misc_switch": get_val("misc_switch"),
+        "mep_rate": get_val("u_mep", "mep"),
+        "utility_rate": get_val("u_util", "utility"),
+        "railing_qty": get_val("r_rail_qty", "railing_qty"),
+        "railing_rate": get_val("u_rail", "railing_rate"),
+        "skylight_area": get_val("m_skylight"),
+        "skylight_rate": get_val("u_sky", "skylight_rate"),
+        "land_m2": get_val("m_land_m2"),
+        "ext_land_rate": get_val("u_ext", "ext_land"),
+        "pub_fac_m2": get_val("m_fac_pub"),
+        "fac_pub_rate": get_val("u_fac_p", "fac_pub"),
+        "res_fac_m2": get_val("m_fac_res"),
+        "fac_res_rate": get_val("u_fac_r", "fac_res"),
+        "proj_fac_u": get_val("m_fac_proj"),
+        "fac_proj_rate": get_val("u_fac_pr", "fac_proj"),
+        "consultancy_rate": get_val("sc_cons", "cons"),
+        "qs_months": get_val("sc_qs_m"),
+        "qs_rate": get_val("sc_qs_r"),
+        "pm_months": get_val("sc_pm_m"),
+        "pm_rate": get_val("sc_pm_r"),
+        "insurance_pct": get_val("sc_ins", None, 0.12),
+        "prelim_pct": _safe_float(data.get("sc_prelim_pct", 5.0)),
+        "contingency_pct": _safe_float(data.get("sc_contingency_pct", 3.0)),
+        "smart_custom_costs": smart_custom_costs,
+    }
+
+
 def calculate_live_costs(raw):
     """Pure Cost Analysis calculations for the live project page."""
     def n(key, default=0.0):
