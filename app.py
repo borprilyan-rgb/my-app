@@ -9706,6 +9706,8 @@ def show_cost_estimator(): #cost calculator page
             "r_fl_ht": {"label": "HT / Ceramic Tile", "data_key": "r_fl_ht", "widget_key": "r_fl_ht", "session_key": f"r_fl_ht_{curr_type_key}", "unit": "%", "group": "Floor Ratio", "allow_zero": True},
             "r_fl_vin": {"label": "Vinyl", "data_key": "r_fl_vin", "widget_key": "r_fl_vin", "session_key": f"r_fl_vin_{curr_type_key}", "unit": "%", "group": "Floor Ratio", "allow_zero": True},
             "r_fl_mar": {"label": "Marmer", "data_key": "r_fl_mar", "widget_key": "r_fl_mar", "session_key": f"r_fl_mar_{curr_type_key}", "unit": "%", "group": "Floor Ratio", "allow_zero": True},
+            "sc_qs_m": {"label": "QS Duration", "data_key": "sc_qs_m", "widget_key": "sc_qs_m", "unit": "month", "group": "Soft Cost", "allow_zero": False},
+            "sc_pm_m": {"label": "PM Duration", "data_key": "sc_pm_m", "widget_key": "sc_pm_m", "unit": "month", "group": "Soft Cost", "allow_zero": False},
         }
 
         for group in sync_groups:

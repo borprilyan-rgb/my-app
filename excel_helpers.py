@@ -195,6 +195,8 @@ def read_cost_analysis_input_sheet(excel_bytes):
         "r_fl_ht",
         "r_fl_vin",
         "r_fl_mar",
+        "sc_qs_m",
+        "sc_pm_m",
     }
     ratio_keys = {
         "r_fac_pre",
@@ -3297,6 +3299,8 @@ def create_area_excel_form_bytes(
             34: ("Floor Ratio", "HT / Ceramic Tile", "r_fl_ht", "%"),
             35: ("Floor Ratio", "Vinyl", "r_fl_vin", "%"),
             36: ("Floor Ratio", "Marmer", "r_fl_mar", "%"),
+            37: ("Soft Cost", "QS Duration / Month", "sc_qs_m", "month"),
+            38: ("Soft Cost", "PM Duration / Month", "sc_pm_m", "month"),
         }
 
         suggested_value_formulas = {
@@ -3313,6 +3317,8 @@ def create_area_excel_form_bytes(
             "m_fac_pub": "='Facility Misc'!D4",
             "m_fac_proj": f"='Facility Misc'!D{res_total_row - 1}",
             "m_land_m2": "=Eksternal!D4",
+            "sc_qs_m": "=Consultancy!D10",
+            "sc_pm_m": "=Consultancy!D11",
         }
 
         for r, row_values in cost_input_rows.items():
@@ -3329,12 +3335,12 @@ def create_area_excel_form_bytes(
             ws_cost.cell(r, 7).value = None
 
         style_range(ws_cost, "A4:G4", dark, font_color=white, bold=True)
-        style_range(ws_cost, "A5:G36", None)
-        style_range(ws_cost, "E5:E36", formula_fill)
+        style_range(ws_cost, "A5:G38", None)
+        style_range(ws_cost, "E5:E38", formula_fill)
 
-        lock_range(ws_cost, "A1:G36")
-        unlock_range(ws_cost, "F5:F36")
-        unlock_range(ws_cost, "G5:G36")
+        lock_range(ws_cost, "A1:G38")
+        unlock_range(ws_cost, "F5:F38")
+        unlock_range(ws_cost, "G5:G38")
 
         for col, width in {
             "A": 16,
@@ -3348,12 +3354,12 @@ def create_area_excel_form_bytes(
             ws_cost.column_dimensions[col].width = width
         ws_cost.column_dimensions["E"].hidden = True
 
-        for row in ws_cost.iter_rows(min_row=5, max_row=36, min_col=5, max_col=6):
+        for row in ws_cost.iter_rows(min_row=5, max_row=38, min_col=5, max_col=6):
             for cell in row:
                 cell.number_format = '#,##0.00'
 
         ws_cost.freeze_panes = "A5"
-        ws_cost.auto_filter.ref = "A4:G36"
+        ws_cost.auto_filter.ref = "A4:G38"
         ws_cost.protection.sheet = True
         ws_cost.protection.password = "area"
 
