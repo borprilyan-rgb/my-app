@@ -689,8 +689,8 @@ def read_facility_misc_inputs(excel_bytes):
             found["fac_pub_rate"] = rate
             found["area_fac_pub_amount_calc"] = qty * rate
         elif item in ["fasilitas proyek", "project facilities"]:
-            found["m_fac_proj"] = qty
-            found["fac_proj_rate"] = rate
+            found["area_fac_proj_qty"] = qty
+            found["area_fac_proj_rate"] = rate
             found["area_fac_proj_amount_calc"] = qty * rate
 
     return found
@@ -2304,8 +2304,8 @@ def create_area_excel_form_bytes(
         "PROJ",
         "Fasilitas Proyek",
         "unit",
-        _excel_safe_float(facility_misc_values.get("m_fac_proj", 0.0)),
-        _excel_safe_float(facility_misc_values.get("fac_proj_rate", facility_misc_values.get("u_fac_pr", 0.0))),
+        _excel_safe_float(facility_misc_values.get("area_fac_proj_qty", facility_misc_values.get("m_fac_proj", 0.0))),
+        _excel_safe_float(facility_misc_values.get("area_fac_proj_rate", facility_misc_values.get("fac_proj_rate", facility_misc_values.get("u_fac_pr", 0.0)))),
     ])
 
     for r, row in enumerate(res_rows, start=4):

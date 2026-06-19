@@ -6938,8 +6938,8 @@ def show_area_calculator():
                                     * _safe_float(curr_proj["data"].get("fac_pub_rate", 0.0))
                                 )
                                 curr_proj["data"]["area_fac_proj_amount_calc"] = (
-                                    _safe_float(curr_proj["data"].get("m_fac_proj", 0.0))
-                                    * _safe_float(curr_proj["data"].get("fac_proj_rate", 0.0))
+                                    _safe_float(curr_proj["data"].get("area_fac_proj_qty", 0.0))
+                                    * _safe_float(curr_proj["data"].get("area_fac_proj_rate", 0.0))
                                 )
                                 curr_proj["data"]["group_misc"] = (
                                     _safe_float(curr_proj["data"].get("area_fac_pub_amount_calc", 0.0))
@@ -7104,6 +7104,8 @@ def show_area_calculator():
                                 f"area_panjang_railing_{curr_id}",
                                 f"area_tinggi_railing_{curr_id}",
                                 f"area_facade_tolerance_pct_{curr_id}",
+                                f"area_m_fac_proj_{curr_id}",
+                                f"area_fac_proj_rate_{curr_id}",
                             ]:
                                 if stale_key in st.session_state:
                                     del st.session_state[stale_key]
@@ -7215,7 +7217,7 @@ def show_area_calculator():
                 {"Item": "Landscape", "Value": summary_landscape, "Unit": "m2"},
                 {"Item": "Fasilitas Penghuni", "Value": summary_residential_facility, "Unit": "m2"},
                 {"Item": "Fasilitas Publik", "Value": _safe_float(curr_proj["data"].get("m_fac_pub", 0.0)), "Unit": "m2"},
-                {"Item": "Fasilitas Proyek", "Value": _safe_float(curr_proj["data"].get("m_fac_proj", 0.0)), "Unit": "unit"},
+                {"Item": "Fasilitas Proyek", "Value": _safe_float(curr_proj["data"].get("area_fac_proj_qty", curr_proj["data"].get("m_fac_proj", 0.0))), "Unit": "unit"},
                 {"Item": "Railing", "Value": _safe_float(curr_proj["data"].get("area_railing_length_per_room_calc", curr_proj["data"].get("area_panjang_railing", 0.0))), "Unit": "m'/room"},
                 {"Item": "Wooden Door", "Value": _safe_float(curr_proj["data"].get("area_door_wood_calc", 0.0)), "Unit": "unit"},
                 {"Item": "Steel Door", "Value": _safe_float(curr_proj["data"].get("area_door_steel_calc", 0.0)), "Unit": "unit"},
@@ -8177,17 +8179,26 @@ def show_area_calculator():
         proj_c1, proj_c2, proj_c3 = st.columns(3)
         area_proj_qty_key = f"area_m_fac_proj_{curr_id}"
         area_proj_rate_key = f"area_fac_proj_rate_{curr_id}"
+        area_fac_proj_qty_default = _safe_float(
+            curr_proj["data"].get("area_fac_proj_qty", curr_proj["data"].get("m_fac_proj", 0.0))
+        )
+        area_fac_proj_rate_default = _safe_float(
+            curr_proj["data"].get(
+                "area_fac_proj_rate",
+                curr_proj["data"].get("fac_proj_rate", curr_proj["data"].get("u_fac_pr", 0.0)),
+            )
+        )
         proj_fac_u_area = proj_c1.number_input(
             "Fasilitas Proyek (unit)",
             min_value=0.0,
-            value=_safe_float(curr_proj["data"].get("m_fac_proj", 0.0)),
+            value=area_fac_proj_qty_default,
             step=1.0,
             key=area_proj_qty_key,
         )
         fac_proj_rate_area = proj_c2.number_input(
             "Fasilitas Proyek Rate (Rp/unit)",
             min_value=0.0,
-            value=_safe_float(curr_proj["data"].get("fac_proj_rate", curr_proj["data"].get("u_fac_pr", 0.0))),
+            value=area_fac_proj_rate_default,
             step=100000.0,
             key=area_proj_rate_key,
         )
@@ -8202,8 +8213,8 @@ def show_area_calculator():
             curr_proj["data"]["area_res_fac_amount_calc"] = total_res_fac_amount
             curr_proj["data"]["m_fac_pub"] = pub_fac_m2_area
             curr_proj["data"]["fac_pub_rate"] = fac_pub_rate_area
-            curr_proj["data"]["m_fac_proj"] = proj_fac_u_area
-            curr_proj["data"]["fac_proj_rate"] = fac_proj_rate_area
+            curr_proj["data"]["area_fac_proj_qty"] = proj_fac_u_area
+            curr_proj["data"]["area_fac_proj_rate"] = fac_proj_rate_area
             curr_proj["data"]["t_pub_fac"] = t_pub_fac_area
             curr_proj["data"]["t_proj_fac"] = t_proj_fac_area
             curr_proj["data"]["area_fac_pub_amount_calc"] = t_pub_fac_area
@@ -9686,8 +9697,21 @@ def show_cost_estimator(): #cost calculator page
 
         suggested_fac_pub_qty = _safe_float(curr_proj.get("data", {}).get("m_fac_pub", 0.0))
         suggested_fac_pub_rate = _safe_float(curr_proj.get("data", {}).get("fac_pub_rate", 0.0))
-        suggested_fac_proj_qty = _safe_float(curr_proj.get("data", {}).get("m_fac_proj", 0.0))
-        suggested_fac_proj_rate = _safe_float(curr_proj.get("data", {}).get("fac_proj_rate", 0.0))
+        suggested_fac_proj_qty = _safe_float(
+            curr_proj.get("data", {}).get(
+                "area_fac_proj_qty",
+                curr_proj.get("data", {}).get("m_fac_proj", 0.0),
+            )
+        )
+        suggested_fac_proj_rate = _safe_float(
+            curr_proj.get("data", {}).get(
+                "area_fac_proj_rate",
+                curr_proj.get("data", {}).get(
+                    "fac_proj_rate",
+                    curr_proj.get("data", {}).get("u_fac_pr", 0.0),
+                ),
+            )
+        )
         suggested_group_misc = _safe_float(curr_proj.get("data", {}).get("group_misc", 0.0))
 
         if isinstance(area_table_data, list) and len(area_table_data) > 0:
