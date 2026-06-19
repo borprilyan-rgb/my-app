@@ -475,6 +475,13 @@ UI_TEXT = {
         "admin.saved_notes": "Saved Notes",
         "admin.no_notes": "No notes yet.",
         "admin.delete_simple_note": "Delete Simple Note",
+        "admin.quick_note": "Quick Note",
+        "admin.display_note": "Display Note",
+        "admin.save_quick_note": "Save Quick Note",
+        "admin.quick_note_saved": "Quick Note saved.",
+        "admin.quick_note_save_failed": "Quick Note changed locally, but cloud save failed. Do not log out yet.",
+        "admin.quick_note_archive_read_only": "Quick Note is managed from the sidebar.",
+        "admin.no_quick_note_yet": "No quick note yet.",
         "admin.name": "Name",
         "admin.project_name_required": "Please enter Project name.",
         "admin.save": "Save",
@@ -862,6 +869,13 @@ UI_TEXT = {
         "admin.saved_notes": "Catatan Tersimpan",
         "admin.no_notes": "Belum ada catatan.",
         "admin.delete_simple_note": "Hapus Catatan Sederhana",
+        "admin.quick_note": "Catatan Cepat",
+        "admin.display_note": "Tampilkan Catatan",
+        "admin.save_quick_note": "Simpan Catatan Cepat",
+        "admin.quick_note_saved": "Catatan cepat tersimpan.",
+        "admin.quick_note_save_failed": "Catatan cepat berubah secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
+        "admin.quick_note_archive_read_only": "Catatan cepat dikelola dari sidebar.",
+        "admin.no_quick_note_yet": "Belum ada catatan cepat.",
         "admin.name": "Nama",
         "admin.project_name_required": "Masukkan nama proyek.",
         "admin.save": "Simpan",
@@ -5897,6 +5911,37 @@ def save_after_user_action(success_message="Saved to cloud.", fail_message="Chan
 
     st.error(fail_message)
     return False
+
+
+def get_quick_note_text(project):
+    if not isinstance(project, dict):
+        return ""
+
+    data = project.setdefault("data", {})
+    if not isinstance(data, dict):
+        project["data"] = {}
+        data = project["data"]
+
+    notes = data.get("simple_notes", [])
+    if not isinstance(notes, list) or not notes:
+        return ""
+
+    latest_note = notes[0]
+    if not isinstance(latest_note, dict):
+        return ""
+
+    return str(latest_note.get("note", ""))
+
+
+def set_quick_note_text(project, note_text):
+    if not isinstance(project.get("data"), dict):
+        project["data"] = {}
+
+    project["data"]["simple_notes"] = [{
+        "created_at": datetime.utcnow().isoformat(),
+        "note": str(note_text or "")
+    }]
+
 
 def get_project_versions(project):
     if not isinstance(project, dict):
@@ -12442,84 +12487,14 @@ def show_snapshots():
         st.subheader(t("admin.notes"))
 
         curr_id, pdata = get_current_project()
-        pdata.setdefault("data", {})
-        pdata["data"].setdefault("simple_notes", [])
+        quick_note_text = get_quick_note_text(pdata).strip()
 
-        note_key = f"simple_note_input_{curr_id}"
+        st.caption(t("admin.quick_note_archive_read_only"))
 
-        def add_simple_note():
-            curr_id_cb, pdata_cb = get_current_project()
-            pdata_cb.setdefault("data", {})
-            pdata_cb["data"].setdefault("simple_notes", [])
-
-            clean_note = str(st.session_state.get(note_key, "")).strip()
-
-            if clean_note == "":
-                st.session_state["simple_note_warning"] = t("admin.write_note_first")
-                return
-
-            pdata_cb["data"]["simple_notes"].insert(0, {
-                "created_at": datetime.utcnow().isoformat(),
-                "note": clean_note
-            })
-
-            st.session_state[note_key] = ""
-            st.session_state["simple_note_warning"] = ""
-            save_ok = save_after_user_action(t("admin.add_simple_note"))
-
-        st.text_area(
-            t("admin.write_note"),
-            placeholder=t("admin.note_placeholder"),
-            height=120,
-            key=note_key
-        )
-
-        st.button(
-            t("admin.add_note"),
-            type="primary",
-            width="stretch",
-            key=f"add_simple_note_btn_{curr_id}",
-            on_click=add_simple_note
-        )
-
-        if st.session_state.get("simple_note_warning"):
-            st.warning(st.session_state["simple_note_warning"])
-
-        st.divider()
-        st.markdown(f"### {t('admin.saved_notes')}")
-
-        notes = pdata["data"].get("simple_notes", [])
-
-        if not notes:
-            st.info(t("admin.no_notes"))
+        if quick_note_text == "":
+            st.caption(t("admin.no_quick_note_yet"))
         else:
-            for idx, note in enumerate(notes):
-                created_at = note.get("created_at", "")
-
-                try:
-                    created_dt = datetime.fromisoformat(created_at)
-                    created_display = (created_dt + timedelta(hours=7)).strftime("%d %b %Y, %H:%M WIB")
-                except Exception:
-                    created_display = created_at
-
-                with st.container(border=True):
-                    col_note, col_delete = st.columns([5, 1])
-
-                    with col_note:
-                        st.caption(created_display)
-                        st.write(note.get("note", ""))
-
-                    with col_delete:
-                        if st.button(
-                            t("delete"),
-                            key=f"delete_simple_note_{curr_id}_{idx}",
-                            width="stretch"
-                        ):
-                            pdata["data"]["simple_notes"].pop(idx)
-                            save_ok = save_after_user_action(t("admin.delete_simple_note"))
-
-                            if save_ok:
-                                st.rerun()
+            st.info(quick_note_text)
 
     with atab1:
         # --- CREATE LOCAL STUDY / SAVE NEW SNAPSHOT ---
@@ -13671,6 +13646,34 @@ def main_app():
         st.rerun()
         
     st.sidebar.caption(f"v{APP_VERSION} | &copy; 2026 QS & Procurement - ASG")
+
+    curr_id, curr_proj = get_current_project()
+    quick_note_text_key = f"quick_note_text_{curr_id}"
+
+    with st.sidebar.expander(t("admin.quick_note"), expanded=False):
+        if quick_note_text_key not in st.session_state:
+            st.session_state[quick_note_text_key] = get_quick_note_text(curr_proj)
+
+        st.text_area(
+            t("admin.quick_note"),
+            placeholder=t("admin.note_placeholder"),
+            height=120,
+            key=quick_note_text_key,
+            label_visibility="collapsed"
+        )
+
+        if st.button(
+            t("admin.save_quick_note"),
+            key=f"quick_note_save_{curr_id}",
+            width="stretch",
+            icon=icon_safe("save")
+        ):
+            set_quick_note_text(curr_proj, st.session_state.get(quick_note_text_key, ""))
+            if save_after_user_action(
+                success_message=t("admin.quick_note_saved"),
+                fail_message=t("admin.quick_note_save_failed")
+            ):
+                st.rerun()
     #endregion
 
     #debugcode
