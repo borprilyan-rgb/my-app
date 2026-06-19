@@ -117,9 +117,9 @@ def build_cost_raw_from_project_data(project_data, project_type_data):
         "qs_rate": get_val("sc_qs_r", "qs_rate"),
         "pm_months": get_val("sc_pm_m"),
         "pm_rate": get_val("sc_pm_r", "pm_rate"),
-        "insurance_pct": get_val("sc_ins", None, 0.12),
-        "prelim_pct": _safe_float(data.get("sc_prelim_pct", 5.0)),
-        "contingency_pct": _safe_float(data.get("sc_contingency_pct", 3.0)),
+        "insurance_pct": get_val("sc_ins", "insurance_pct", 0.12),
+        "prelim_pct": get_val("sc_prelim_pct", "prelim_pct", 5.0),
+        "contingency_pct": get_val("sc_contingency_pct", "contingency_pct", 3.0),
         "smart_custom_costs": smart_custom_costs,
     }
 

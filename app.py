@@ -1644,6 +1644,12 @@ def calculate_project_totals(pdata, curr_type):
         try: return _safe_float(val)
         except: return val
 
+    def get_percent_default(saved_key, db_key, fallback):
+        val = d.get(saved_key)
+        if val is not None and val != "":
+            return _safe_float(val, fallback)
+        return _safe_float(pt_data.get(db_key, fallback), fallback)
+
     # --- Area Calculations ---
     area_table = get_val("area_table_data", [])
     table_totals = {
@@ -1692,9 +1698,9 @@ def calculate_project_totals(pdata, curr_type):
     utility_rate = get_val("u_util", pt_data.get("utility", 0))
     
     consultancy_rate = get_val("sc_cons", pt_data.get("cons", 0))
-    insurance_pct = get_val("sc_ins", 0.12)
-    prelim_pct = get_val("sc_prelim_pct", 5.0)
-    contingency_pct = get_val("sc_contingency_pct", 3.0)
+    insurance_pct = get_percent_default("sc_ins", "insurance_pct", 0.12)
+    prelim_pct = get_percent_default("sc_prelim_pct", "prelim_pct", 5.0)
+    contingency_pct = get_percent_default("sc_contingency_pct", "contingency_pct", 3.0)
     
     smart_custom_costs = sum(_safe_float(item.get("Rate (Rp)", 0)) * _safe_float(item.get("Quantity", 1)) for item in get_val("smart_custom_costs", []))
 
@@ -5377,6 +5383,27 @@ def show_project_database():  # database page
             "Type": "currency",
             "Note": "Project management monthly fee allowance."
         },
+        "prelim_pct": {
+            "Group": "Soft Cost",
+            "Item": "Preliminaries %",
+            "Basis": "% of construction subtotal",
+            "Type": "percent",
+            "Note": "Preliminary works allowance."
+        },
+        "contingency_pct": {
+            "Group": "Soft Cost",
+            "Item": "Contingencies %",
+            "Basis": "% of construction subtotal + preliminaries",
+            "Type": "percent",
+            "Note": "Contingency allowance."
+        },
+        "insurance_pct": {
+            "Group": "Soft Cost",
+            "Item": "Insurance %",
+            "Basis": "% of hard cost",
+            "Type": "percent",
+            "Note": "Insurance coverage allowance."
+        },
     }
 
     GROUP_ORDER = [
@@ -6235,9 +6262,16 @@ def _project_metric_summary(project):
         data = {}
 
     curr_type = project.get("type", "Hotel")
+    pt_data = get_project_type_data(curr_type)
     gba, gfa, sgfa, budget, rooms = calculate_project_totals(project, curr_type)
     nfa = _safe_float(data.get("m_nfa", 0.0))
     land_area = _safe_float(data.get("m_land", data.get("m_land_m2", 0.0)))
+
+    def get_percent_default(saved_key, db_key, fallback):
+        val = data.get(saved_key)
+        if val is not None and val != "":
+            return _safe_float(val, fallback)
+        return _safe_float(pt_data.get(db_key, fallback), fallback)
 
     earthwork = gba * _safe_float(data.get("u_earth", 0.0))
     foundation = gba * _safe_float(data.get("u_found", 0.0))
@@ -6252,8 +6286,8 @@ def _project_metric_summary(project):
     known_hard_base = sum([
         earthwork, foundation, structure, architecture, ffe, mep, utility, external, misc
     ])
-    prelim_pct = _safe_float(data.get("sc_prelim_pct", 5.0))
-    contingency_pct = _safe_float(data.get("sc_contingency_pct", 3.0))
+    prelim_pct = get_percent_default("sc_prelim_pct", "prelim_pct", 5.0)
+    contingency_pct = get_percent_default("sc_contingency_pct", "contingency_pct", 3.0)
     prelim = known_hard_base * (prelim_pct / 100.0)
     contingency = (known_hard_base + prelim) * (contingency_pct / 100.0)
     hard_cost = known_hard_base + prelim + contingency
@@ -9561,6 +9595,18 @@ def show_cost_estimator(): #cost calculator page
             # If it's not a number (like "Type1"), return it as is
             return val
 
+    # --- PROJECT SETUP ---
+    curr_type = curr_proj["type"]
+    pt_data = get_project_type_data(curr_type)
+    warn_if_unknown_project_type(curr_type, context="project")
+    curr_type_key = f"{curr_id}_{curr_type}"
+
+    def get_percent_default(saved_key, db_key, fallback):
+        val = curr_proj["data"].get(saved_key)
+        if val is not None and val != "":
+            return _safe_float(val, fallback)
+        return _safe_float(pt_data.get(db_key, fallback), fallback)
+
     assump_col1, assump_col2, assump_col3 = st.columns([1, 1, 2])
 
     with assump_col1:
@@ -9568,7 +9614,7 @@ def show_cost_estimator(): #cost calculator page
             t("cost_prelim_label"),
             min_value=0.0,
             max_value=100.0,
-            value=float(_safe_float(curr_proj["data"].get("sc_prelim_pct", 5.0))),
+            value=float(get_percent_default("sc_prelim_pct", "prelim_pct", 5.0)),
             step=0.5,
             key=f"sc_prelim_pct_{curr_id}",
             help=t("cost_prelim_help")
@@ -9579,17 +9625,11 @@ def show_cost_estimator(): #cost calculator page
             t("cost_conting_label"),
             min_value=0.0,
             max_value=100.0,
-            value=float(_safe_float(curr_proj["data"].get("sc_contingency_pct", 3.0))),
+            value=float(get_percent_default("sc_contingency_pct", "contingency_pct", 3.0)),
             step=0.5,
             key=f"sc_contingency_pct_{curr_id}",
             help=t("cost_conting_help")
         )
-
-    # --- PROJECT SETUP ---
-    curr_type = curr_proj["type"]
-    pt_data = get_project_type_data(curr_type)
-    warn_if_unknown_project_type(curr_type, context="project")
-    curr_type_key = f"{curr_id}_{curr_type}"
 
     # --- TABS ---
     tab2, tab3, tab5, tab4, tab6, tab7, tab8 = st.tabs([
@@ -10489,7 +10529,7 @@ def show_cost_estimator(): #cost calculator page
             with st.expander("Lainnya", expanded=True):
                 consultancy_rate = st.number_input("Biaya Konsultan (Rp) per m2 GFA", help="Biaya konsultan per m2 GFA", value=get_val("sc_cons", pt_data["cons"]), key=f"sc_cons_{curr_type_key}")
                 st.caption(f"""Hitungan: {gfa:,.0f} m2 x Rp {consultancy_rate:,.0f}  \n  Total Consultancy Fee: Rp {gfa * consultancy_rate:,.0f}  \n  Terbilang: {n2w(gfa * consultancy_rate)}""")
-                insurance_pct = st.number_input("Insurance (%)", help="Persentase premi asuransi", value=get_val("sc_ins", 0.12), step=0.01, key=f"sc_ins_{curr_id}")
+                insurance_pct = st.number_input("Insurance (%)", help="Persentase premi asuransi", value=get_percent_default("sc_ins", "insurance_pct", 0.12), step=0.01, key=f"sc_ins_{curr_id}")
     
     # --- TAB 5: CUSTOM ITEMS ---
     with tab6:
