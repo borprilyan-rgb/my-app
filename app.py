@@ -146,7 +146,7 @@ UI_TEXT = {
         "component_name_empty": "Component name cannot be empty.",
         "component_name_duplicate": "Project name already exists.",
         "component_name_duplicate_unique": "Component name already exists. Use a unique name.",
-        "component_added_saved": "Component added and saved to cloud.",
+        "component_added_saved": "Created and switched to {name}.",
         "component_added_save_failed": "Component added locally, but cloud save failed. Do not log out yet.",
         "component_saved": "Component saved to cloud.",
         "component_save_failed": "Component changed locally, but cloud save failed. Do not log out yet.",
@@ -533,7 +533,7 @@ UI_TEXT = {
         "component_name_empty": "Nama komponen tidak boleh kosong.",
         "component_name_duplicate": "Nama proyek sudah ada.",
         "component_name_duplicate_unique": "Nama komponen sudah ada. Gunakan nama yang unik.",
-        "component_added_saved": "Komponen berhasil ditambahkan dan disimpan ke cloud.",
+        "component_added_saved": "Dibuat dan beralih ke {name}.",
         "component_added_save_failed": "Komponen ditambahkan secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
         "component_saved": "Komponen berhasil disimpan ke cloud.",
         "component_save_failed": "Komponen berubah secara lokal, tetapi gagal disimpan ke cloud. Jangan logout dulu.",
@@ -13264,6 +13264,10 @@ def main_app():
     ]
 
     current_index = proj_ids.index(curr_id) if curr_id in proj_ids else 0
+    if proj_labels and 0 <= current_index < len(proj_labels):
+        expected_selector = proj_labels[current_index]
+        if st.session_state.get("project_selector") != expected_selector:
+            st.session_state["project_selector"] = expected_selector
     
     # ==================================================
     # SIDEBAR CURRENT FILE
@@ -13444,7 +13448,7 @@ def main_app():
                         st.session_state.sidebar_component_mode = None
 
                         if save_after_user_action(
-                            success_message=t("component_added_saved"),
+                            success_message=t("component_added_saved").format(name=clean_name),
                             fail_message=t("component_added_save_failed")
                         ):
                             st.rerun()
