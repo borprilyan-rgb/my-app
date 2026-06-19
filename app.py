@@ -12551,54 +12551,15 @@ def show_snapshots():
             and curr_id in projects
         )
 
-        project_type_options = get_project_type_options(include_hidden=False)
-        project_type_placeholder = "Select project type..."
-        project_type_select_options = [project_type_placeholder] + project_type_options
+        archive_create_mode_key = "archive_create_new_study_mode"
+        if archive_create_mode_key not in st.session_state:
+            st.session_state[archive_create_mode_key] = False
 
-        col1, col2, col3 = st.columns([3, 3, 2])
-        snapshot_name = col1.text_input(
+        col_save_name, col_save, col_create_entry, _ = st.columns([3, 2, 2, 2])
+        snapshot_name = col_save_name.text_input(
             t("admin.feasibility_study_name"),
             placeholder="e.g. Project X - Opt 1 - Rev 0"
         )
-        initial_component_name = col2.text_input(
-            t("component_name"),
-            placeholder=t("component_name_placeholder"),
-            key="archive_create_component_name",
-        )
-        initial_project_type = col3.selectbox(
-            t("component_type"),
-            options=project_type_select_options,
-            index=0,
-            key="archive_create_project_type",
-        )
-        col_create, col_save, _ = st.columns([2, 2, 3])
-        can_create_study = (
-            snapshot_name.strip() != ""
-            and initial_component_name.strip() != ""
-            and initial_project_type != project_type_placeholder
-        )
-
-        if col_create.button(
-            t("admin.create_new_study"),
-            width="stretch",
-            icon=icon_safe("create_new_folder"),
-            disabled=not can_create_study,
-        ):
-            if snapshot_name.strip() == "":
-                col_create.warning(t("admin.enter_study_name"))
-            elif initial_component_name.strip() == "":
-                col_create.warning(t("component_name_empty"))
-            elif initial_project_type == project_type_placeholder:
-                col_create.warning("Please select project type.")
-            else:
-                clean_snapshot_name = snapshot_name.strip()
-                if create_new_study_and_archive(
-                    clean_snapshot_name,
-                    component_name=initial_component_name.strip(),
-                    project_type=initial_project_type,
-                ):
-                    st.success(t("admin.study_created_saved").format(name=clean_snapshot_name))
-                    st.rerun()
 
         if col_save.button(
             t("admin.save"),
@@ -12613,6 +12574,77 @@ def show_snapshots():
                 save_name = unique_snapshot_name(snapshot_name)
                 if save_snapshot(save_name):
                     st.success(t("admin.study_saved").format(name=save_name))
+                    st.rerun()
+
+        if col_create_entry.button(
+            t("admin.create_new_study"),
+            width="stretch",
+            icon=icon_safe("create_new_folder"),
+        ):
+            st.session_state[archive_create_mode_key] = True
+            st.rerun()
+
+        if st.session_state[archive_create_mode_key]:
+            project_type_options = get_project_type_options(include_hidden=False)
+            project_type_placeholder = "Select project type..."
+            project_type_select_options = [project_type_placeholder] + project_type_options
+
+            with st.container(border=True):
+                c1, c2, c3 = st.columns([3, 3, 2])
+                create_snapshot_name = c1.text_input(
+                    t("admin.feasibility_study_name"),
+                    placeholder="e.g. Project X - Opt 1 - Rev 0",
+                    key="archive_create_study_name",
+                )
+                initial_component_name = c2.text_input(
+                    t("component_name"),
+                    placeholder=t("component_name_placeholder"),
+                    key="archive_create_component_name",
+                )
+                initial_project_type = c3.selectbox(
+                    t("component_type"),
+                    options=project_type_select_options,
+                    index=0,
+                    key="archive_create_project_type",
+                )
+
+                col_confirm, col_cancel, _ = st.columns([2, 2, 3])
+                can_create_study = (
+                    create_snapshot_name.strip() != ""
+                    and initial_component_name.strip() != ""
+                    and initial_project_type != project_type_placeholder
+                )
+
+                if col_confirm.button(
+                    t("confirm"),
+                    width="stretch",
+                    type="primary",
+                    icon=icon_safe("check"),
+                    disabled=not can_create_study,
+                ):
+                    if create_snapshot_name.strip() == "":
+                        col_confirm.warning(t("admin.enter_study_name"))
+                    elif initial_component_name.strip() == "":
+                        col_confirm.warning(t("component_name_empty"))
+                    elif initial_project_type == project_type_placeholder:
+                        col_confirm.warning("Please select project type.")
+                    else:
+                        clean_snapshot_name = create_snapshot_name.strip()
+                        if create_new_study_and_archive(
+                            clean_snapshot_name,
+                            component_name=initial_component_name.strip(),
+                            project_type=initial_project_type,
+                        ):
+                            st.session_state[archive_create_mode_key] = False
+                            st.success(t("admin.study_created_saved").format(name=clean_snapshot_name))
+                            st.rerun()
+
+                if col_cancel.button(
+                    t("cancel"),
+                    width="stretch",
+                    icon=icon_safe("close"),
+                ):
+                    st.session_state[archive_create_mode_key] = False
                     st.rerun()
 
         st.divider()
