@@ -12551,30 +12551,24 @@ def show_snapshots():
             and curr_id in projects
         )
 
+        archive_save_mode_key = "archive_save_mode"
         archive_create_mode_key = "archive_create_new_study_mode"
+        if archive_save_mode_key not in st.session_state:
+            st.session_state[archive_save_mode_key] = False
         if archive_create_mode_key not in st.session_state:
             st.session_state[archive_create_mode_key] = False
 
-        col_save_name, col_save, col_create_entry, _ = st.columns([3, 2, 2, 2])
-        snapshot_name = col_save_name.text_input(
-            t("admin.feasibility_study_name"),
-            placeholder="e.g. Project X - Opt 1 - Rev 0"
-        )
-
-        if col_save.button(
-            t("admin.save"),
+        col_save_entry, col_create_entry, _ = st.columns([2, 2, 5])
+        if col_save_entry.button(
+            "Save current working study as archive",
             width="stretch",
             icon=icon_safe("save_as"),
             disabled=not has_active_working_study,
             type="primary"
         ):
-            if snapshot_name.strip() == "":
-                col_save.warning(t("admin.project_name_required"))
-            else:
-                save_name = unique_snapshot_name(snapshot_name)
-                if save_snapshot(save_name):
-                    st.success(t("admin.study_saved").format(name=save_name))
-                    st.rerun()
+            st.session_state[archive_save_mode_key] = True
+            st.session_state[archive_create_mode_key] = False
+            st.rerun()
 
         if col_create_entry.button(
             t("admin.create_new_study"),
@@ -12582,7 +12576,40 @@ def show_snapshots():
             icon=icon_safe("create_new_folder"),
         ):
             st.session_state[archive_create_mode_key] = True
+            st.session_state[archive_save_mode_key] = False
             st.rerun()
+
+        if st.session_state[archive_save_mode_key]:
+            with st.container(border=True):
+                save_snapshot_name = st.text_input(
+                    "Archive / Study Name",
+                    placeholder="e.g. Project X - Opt 1 - Rev 0",
+                    key="archive_save_snapshot_name",
+                )
+
+                col_confirm_save, col_cancel_save, _ = st.columns([2, 2, 3])
+                if col_confirm_save.button(
+                    "Confirm Save",
+                    width="stretch",
+                    type="primary",
+                    icon=icon_safe("check"),
+                ):
+                    if save_snapshot_name.strip() == "":
+                        col_confirm_save.warning(t("admin.project_name_required"))
+                    else:
+                        save_name = unique_snapshot_name(save_snapshot_name)
+                        if save_snapshot(save_name):
+                            st.session_state[archive_save_mode_key] = False
+                            st.success(t("admin.study_saved").format(name=save_name))
+                            st.rerun()
+
+                if col_cancel_save.button(
+                    t("cancel"),
+                    width="stretch",
+                    icon=icon_safe("close"),
+                ):
+                    st.session_state[archive_save_mode_key] = False
+                    st.rerun()
 
         if st.session_state[archive_create_mode_key]:
             project_type_options = get_project_type_options(include_hidden=False)
@@ -12594,7 +12621,7 @@ def show_snapshots():
                 create_snapshot_name = c1.text_input(
                     t("admin.feasibility_study_name"),
                     placeholder="e.g. Project X - Opt 1 - Rev 0",
-                    key="archive_create_study_name",
+                    key="archive_create_snapshot_name",
                 )
                 initial_component_name = c2.text_input(
                     t("component_name"),
