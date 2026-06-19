@@ -52,6 +52,7 @@ import json as _json
 
 APP_VERSION = "1.1.0"
 SHOW_DASHBOARD_PAGE = False
+SHOW_DEBUG_BUTTON = False
 AREA_UNIT = "m2"
 MULTIPLY_SIGN = "*"
 st.set_page_config(page_title="Project Feasibility Study - Agung Sedayu Group",
@@ -13617,7 +13618,7 @@ def main_app():
         ):
             st.session_state.current_page = None
             st.rerun()
-    elif st.sidebar.button(
+    elif SHOW_DEBUG_BUTTON and st.sidebar.button(
         t("debug"),
         key="open_app_debugger",
         width="stretch",
