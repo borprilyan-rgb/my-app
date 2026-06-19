@@ -403,7 +403,7 @@ UI_TEXT = {
         "cost_detail_info_title": "{section} Detail-Derived Rate Review",
         "admin.feasibility_study": "Feasibility Study",
         "admin.loaded_file_ready": "**{name}** is currently loaded (You can start calculating your project)",
-        "admin.previous_page": "Previous Page",
+        "admin.previous_page": "Back",
         "admin.welcome_start": (
             "**Welcome to Project Feasibility Study - Agung Sedayu Group**\n\n"
             "To start calculating, first create a new project by clicking the button below."
