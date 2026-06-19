@@ -118,6 +118,7 @@ UI_TEXT = {
         "page.archive": "Archive",
         "current_study": "Current study",
         "save_current_study": "Save",
+        "save_current_study_as": "Save As",
         "current_linked_study_saved": "Current linked study saved: {name}",
         "working_copy_saved_archive_hint": (
             "Working copy saved. To create or link an archive, use Archive > Online Backup > Save."
@@ -504,6 +505,7 @@ UI_TEXT = {
         "page.archive": "Arsip",
         "current_study": "Studi saat ini",
         "save_current_study": "Simpan",
+        "save_current_study_as": "Simpan sebagai",
         "current_linked_study_saved": "Studi tertaut berhasil disimpan: {name}",
         "working_copy_saved_archive_hint": (
             "Working copy berhasil disimpan. Untuk membuat atau menautkan arsip, gunakan Archive > Online Backup > Save."
@@ -12560,7 +12562,7 @@ def show_snapshots():
 
         col_save_entry, col_create_entry, _ = st.columns([2, 2, 5])
         if col_save_entry.button(
-            "Save current working study as archive",
+            t("save_current_study_as"),
             width="stretch",
             icon=icon_safe("save_as"),
             disabled=not has_active_working_study,
